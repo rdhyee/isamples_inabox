@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "isamples_inabox"
+version = "0.1.0"
+description = "Python implementation of iSamples-in-a-box components"
+authors = ["datadavev <605409+datadavev@users.noreply.github.com>"]
+license = "Apache 2.0"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+igsn-lib = {path = "../igsn_lib"}
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.3"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
