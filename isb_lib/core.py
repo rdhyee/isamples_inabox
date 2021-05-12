@@ -98,16 +98,17 @@ class IdentifierIterator:
 
 class CollectionAdaptor:
     def __init__(self):
+        self._identifier_iterator = IdentifierIterator
         pass
 
-    def listIdentifiers(self):
-        pass
+    def listIdentifiers(self, **kwargs):
+        return self._identifier_iterator(**kwargs)
 
     def getRecord(self, identifier, format=None, profile=None):
-        pass
+        return {"identifier": identifier}
 
     def listFormats(self, profile=None):
-        pass
+        return []
 
     def listProfiles(self, format=None):
-        pass
+        return []

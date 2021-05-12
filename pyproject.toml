@@ -8,9 +8,13 @@ license = "Apache 2.0"
 [tool.poetry.dependencies]
 python = "^3.8"
 igsn-lib = {path = "../igsn_lib"}
+click = "^7.1.2"
+click-config-file = "^0.6.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.3"
+jupyter = "^1.0.0"
+nbterm = "^0.0.7"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
