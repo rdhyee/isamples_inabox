@@ -15,7 +15,7 @@ import concurrent.futures
 import click
 import click_config_file
 
-CONCURRENT_DOWNLOADS = 3
+CONCURRENT_DOWNLOADS = 10
 BACKLOG_SIZE = 40
 
 JSON_LD_MEDIA = "application/ld+json"
@@ -205,7 +205,8 @@ def getSesarItemJsonLD(igsn, t_created):
 
 def countThings(session):
     """Return number of things already collected in database"""
-    return 1000
+    cnt = session.query(igsn_lib.models.thing.Thing).count()
+    return cnt
 
 
 async def _loadSesarEntries(session, max_count, start_from=None):
@@ -235,7 +236,7 @@ async def _loadSesarEntries(session, max_count, start_from=None):
                             .filter_by(id=f"IGSN:{igsn}")
                             .one()
                         )
-                        logging.info("Already have %s at %s", igsn, _id[1])
+                        logging.debug("Already have %s at %s", igsn, _id[1])
                     except sqlalchemy.orm.exc.NoResultFound:
                         future = executor.submit(getSesarItemJsonLD, igsn, _id[1])
                         futures.append(future)

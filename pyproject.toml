@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "isamples_inabox"
-version = "0.2.0"
+version = "0.2.1"
 description = "Python implementation of iSamples-in-a-box components"
 authors = ["datadavev <605409+datadavev@users.noreply.github.com>"]
 license = "Apache 2.0"

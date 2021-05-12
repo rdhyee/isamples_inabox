@@ -1,5 +1,6 @@
 import os
 import uvicorn
+import datetime
 import typing
 import fastapi.staticfiles
 import fastapi.templating
@@ -63,17 +64,19 @@ async def thing_list(
 
 @app.get("/thing/{identifier}")
 async def get_thing(
-    identifier: str, db: sqlalchemy.orm.Session = fastapi.Depends((getDb))
+    identifier: str, full:bool=False, db: sqlalchemy.orm.Session = fastapi.Depends((getDb))
 ):
     """Retrieve the record for the specified identifier"""
     item = crud.getThing(db, identifier)
     if item is None:
         raise fastapi.HTTPException(status_code=404, detail=f"Thing not found: {identifier}")
+    if full:
+        return item
     return fastapi.responses.JSONResponse(
         content=item.resolved_content, media_type=item.resolved_media_type
     )
 
-@app.get("/thing/{identifier}/related")
+@app.get("/thing/{identifier}/related", response_model=typing.List[typing.Tuple[datetime.datetime, str, str]])
 async def get_thing_related(
     identifier: str, db: sqlalchemy.orm.Session = fastapi.Depends((getDb))
 ):

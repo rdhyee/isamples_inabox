@@ -10,6 +10,11 @@ def getThingMeta(db: sqlalchemy.orm.Session):
         sqlalchemy.sql.label('count', sqlalchemy.func.count(igsn_lib.models.thing.Thing.resolved_status)),
     ).group_by(igsn_lib.models.thing.Thing.resolved_status)
     meta = {"counts": dbq.all()}
+    dbq = db.query(
+        sqlalchemy.sql.label('authority', igsn_lib.models.thing.Thing.authority_id),
+        sqlalchemy.sql.label('count', sqlalchemy.func.count(igsn_lib.models.thing.Thing.authority_id)),
+    ).group_by(igsn_lib.models.thing.Thing.authority_id)
+    meta["authority"] = dbq.all()
     return meta
 
 
