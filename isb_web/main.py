@@ -8,10 +8,12 @@ import sqlalchemy.orm
 from isb_web import database
 from isb_web import schemas
 from isb_web import crud
+from isb_web import config
 
 THIS_PATH = os.path.dirname(os.path.abspath(__file__))
+WEB_ROOT = config.Settings().web_root
 
-app = fastapi.FastAPI()
+app = fastapi.FastAPI(root_path=WEB_ROOT)
 
 app.add_middleware(
     fastapi.middleware.cors.CORSMiddleware,
