@@ -18,6 +18,8 @@ import click_config_file
 CONCURRENT_DOWNLOADS = 3
 BACKLOG_SIZE = 40
 
+JSON_LD_MEDIA = "application/ld+json"
+
 LOG_LEVELS = {
     "DEBUG": logging.DEBUG,
     "INFO": logging.INFO,
@@ -98,6 +100,19 @@ def getSesarItem(igsn, t_created):
 
 
 def getSesarItemJsonLD(igsn, t_created):
+    '''
+
+    Args:
+        igsn: IGSN value (no prefix)
+        t_created: time zone aware date time
+
+    Returns: Thing
+
+    '''
+
+    def fullIgsn(v):
+        return f"IGSN:{igsn_lib.normalize(v)}"
+
     def getRelatedItems(relations, predicate):
         """For each relation, return (tstamp, predicate, target).
 
@@ -106,7 +121,8 @@ def getSesarItemJsonLD(igsn, t_created):
         nonlocal tstamp
         related = []
         for k in relations:
-            related.append((tstamp, predicate, k))
+            _id = f"IGSN:{igsn_lib.normalize(k)}"
+            related.append((tstamp, predicate, _id))
         return related
 
     # t_created is the value of lastmod from the sitemap
@@ -119,6 +135,8 @@ def getSesarItemJsonLD(igsn, t_created):
         elapsed = igsn_lib.time.datetimeDeltaToSeconds(res.elapsed)
         for h in res.history:
             elapsed = igsn_lib.time.datetimeDeltaToSeconds(h.elapsed)
+        r_url = res.url
+        r_status = res.status_code
         item = {}
         try:
             item = res.json()
@@ -126,13 +144,26 @@ def getSesarItemJsonLD(igsn, t_created):
             L.warning(e)
         if not isinstance(item, dict):
             L.error("Returned item is not an object %s", igsn)
-            return igsn, t_created, None
-        r_url = res.url
-        r_status = res.status_code
+            #return a thing, the status code should be used to determine this thing is no good
+            _thing = igsn_lib.models.thing.Thing(
+                id=f"IGSN:{igsn}",
+                tcreated=t_created,
+                item_type=item.get("sample", {}).get("sample_type", "sample"),
+                authority_id="SESAR",
+                resolved_url=r_url,
+                resolved_status=r_status,
+                tresolved=igsn_lib.time.dtnow(),
+                resolve_elapsed = elapsed,
+            )
+            return igsn, t_created, _thing
+
+        # SESAR incorrectly returns "application/json;charset=UTF-8" for json-ld content
+        # manually override it here.
+        media_type = JSON_LD_MEDIA
         related = []
         related += list(
             map(
-                lambda V: (tstamp, "child", V),
+                lambda V: (tstamp, "child", fullIgsn(V)),
                 item.get("description", {})
                 .get("supplementMetadata", {})
                 .get("childIGSN", []),
@@ -140,7 +171,7 @@ def getSesarItemJsonLD(igsn, t_created):
         )
         related += list(
             map(
-                lambda V: (tstamp, "parent", V),
+                lambda V: (tstamp, "parent", fullIgsn(V)),
                 item.get("description", {})
                 .get("supplementMetadata", {})
                 .get("parentIGSN", []),
@@ -148,7 +179,7 @@ def getSesarItemJsonLD(igsn, t_created):
         )
         related += list(
             map(
-                lambda V: (tstamp, "sibling", V),
+                lambda V: (tstamp, "sibling", fullIgsn(V)),
                 item.get("description", {})
                 .get("supplementMetadata", {})
                 .get("siblingIGSN", []),
@@ -156,17 +187,17 @@ def getSesarItemJsonLD(igsn, t_created):
         )
         _thing = igsn_lib.models.thing.Thing(
             id=f"IGSN:{igsn}",
-            tcreated=igsn_lib.time.datetimeToJD(t_created),
+            tcreated=t_created,
             item_type=item.get("sample", {}).get("sample_type", "sample"),
             authority_id="SESAR",
             related=related,
             resolved_url=r_url,
             resolved_status=r_status,
-            tresolved=igsn_lib.time.jdnow(),
+            tresolved=igsn_lib.time.dtnow(),
+            resolved_media_type=media_type,
             resolved_content=item,
             resolve_elapsed = elapsed,
         )
-        L.debug(_thing)
         return igsn, t_created, _thing
     except Exception as e:
         L.error(e)
@@ -219,6 +250,7 @@ async def _loadSesarEntries(session, max_count, start_from=None):
             try:
                 for fut in concurrent.futures.as_completed(futures, timeout=1):
                     igsn, tc, _thing = fut.result()
+                    futures.remove(fut)
                     if not _thing is None:
                         try:
                             session.add(_thing)
@@ -226,18 +258,17 @@ async def _loadSesarEntries(session, max_count, start_from=None):
                         except sqlalchemy.exc.IntegrityError as e:
                             session.rollback()
                             logging.error("Item already exists: %s", _id[0])
-                        futures.remove(fut)
                         working.pop(igsn)
                         total_completed += 1
                     else:
-                        L.info("Failed to retrieve %s", igsn)
                         if working.get(igsn,0) < 3:
-                            future = executor.submit(getSesarItemJsonLD, igsn, tc)
-                            futures.append(future)
                             if not igsn in working:
-                                working[igsn] = 0
+                                working[igsn] = 1
                             else:
                                 working[igsn] += 1
+                            L.info("Failed to retrieve %s. Retry = %s", igsn, working[igsn])
+                            future = executor.submit(getSesarItemJsonLD, igsn, tc)
+                            futures.append(future)
                         else:
                             L.error("Too many retries on %s", igsn)
                             working.pop(igsn)
@@ -295,7 +326,7 @@ def main(db_url, max_records, verbosity):
         .first()
     )
     if not res is None:
-        oldest_record = igsn_lib.time.jdToDateTime(res.tcreated)
+        oldest_record = res.tcreated
     logging.info("Oldest = %s", oldest_record)
     time.sleep(5)
     try:

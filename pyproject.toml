@@ -1,20 +1,31 @@
 [tool.poetry]
 name = "isamples_inabox"
-version = "0.1.0"
+version = "0.2.0"
 description = "Python implementation of iSamples-in-a-box components"
 authors = ["datadavev <605409+datadavev@users.noreply.github.com>"]
 license = "Apache 2.0"
+packages = [
+    { include = "isb_lib"},
+    { include = "isb_web"},
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-igsn-lib = {path = "../igsn_lib"}
 click = "^7.1.2"
 click-config-file = "^0.6.0"
+fastapi = "^0.65.1"
+uvicorn = "^0.13.4"
+aiofiles = "^0.6.0"
+igsn-lib = {git = "git@github.com:isamplesorg/igsn_lib.git", rev = "main"}
+python-dotenv = "^0.17.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.3"
 jupyter = "^1.0.0"
 nbterm = "^0.0.7"
+
+[tool.poetry.scripts]
+sesar_things = "scripts.sesar_things:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
