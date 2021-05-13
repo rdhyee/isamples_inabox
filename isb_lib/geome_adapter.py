@@ -33,8 +33,9 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
             date_start=date_start,
             date_end=date_end,
         )
+        self._project_ids = None
 
-    def _listProjects(self):
+    def listProjects(self):
         L = getLogger()
         L.debug("Loading project ids...")
         url = f"{GEOME_API}projects"
@@ -42,7 +43,9 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
             "Accept": "application/json",
         }
         params = {"includePublic": "true", "admin": "false"}
-        response = requests.get(url, params=params, headers=headers, timeout=HTTP_TIMEOUT)
+        response = requests.get(
+            url, params=params, headers=headers, timeout=HTTP_TIMEOUT
+        )
         if response.status_code != 200:
             raise ValueError(
                 "Unable to load projects, status: %s; reason: %s",
@@ -50,15 +53,10 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
                 response.reason,
             )
         projects = response.json()
-        project_ids = []
         for project in projects:
-            proj_id = project.get("projectId", None)
-            if not proj_id is None:
-                project_ids.append(proj_id)
-        L.debug("Found %s project Ids", len(project_ids))
-        return project_ids
+            yield project
 
-    def _identifiesInProject(self, project_id, record_type="Sample"):
+    def recordsInProject(self, project_id, record_type="Event"):
         L = getLogger()
         L.debug("Loading identifiers for project %s", project_id)
         url = f"{GEOME_API}records/Sample/json"
@@ -74,33 +72,51 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
         identifiers = []
         more_work = True
         while more_work:
-            response = requests.get(url, params=params, headers=headers, timeout=HTTP_TIMEOUT)
-            if response.status_code == 200:
-                data = response.json()
-                recs = data.get("content", {}).get("Sample", [])
-                nrecs = len(recs)
-                for rec in recs:
-                    _id = rec.get("bcid", None)
-                    if not _id is None:
-                        identifiers.append(_id)
-                        L.debug(_id)
-                if nrecs < _page_size:
-                    more_work = False
-                params["page"] = params["page"] + 1
-            else:
-                L.error("Unable to continue on project_id: %s; reason: %s", project_id, response.reason)
+            response = requests.get(
+                url, params=params, headers=headers, timeout=HTTP_TIMEOUT
+            )
+            if response.status_code != 200:
+                raise ValueError(
+                    "Unable to load records, status: %s; reason: %s",
+                    response.status_code,
+                    response.reason,
+                )
+            data = response.json()
+            for record in data.get("content", {}).get(record_type, []):
+                yield record
+            if len(data.get("content", {}).get(record_type, [])) < _page_size:
                 more_work = False
+            params["page"] = params["page"] + 1
         L.debug("Found %s identifiers in project_id %s", len(identifiers), project_id)
         return identifiers
 
-
     def _loadEntries(self):
-        _project_ids = self._listProjects()
+        if self._project_ids is None:
+            # Load the project IDs
+            # each entry is a dict with key
+            self._project_ids = []
+            for p in self.listProjects():
+                pid = p.get("projectId", None)
+                if not pid is None:
+                    self._project_ids.append(
+                        {
+                            "project_id": pid,
+                            "identifiers": [],
+                            "loaded": False,
+                        }
+                    )
+        for p in self._project_ids:
+            #return the next set of identifiers within a project
+            if not p["loaded"]:
+                for record in self.recordsInProject(p['project_id'], record_type='Event'):
+                    rid = record.get('bcid', None)
+                    if not rid is None:
+                        p['identifiers'].append(rid)
+                p['loaded'] = True
+                self._cpage = p['identifiers']
+                self._total_records += len(self._cpage)
+                break
         self._cpage = []
-        for project_id in _project_ids:
-            self._cpage += self._identifiesInProject(project_id)
-        self._cpage = []
-        counter = 0
 
     def __len__(self):
         return self._total_records
