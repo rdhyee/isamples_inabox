@@ -215,15 +215,22 @@ def reparseRecords(ctx):
     session = getDBSession(ctx.obj["db_url"])
     try:
         i = 0
-        for athing in session.query(igsn_lib.models.thing.Thing).yield_per(1000):
-            itype = athing.item_type
-            isb_lib.sesar_adaptor.reparseThing(athing)
-            L.info("%s: reparse %s, %s -> %s", i, athing.id, itype, athing.item_type)
-            i += 1
-            if i % batch_size == 0:
-                session.commit()
-        # don't forget to commit the remainder!
-        session.commit()
+        result = session.execute(
+            sqlalchemy.select(igsn_lib.models.thing.Thing).execution_options(
+                postgresql_with_hold=True
+            )
+        )
+        #work with a partition of 1000 records at a time
+        for partition in result.partitions(1000):
+            for athing in partition:
+                thing = athing[0]
+                itype = thing.item_type
+                isb_lib.sesar_adaptor.reparseThing(thing)
+                L.info("%s: reparse %s, %s -> %s", i, thing.id, itype, thing.item_type)
+                i += 1
+                if i % batch_size == 0:
+                    session.commit()
+            session.commit()
     finally:
         session.close()
 
