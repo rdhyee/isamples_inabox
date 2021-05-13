@@ -209,28 +209,38 @@ def loadRecords(ctx, max_records):
 @main.command("reparse")
 @click.pass_context
 def reparseRecords(ctx):
+    def _yieldRecordsByPage(qry, pk):
+        nonlocal session
+        offset = 0
+        page_size = 1000
+        while True:
+            q = qry
+            rec = None
+            n = 0
+            for rec in q.order_by(pk).offset(offset).limit(page_size):
+                n += 1
+                yield rec
+            if n == 0:
+                break
+            offset += page_size
+
     L = getLogger()
     batch_size = 50
     L.info("reparseRecords with batch size: %s", batch_size)
     session = getDBSession(ctx.obj["db_url"])
     try:
         i = 0
-        result = session.execute(
-            sqlalchemy.select(igsn_lib.models.thing.Thing).execution_options(
-                postgresql_with_hold=True
-            )
-        )
-        #work with a partition of 1000 records at a time
-        for partition in result.partitions(1000):
-            for athing in partition:
-                thing = athing[0]
-                itype = thing.item_type
-                isb_lib.sesar_adaptor.reparseThing(thing)
-                L.info("%s: reparse %s, %s -> %s", i, thing.id, itype, thing.item_type)
-                i += 1
-                if i % batch_size == 0:
-                    session.commit()
-            session.commit()
+        qry = session.query(igsn_lib.models.thing.Thing)
+        pk = igsn_lib.models.thing.Thing.id
+        for thing in _yieldRecordsByPage(qry, pk):
+            itype = thing.item_type
+            isb_lib.sesar_adaptor.reparseThing(thing)
+            L.info("%s: reparse %s, %s -> %s", i, thing.id, itype, thing.item_type)
+            i += 1
+            if i % batch_size == 0:
+                session.commit()
+        # don't forget to commit the remainder!
+        session.commit()
     finally:
         session.close()
 
