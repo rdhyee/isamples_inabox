@@ -219,7 +219,8 @@ def reparseRecords(ctx):
             itype = athing.item_type
             isb_lib.sesar_adaptor.reparseThing(athing)
             L.info("%s: reparse %s, %s -> %s", i, athing.id, itype, athing.item_type)
-            if (i + 1) % batch_size == 0:
+            i += 1
+            if i % batch_size == 0:
                 session.commit()
         # don't forget to commit the remainder!
         session.commit()
