@@ -212,7 +212,7 @@ def reparseRecords(ctx):
     def _yieldRecordsByPage(qry, pk):
         nonlocal session
         offset = 0
-        page_size = 1000
+        page_size = 5000
         while True:
             q = qry
             rec = None
