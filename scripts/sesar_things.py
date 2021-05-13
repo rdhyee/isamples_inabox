@@ -214,7 +214,8 @@ def reparseRecords(ctx):
     L.info("reparseRecords with batch size: %s", batch_size)
     session = getDBSession(ctx.obj["db_url"])
     try:
-        for i, athing in enumerate(session.query(igsn_lib.models.thing.Thing).all()):
+        i = 0
+        for athing in session.query(igsn_lib.models.thing.Thing).yield_per(1000):
             itype = athing.item_type
             isb_lib.sesar_adaptor.reparseThing(athing)
             L.info("%s: reparse %s, %s -> %s", i, athing.id, itype, athing.item_type)
