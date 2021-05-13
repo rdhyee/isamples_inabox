@@ -38,3 +38,10 @@ def getRelated(db: sqlalchemy.orm.Session, identifier: str):
         .filter(igsn_lib.models.thing.Thing.id == identifier)
         .first()
     )
+
+def getSampleTypes(db: sqlalchemy.orm.Session):
+    dbq = db.query(
+        sqlalchemy.sql.label('item_type', igsn_lib.models.thing.Thing.item_type),
+        sqlalchemy.sql.label('count', sqlalchemy.func.count(igsn_lib.models.thing.Thing.item_type)),
+    ).group_by(igsn_lib.models.thing.Thing.item_type)
+    return dbq.all()

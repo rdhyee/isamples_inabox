@@ -54,7 +54,7 @@ async def thing_list_metadata(
 async def thing_list(
     offset: int = 0,
     limit: int = 1000,
-    status:int = 200,
+    status: int = 200,
     db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
 ):
     """List identifiers available on this service"""
@@ -62,32 +62,46 @@ async def thing_list(
     return things
 
 
+@app.get("/thing/types")
+async def thing_list_types(
+    db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
+):
+    return crud.getSampleTypes(db)
+
+
 @app.get("/thing/{identifier}")
 async def get_thing(
-    identifier: str, full:bool=False, db: sqlalchemy.orm.Session = fastapi.Depends((getDb))
+    identifier: str,
+    full: bool = False,
+    db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
 ):
     """Retrieve the record for the specified identifier"""
     item = crud.getThing(db, identifier)
     if item is None:
-        raise fastapi.HTTPException(status_code=404, detail=f"Thing not found: {identifier}")
+        raise fastapi.HTTPException(
+            status_code=404, detail=f"Thing not found: {identifier}"
+        )
     if full:
         return item
     return fastapi.responses.JSONResponse(
         content=item.resolved_content, media_type=item.resolved_media_type
     )
 
-@app.get("/thing/{identifier}/related", response_model=typing.List[typing.Tuple[datetime.datetime, str, str]])
+
+@app.get(
+    "/thing/{identifier}/related",
+    response_model=typing.List[typing.Tuple[datetime.datetime, str, str]],
+)
 async def get_thing_related(
     identifier: str, db: sqlalchemy.orm.Session = fastapi.Depends((getDb))
 ):
     """Retrieve related identifiers for the specified identifier"""
     item = crud.getThing(db, identifier)
     if item is None:
-        raise fastapi.HTTPException(status_code=404, detail=f"Thing not found: {identifier}")
-    return fastapi.responses.JSONResponse(
-        content=item.related
-    )
-
+        raise fastapi.HTTPException(
+            status_code=404, detail=f"Thing not found: {identifier}"
+        )
+    return fastapi.responses.JSONResponse(content=item.related)
 
 
 @app.get("/")

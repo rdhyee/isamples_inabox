@@ -6,22 +6,35 @@ import datetime
 import requests
 import sickle.oaiexceptions
 import sickle.utils
+import igsn_lib
 import igsn_lib.oai
 import igsn_lib.time
+import igsn_lib.models.thing
 import isb_lib.core
 import isb_lib.sitemaps
 
 HTTP_TIMEOUT = 10.0  # seconds
 DEFAULT_IGSN_OAI = "https://doidb.wdc-terra.org/igsnoaip/oai"
 DEFAULT_SESAR_SITEMAP = "https://app.geosamples.org/sitemaps/sitemap-index.xml"
+MEDIA_JSON_LD = "application/ld+json"
+AUTHORITY_ID = "SESAR"
+RELATION_TYPE = {
+    "child": "child",
+    "parent": "parent",
+    "sibling": "sibling",
+}
 
 
 def getLogger():
     return logging.getLogger("isb_lib.sesar_adapter")
 
 
+def fullIgsn(v):
+    return f"IGSN:{igsn_lib.normalize(v)}"
+
+
 def getSesarItem_app(igsn_value, verify=False):
-    # return JSON entry from sesar
+    # return JSON entry from sesar, using the older app interface
     headers = {"Accept": "application/json"}
     url = "https://app.geosamples.org/webservices/display.php"
     params = {"igsn": igsn_value}
@@ -31,12 +44,135 @@ def getSesarItem_app(igsn_value, verify=False):
     return res
 
 
-def getSesarItem_jsonld(igsn_value, verify=False):
-    # Return JSON-LD representation of SESAR record. This is the preferred.
+def getSESARItem_jsonld(igsn_value, verify=False):
+    # Return JSON-LD representation of SESAR record. This is the preferred as of May 2021.
     headers = {"Accept": "application/ld+json, application/json"}
     url = f"https://api.geosamples.org/v1/sample/igsn-ev-json-ld/igsn/{igsn_value}"
     res = requests.get(url, headers=headers, verify=verify, timeout=HTTP_TIMEOUT)
     return res
+
+
+class SESARItem(object):
+    def __init__(self, source):
+        self.authority_id = AUTHORITY_ID
+        self.item = source
+
+    def getRelations(self, tstamp):
+        """Extract relations from the record
+
+        Result is a list of (tstamp, predicate, object)
+        """
+        if isinstance(tstamp, datetime.datetime):
+            tstamp = igsn_lib.time.datetimeToJsonStr(tstamp)
+        related = []
+        _parent = self.item.get("description", {}).get("parentIdentifier", None)
+        if not _parent is None:
+            related.append((tstamp, RELATION_TYPE["parent"], fullIgsn(_parent)))
+        related += list(
+            map(
+                lambda V: (tstamp, RELATION_TYPE["child"], fullIgsn(V)),
+                self.item.get("description", {})
+                .get("supplementMetadata", {})
+                .get("childIGSN", []),
+            )
+        )
+        related += list(
+            map(
+                lambda V: (tstamp, RELATION_TYPE["sibling"], fullIgsn(V)),
+                self.item.get("description", {})
+                .get("supplementMetadata", {})
+                .get("siblingIGSN", []),
+            )
+        )
+        return related
+
+    def getItemType(self):
+        return self.item.get("description", {}).get("sampleType", "sample")
+
+    def asThing(
+        self,
+        igsn: str,
+        t_created: datetime.datetime,
+        status: int,
+        resolved_url: str,
+        t_resolved: datetime.datetime,
+        resolve_elapsed: float,
+    ):
+        L = getLogger()
+        L.debug("SESARItem.asThing")
+        tstamp = igsn_lib.time.datetimeToJsonStr(t_created)
+        if not isinstance(self.item, dict):
+            L.error("Item is not an object")
+            _thing = igsn_lib.models.thing.Thing(
+                id=fullIgsn(igsn),
+                tcreated=t_created,
+                item_type=None,
+                authority_id=self.authority_id,
+                resolved_url=resolved_url,
+                resolved_status=status,
+                tresolved=t_resolved,
+                resolve_elapsed=resolve_elapsed,
+            )
+            return _thing
+        # SESAR incorrectly returns "application/json;charset=UTF-8" for json-ld content
+        # manually override it here.
+        media_type = MEDIA_JSON_LD
+        _thing = igsn_lib.models.thing.Thing(
+            id=fullIgsn(igsn),
+            tcreated=t_created,
+            item_type=self.getItemType(),
+            authority_id=self.authority_id,
+            related=self.getRelations(t_created),
+            resolved_url=resolved_url,
+            resolved_status=status,
+            tresolved=t_resolved,
+            resolved_media_type=media_type,
+            resolved_content=self.item,
+            resolve_elapsed=resolve_elapsed,
+        )
+        return _thing
+
+
+def reparseThing(thing):
+    """Reparse the resolved_content"""
+    if not isinstance(thing.resolved_content, dict):
+        raise ValueError("Thing.resolved_content is not an object")
+    if not thing.authority_id == AUTHORITY_ID:
+        raise ValueError("Thing is not a SESAR item")
+    item = SESARItem(thing.resolved_content)
+    tstamp = igsn_lib.time.datetimeToJsonStr(thing.tcreated)
+    thing.related = item.getRelations(tstamp)
+    thing.item_type = item.getItemType()
+    thing.tstamp = igsn_lib.time.dtnow()
+    return thing
+
+
+def loadThing(igsn_value, t_created):
+    L = getLogger()
+    L.info("loadThing: %s", igsn_value)
+    response = getSESARItem_jsonld(igsn_value, verify=True)
+    t_resolved = igsn_lib.time.dtnow()
+    elapsed = igsn_lib.time.datetimeDeltaToSeconds(response.elapsed)
+    for h in response.history:
+        elapsed = igsn_lib.time.datetimeDeltaToSeconds(h.elapsed)
+    r_url = response.url
+    r_status = response.status_code
+    obj = None
+    try:
+        obj = response.json()
+    except Exception as e:
+        L.warning(e)
+    item = SESARItem(obj)
+    _thing = item.asThing(igsn_value, t_created, r_status, r_url, t_resolved, elapsed)
+    return _thing
+
+
+def reloadThing(thing):
+    """Given an instance of thing, reload from the source and reparse."""
+    L = getLogger()
+    L.debug("reloadThing id=%s", thing.id)
+    igsn_value = igsn_lib.normalize(thing.id)
+    return loadThing(igsn_value, thing.tcreated)
 
 
 class SESARIdentifiersSitemap(isb_lib.core.IdentifierIterator):
