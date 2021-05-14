@@ -1,3 +1,10 @@
+# Install:
+#   /etc/systemd/service/isb_web.socket
+# enable:
+#   systemctl enable --now isb_web.socket
+# edit:
+#   systemctl edit --full isb_web.socket
+#
 [Unit]
 Description = ISB_web socket
 
