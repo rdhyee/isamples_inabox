@@ -1,0 +1,27 @@
+[Unit]
+Description = ISB_web daemon
+Requires = isb_web.socket
+After = network.target
+
+[Service]
+Type=notify
+
+# the specific user that our service will run as
+User=www-data
+Group=www-data
+
+# change to match the install path and
+WorkingDirectory=/home/vieglais/workspace/isb/isamples_inabox
+
+# the location of the virtual environment bin
+Environment="PATH=/home/vieglais/.virtualenvs/isb/bin"
+
+# startup for gunicorn
+ExecStart=/home/vieglais/.virtualenvs/isb/bin/gunicorn -w 4 -k uvicorn.workers.UvicornWorker --bind unix:/run/isb_web.sock --error-logfile /var/log/isb_web/error.log isb_web.main:app
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

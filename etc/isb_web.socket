@@ -1,0 +1,9 @@
+[Unit]
+Description = ISB_web socket
+
+[Socket]
+ListenStream=/run/isb_web.sock
+SocketUser=www-data
+
+[Install]
+WantedBy = sockets.target
