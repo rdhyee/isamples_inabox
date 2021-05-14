@@ -12,6 +12,7 @@ import igsn_lib.time
 import isb_lib.core
 
 HTTP_TIMEOUT = 10.0  # seconds
+AUTHORITY_ID = "GEOME"
 GEOME_API = "https://api.geome-db.org/v1/"
 
 
@@ -54,12 +55,13 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
             )
         projects = response.json()
         for project in projects:
+            L.debug("project id: %s", project.get('projectId', None))
             yield project
 
     def recordsInProject(self, project_id, record_type="Event"):
         L = getLogger()
         L.debug("Loading identifiers for project %s", project_id)
-        url = f"{GEOME_API}records/Sample/json"
+        url = f"{GEOME_API}records/{record_type}/json"
         headers = {
             "Accept": "application/json",
         }
@@ -81,8 +83,10 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
                     response.status_code,
                     response.reason,
                 )
+            L.debug("data: %s", response.text[:256])
             data = response.json()
             for record in data.get("content", {}).get(record_type, []):
+                L.debug("Record id: %s", record.get("bcid", None))
                 yield record
             if len(data.get("content", {}).get(record_type, [])) < _page_size:
                 more_work = False
@@ -106,16 +110,19 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
                         }
                     )
         for p in self._project_ids:
-            #return the next set of identifiers within a project
+            # return the next set of identifiers within a project
             if not p["loaded"]:
-                for record in self.recordsInProject(p['project_id'], record_type='Event'):
-                    rid = record.get('bcid', None)
+                for record in self.recordsInProject(
+                    p["project_id"], record_type="Event"
+                ):
+                    rid = record.get("bcid", None)
                     if not rid is None:
-                        p['identifiers'].append(rid)
-                p['loaded'] = True
-                self._cpage = p['identifiers']
+                        p["identifiers"].append(rid)
+                p["loaded"] = True
+                self._cpage = p["identifiers"]
                 self._total_records += len(self._cpage)
-                break
+                if len(self._cpage) > 0:
+                    break
         self._cpage = []
 
     def __len__(self):

@@ -28,6 +28,7 @@ nbterm = "^0.0.7"
 
 [tool.poetry.scripts]
 sesar_things = "scripts.sesar_things:main"
+geome_things = "scripts.geome_things:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
