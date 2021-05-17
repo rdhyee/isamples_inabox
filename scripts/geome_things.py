@@ -38,7 +38,7 @@ def getLogger():
 def wrapLoadThing(ark, tc):
     """Return request information to assist future management"""
     try:
-        return ark, tc, isb_lib.sesar_adapter.loadThing(ark, tc)
+        return ark, tc, isb_lib.geome_adapter.loadThing(ark, tc)
     except:
         pass
     return ark, tc, None
@@ -57,11 +57,14 @@ async def _loadGEOMEEntries(session, max_count, start_from=None):
     ids = isb_lib.geome_adapter.GEOMEIdentifierIterator(
         max_entries=countThings(session) + max_count, date_start=start_from
     )
-    i = 0
-    for id in ids:
-        print(f"{i:05} {id}")
-        i += 1
-    return
+    #i = 0
+    #for id in ids:
+    #    print(f"{i:05} {id}")
+    #    i += 1
+    #    if i > max_count:
+    #        break
+    #print(f"Counted total of {i}", i)
+    #return
 
     total_requested = 0
     total_completed = 0
@@ -80,18 +83,18 @@ async def _loadGEOMEEntries(session, max_count, start_from=None):
             ):
                 try:
                     _id = next(ids)
-                    igsn = igsn_lib.normalize(_id[0])
+                    identifier = _id[0]
                     try:
                         res = (
                             session.query(igsn_lib.models.thing.Thing.id)
-                            .filter_by(id=isb_lib.sesar_adapter.fullIgsn(igsn))
+                            .filter_by(id=identifier)
                             .one()
                         )
-                        logging.debug("Already have %s at %s", igsn, _id[1])
+                        logging.debug("Already have %s at %s", identifier, _id[1])
                     except sqlalchemy.orm.exc.NoResultFound:
-                        future = executor.submit(wrapLoadThing, igsn, _id[1])
+                        future = executor.submit(wrapLoadThing, identifier, _id[1])
                         futures.append(future)
-                        working[igsn] = 0
+                        working[identifier] = 0
                         total_requested += 1
                 except StopIteration as e:
                     L.info("Reached end of identifier iteration.")
@@ -101,7 +104,7 @@ async def _loadGEOMEEntries(session, max_count, start_from=None):
             L.debug("%s", working)
             try:
                 for fut in concurrent.futures.as_completed(futures, timeout=1):
-                    igsn, tc, _thing = fut.result()
+                    identifier, tc, _thing = fut.result()
                     futures.remove(fut)
                     if not _thing is None:
                         try:
@@ -110,22 +113,22 @@ async def _loadGEOMEEntries(session, max_count, start_from=None):
                         except sqlalchemy.exc.IntegrityError as e:
                             session.rollback()
                             logging.error("Item already exists: %s", _id[0])
-                        working.pop(igsn)
+                        working.pop(identifier)
                         total_completed += 1
                     else:
-                        if working.get(igsn, 0) < 3:
-                            if not igsn in working:
-                                working[igsn] = 1
+                        if working.get(identifier, 0) < 3:
+                            if not identifier in working:
+                                working[identifier] = 1
                             else:
-                                working[igsn] += 1
+                                working[identifier] += 1
                             L.info(
-                                "Failed to retrieve %s. Retry = %s", igsn, working[igsn]
+                                "Failed to retrieve %s. Retry = %s", identifier, working[identifier]
                             )
-                            future = executor.submit(wrapLoadThing, igsn, tc)
+                            future = executor.submit(wrapLoadThing, identifier, tc)
                             futures.append(future)
                         else:
-                            L.error("Too many retries on %s", igsn)
-                            working.pop(igsn)
+                            L.error("Too many retries on %s", identifier)
+                            working.pop(identifier)
             except concurrent.futures.TimeoutError:
                 # L.info("No futures to process")
                 pass

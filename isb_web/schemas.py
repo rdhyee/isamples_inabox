@@ -5,7 +5,7 @@ import datetime
 
 class ThingListEntry(pydantic.BaseModel):
     id: str
-    tcreated: datetime.datetime
+    tcreated: typing.Optional[datetime.datetime]
     resolved_status: int
 
     class Config:
