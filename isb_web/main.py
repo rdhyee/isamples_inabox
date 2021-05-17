@@ -69,7 +69,7 @@ async def thing_list_types(
     return crud.getSampleTypes(db)
 
 
-@app.get("/thing/{identifier}")
+@app.get("/thing/{identifier:path}")
 async def get_thing(
     identifier: str,
     full: bool = False,
@@ -89,7 +89,7 @@ async def get_thing(
 
 
 @app.get(
-    "/thing/{identifier}/related",
+    "/thing/{identifier:path}/related",
     response_model=typing.List[typing.Tuple[datetime.datetime, str, str]],
 )
 async def get_thing_related(

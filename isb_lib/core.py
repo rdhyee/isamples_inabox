@@ -76,18 +76,22 @@ class IdentifierIterator:
         if self._cpage is None:
             L.debug("_cpage is None, stopping.")
             raise StopIteration
+        #L.debug("max_entries: %s; len(cpage): %s; page_offset: %s; coffset: %s", self._max_entries, len(self._cpage), self._page_offset, self._coffset)
         # Reached maximum requested entries?
         if self._max_entries> 0 and self._coffset >= self._max_entries:
-            L.debug("Over max entries, stopping.")
+            L.debug("Over (%s) max entries (%s), stopping.", self._coffset, self._max_entries)
             raise StopIteration
         # fetch a new page
         if self._page_offset >= len(self._cpage):
+            #L.debug("Get page")
             self._getPage()
         try:
             entry = self._cpage[self._page_offset]
             self._page_offset += 1
             self._coffset += 1
             return entry
+        except IndexError as e:
+            raise StopIteration
         except KeyError as e:
             raise StopIteration
         except TypeError as e:
