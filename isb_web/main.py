@@ -55,10 +55,13 @@ async def thing_list(
     offset: int = 0,
     limit: int = 1000,
     status: int = 200,
+    authority: str = None,
     db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
 ):
     """List identifiers available on this service"""
-    things = crud.getThings(db, offset=offset, limit=limit, status=status)
+    things = crud.getThings(
+        db, offset=offset, limit=limit, status=status, authority_id=authority
+    )
     return things
 
 

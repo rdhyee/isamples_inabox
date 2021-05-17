@@ -23,9 +23,13 @@ def getThingMeta(db: sqlalchemy.orm.Session):
 
 
 def getThings(
-    db: sqlalchemy.orm.Session, offset: int = 0, limit: int = 1000, status: int = 200
+    db: sqlalchemy.orm.Session, offset: int = 0, limit: int = 1000, status: int = 200, authority_id: str=None,
 ):
-    return db.query(igsn_lib.models.thing.Thing).offset(offset).limit(limit).all()
+    qry = db.query(igsn_lib.models.thing.Thing)
+    qry = qry.filter(igsn_lib.models.thing.Thing.resolved_status == status)
+    if not authority_id is None:
+        qry = qry.filter(igsn_lib.models.thing.Thing.authority_id == authority_id)
+    return qry.offset(offset).limit(limit).all()
 
 
 def getThing(db: sqlalchemy.orm.Session, identifier: str):
