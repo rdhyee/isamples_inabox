@@ -92,19 +92,55 @@ async def get_thing(
 
 
 @app.get(
-    "/thing/{identifier:path}/related",
-    response_model=typing.List[typing.Tuple[datetime.datetime, str, str]],
+    "/related",
 )
-async def get_thing_related(
-    identifier: str, db: sqlalchemy.orm.Session = fastapi.Depends((getDb))
+async def relation_metadata(
+    db: sqlalchemy.orm.Session = fastapi.Depends((getDb))
 ):
-    """Retrieve related identifiers for the specified identifier"""
-    item = crud.getThing(db, identifier)
-    if item is None:
-        raise fastapi.HTTPException(
-            status_code=404, detail=f"Thing not found: {identifier}"
-        )
-    return fastapi.responses.JSONResponse(content=item.related)
+    """Retrieve parent(s) of specified identifier"""
+    return crud.getPredicateCounts(db)
+
+
+@app.get(
+    "/related/object/{predicate:default=to}/{identifier:path}",
+)
+async def get_subject_objects(
+    identifier: str, db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
+    predicate: str = "to"
+):
+    """Retrieve relations like {s=identifier, p, o}.
+
+    Using predicate "to" or "*" returns all relations to subject.
+    """
+    if predicate in ["to", "*"]:
+        predicate = None
+    related = crud.getRelatedObjects(db, identifier, predicate)
+    if not related is None:
+        return related
+    raise fastapi.HTTPException(
+        status_code=404, detail=f"Thing not found: {identifier}"
+    )
+
+
+@app.get(
+    "/related/subject/{predicate:default=to}/{identifier:path}",
+)
+async def get_object_subjects(
+    identifier: str, db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
+    predicate: str = "to"
+):
+    """Retrieve relations like {s, p, o=identifier}.
+
+    Using predicate "to" or "*" returns all relations to object.
+    """
+    if predicate in ["to", "*"]:
+        predicate = None
+    related = crud.getRelatedSubjects(db, identifier, predicate)
+    if not related is None:
+        return related
+    raise fastapi.HTTPException(
+        status_code=404, detail=f"Thing not found: {identifier}"
+    )
 
 
 @app.get("/")
