@@ -81,7 +81,7 @@ async def _loadSesarEntries(session, max_count, start_from=None):
                             .filter_by(id=isb_lib.sesar_adaptor.fullIgsn(igsn))
                             .one()
                         )
-                        logging.debug("Already have %s at %s", igsn, _id[1])
+                        logging.info("Already have %s at %s", igsn, _id[1])
                     except sqlalchemy.orm.exc.NoResultFound:
                         future = executor.submit(wrapLoadThing, igsn, _id[1])
                         futures.append(future)
