@@ -41,7 +41,7 @@ def wrapLoadThing(ark, tc):
         return ark, tc, isb_lib.geome_adapter.loadThing(ark, tc)
     except:
         pass
-    return ark, tc, None
+    return ark, tc, None, None
 
 
 def countThings(session):
@@ -57,14 +57,14 @@ async def _loadGEOMEEntries(session, max_count, start_from=None):
     ids = isb_lib.geome_adapter.GEOMEIdentifierIterator(
         max_entries=countThings(session) + max_count, date_start=start_from
     )
-    #i = 0
-    #for id in ids:
+    # i = 0
+    # for id in ids:
     #    print(f"{i:05} {id}")
     #    i += 1
     #    if i > max_count:
     #        break
-    #print(f"Counted total of {i}", i)
-    #return
+    # print(f"Counted total of {i}", i)
+    # return
 
     total_requested = 0
     total_completed = 0
@@ -104,7 +104,7 @@ async def _loadGEOMEEntries(session, max_count, start_from=None):
             L.debug("%s", working)
             try:
                 for fut in concurrent.futures.as_completed(futures, timeout=1):
-                    identifier, tc, _thing = fut.result()
+                    identifier, tc, _thing, _related = fut.result()
                     futures.remove(fut)
                     if not _thing is None:
                         try:
@@ -113,6 +113,12 @@ async def _loadGEOMEEntries(session, max_count, start_from=None):
                         except sqlalchemy.exc.IntegrityError as e:
                             session.rollback()
                             logging.error("Item already exists: %s", _id[0])
+                        for _rel in _related:
+                            try:
+                                session.add(_rel)
+                                session.commit()
+                            except sqlalchemy.exc.IntegrityError as e:
+                                L.debug(e)
                         working.pop(identifier)
                         total_completed += 1
                     else:
@@ -122,7 +128,9 @@ async def _loadGEOMEEntries(session, max_count, start_from=None):
                             else:
                                 working[identifier] += 1
                             L.info(
-                                "Failed to retrieve %s. Retry = %s", identifier, working[identifier]
+                                "Failed to retrieve %s. Retry = %s",
+                                identifier,
+                                working[identifier],
                             )
                             future = executor.submit(wrapLoadThing, identifier, tc)
                             futures.append(future)
@@ -246,7 +254,50 @@ def reparseRecords(ctx):
         pk = igsn_lib.models.thing.Thing.id
         for thing in _yieldRecordsByPage(qry, pk):
             itype = thing.item_type
-            isb_lib.sesar_adaptor.reparseThing(thing)
+            isb_lib.geome_adaptor.reparseThing(thing, and_relations=False)
+            L.info("%s: reparse %s, %s -> %s", i, thing.id, itype, thing.item_type)
+            i += 1
+            if i % batch_size == 0:
+                session.commit()
+        # don't forget to commit the remainder!
+        session.commit()
+    finally:
+        session.close()
+
+
+@main.command("relations")
+@click.pass_context
+def reparseRelations(ctx):
+    def _yieldRecordsByPage(qry, pk):
+        nonlocal session
+        offset = 0
+        page_size = 5000
+        while True:
+            q = qry
+            rec = None
+            n = 0
+            for rec in q.order_by(pk).offset(offset).limit(page_size):
+                n += 1
+                yield rec
+            if n == 0:
+                break
+            offset += page_size
+
+    L = getLogger()
+    batch_size = 50
+    L.info("reparseRecords with batch size: %s", batch_size)
+    session = getDBSession(ctx.obj["db_url"])
+    try:
+        i = 0
+        qry = session.query(igsn_lib.models.thing.Thing).filter(
+            igsn_lib.models.thing.Thing.authority_id==isb_lib.geome_adapter.AUTHORITY_ID
+        )
+        pk = igsn_lib.models.thing.Thing.id
+        for thing in _yieldRecordsByPage(qry, pk):
+            itype = thing.item_type
+            relations = isb_lib.geome_adapter.reparseRelations(thing)
+            for relation in relations:
+                session.add(relation)
             L.info("%s: reparse %s, %s -> %s", i, thing.id, itype, thing.item_type)
             i += 1
             if i % batch_size == 0:

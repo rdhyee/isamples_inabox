@@ -13,6 +13,7 @@ import sickle.utils
 import igsn_lib.oai
 import igsn_lib.time
 import igsn_lib.models.thing
+import igsn_lib.models.relation
 import isb_lib.core
 
 HTTP_TIMEOUT = 10.0  # seconds
@@ -23,6 +24,7 @@ RELATION_TYPE = {
     "child": "child",
     "parent": "parent",
 }
+
 
 def getLogger():
     return logging.getLogger("isb_lib.geome_adapter")
@@ -62,7 +64,7 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
         max_entries: int = -1,
         date_start: datetime.datetime = None,
         date_end: datetime.datetime = None,
-        record_type: str = "Sample"
+        record_type: str = "Sample",
     ):
         super().__init__(
             offset=offset,
@@ -125,8 +127,8 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
             data = response.json()
             for record in data.get("content", {}).get(record_type, []):
                 L.debug("recordsInProject Record id: %s", record.get("bcid", None))
-                #print(json.dumps(record, indent=2))
-                #raise NotImplementedError
+                # print(json.dumps(record, indent=2))
+                # raise NotImplementedError
                 yield record
             if len(data.get("content", {}).get(record_type, [])) < _page_size:
                 more_work = False
@@ -152,9 +154,7 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
         for p in self._project_ids:
             # return the next set of identifiers within a project
             if not p["loaded"]:
-                for record in self.recordsInProject(
-                    p["project_id"], self._record_type
-                ):
+                for record in self.recordsInProject(p["project_id"], self._record_type):
                     # record identifier
                     rid = record.get("bcid", None)
                     # record timestamp
@@ -192,29 +192,59 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
 def getGEOMEItem_json(identifier, verify=False):
     headers = {"Accept": "application/json"}
     #
-    #url = f"{GEOME_API}records/{urllib.parse.quote(identifier, safe='')}"
+    # url = f"{GEOME_API}records/{urllib.parse.quote(identifier, safe='')}"
     url = f"{GEOME_API}records/{identifier}"
     params = {"includeChildren": "true", "includeParent": "true"}
-    res = requests.get(url, headers=headers, params=params, verify=verify, timeout=HTTP_TIMEOUT)
+    res = requests.get(
+        url, headers=headers, params=params, verify=verify, timeout=HTTP_TIMEOUT
+    )
     return res
 
 
 class GEOMEItem(object):
-    def __init__(self, source):
+    def __init__(self, identifier, source):
         self.authority_id = AUTHORITY_ID
+        self.identifier = identifier
         self.item = source
 
-    def getRelations(self, tstamp):
+    def _getRelations(self, tstamp):
         if isinstance(tstamp, datetime.datetime):
             tstamp = igsn_lib.time.datetimeToJsonStr(tstamp)
         related = []
-        _id = self.item.get("parent",{}).get("bcid","")
+        _id = self.item.get("parent", {}).get("bcid", "")
         if _id != "":
-            related.append((tstamp, RELATION_TYPE['parent'], _id))
+            related.append((tstamp, RELATION_TYPE["parent"], _id))
         for child in self.item.get("children", []):
             _id = child.get("bcid")
             if _id != "":
-                related.append((tstamp, RELATION_TYPE['child'], _id))
+                related.append((tstamp, RELATION_TYPE["child"], _id))
+        return related
+
+    def asRelations(self):
+        related = []
+        _id = self.item.get("parent", {}).get("bcid", "")
+        if _id != "":
+            related.append(
+                igsn_lib.models.relation.Relation(
+                    source=self.identifier,
+                    name="",
+                    s=self.identifier,
+                    p="parent",
+                    o=_id,
+                )
+            )
+        for child in self.item.get("children", []):
+            _id = child.get("bcid")
+            if _id != "":
+                related.append(
+                    igsn_lib.models.relation.Relation(
+                        source=self.identifier,
+                        name="",
+                        s=self.identifier,
+                        p="child",
+                        o=_id,
+                    )
+                )
         return related
 
     def getItemType(self):
@@ -249,31 +279,41 @@ class GEOMEItem(object):
             L.error("Item is not an object")
             return _thing
         _thing.item_type = self.getItemType()
-        _thing.related = self.getRelations(t_created)
+        _thing.related = None
         _thing.resolved_media_type = media_type
         _thing.resolve_elapsed = resolve_elapsed
         _thing.resolved_content = self.item
         return _thing
 
 
-def reparseThing(thing):
+def reparseRelations(thing):
+    if not isinstance(thing.resolved_content, dict):
+        raise ValueError("Thing.resolved_content is not an object")
+    if not thing.authority_id == AUTHORITY_ID:
+        raise ValueError("Thing is not a GEOME item")
+    item = GEOMEItem(thing.id, thing.resolved_content)
+    return item.asRelations()
+
+
+def reparseThing(thing, and_relations=False):
     """Reparse the resolved_content"""
     if not isinstance(thing.resolved_content, dict):
         raise ValueError("Thing.resolved_content is not an object")
     if not thing.authority_id == AUTHORITY_ID:
         raise ValueError("Thing is not a GEOME item")
-    item = GEOMEItem(thing.resolved_content)
-    tstamp = igsn_lib.time.datetimeToJsonStr(thing.tcreated)
-    thing.related = item.getRelations(tstamp)
+    item = GEOMEItem(thing.id, thing.resolved_content)
     thing.item_type = item.getItemType()
     thing.tstamp = igsn_lib.time.dtnow()
-    return thing
+    relations = None
+    if and_relations:
+        relations = item.asRelations()
+    return thing, relations
 
 
-def loadThing(igsn_value, t_created):
+def loadThing(identifier, t_created):
     L = getLogger()
     L.info("loadThing: %s", igsn_value)
-    response = getGEOMEItem_json(igsn_value, verify=True)
+    response = getGEOMEItem_json(identifier, verify=True)
     t_resolved = igsn_lib.time.dtnow()
     elapsed = igsn_lib.time.datetimeDeltaToSeconds(response.elapsed)
     for h in response.history:
@@ -286,11 +326,10 @@ def loadThing(igsn_value, t_created):
         obj = response.json()
     except Exception as e:
         L.warning(e)
-    item = GEOMEItem(obj)
-    _thing = item.asThing(
-        igsn_value, t_created, r_status, r_url, t_resolved, elapsed, media_type
-    )
-    return _thing
+    item = GEOMEItem(identifier, obj)
+    thing = item.asThing(t_created, r_status, r_url, t_resolved, elapsed, media_type)
+    relations = item.asRelations()
+    return thing, relations
 
 
 def reloadThing(thing):
