@@ -10,6 +10,7 @@ import igsn_lib
 import igsn_lib.oai
 import igsn_lib.time
 import igsn_lib.models.thing
+import igsn_lib.models.relation
 import isb_lib.core
 import isb_lib.sitemaps
 
@@ -53,9 +54,59 @@ def getSESARItem_jsonld(igsn_value, verify=False):
 
 
 class SESARItem(object):
-    def __init__(self, source):
+    def __init__(self, identifier: str, source):
+        self.identifier = fullIgsn(identifier)
         self.authority_id = AUTHORITY_ID
         self.item = source
+
+    def asRelations(self):
+        related = []
+        _id = self.item.get("description", {}).get("parentIdentifier", None)
+        if _id is not None:
+            _id = fullIgsn(_id)
+            related.append(
+                igsn_lib.models.relation.Relation(
+                    source=self.identifier,
+                    name="",
+                    s=self.identifier,
+                    p="parent",
+                    o=_id,
+                )
+            )
+        for child in (
+            self.item.get("description", {})
+            .get("supplementMetadata", {})
+            .get("childIGSN", [])
+        ):
+            _id = fullIgsn(child)
+            related.append(
+                igsn_lib.models.relation.Relation(
+                    source=self.identifier,
+                    name="",
+                    s=self.identifier,
+                    p="child",
+                    o=_id,
+                )
+            )
+        # Don't include siblings.
+        # Adding siblings adds about an order of magnitude more relations, and
+        # computing the siblings is simple - all the o with parent s
+        #for sibling in (
+        #    self.item.get("description", {})
+        #    .get("supplementMetadata", {})
+        #    .get("siblingIGSN", [])
+        #):
+        #    _id = fullIgsn(sibling)
+        #    related.append(
+        #        igsn_lib.models.relation.Relation(
+        #            source=self.identifier,
+        #            name="",
+        #            s=self.identifier,
+        #            p="sibling",
+        #            o=_id,
+        #        )
+        #    )
+        return related
 
     def getRelations(self, tstamp):
         """Extract relations from the record
@@ -91,66 +142,67 @@ class SESARItem(object):
 
     def asThing(
         self,
-        igsn: str,
         t_created: datetime.datetime,
         status: int,
         resolved_url: str,
         t_resolved: datetime.datetime,
         resolve_elapsed: float,
+        media_type: str = None,
     ):
         L = getLogger()
         L.debug("SESARItem.asThing")
-        tstamp = igsn_lib.time.datetimeToJsonStr(t_created)
-        if not isinstance(self.item, dict):
-            L.error("Item is not an object")
-            _thing = igsn_lib.models.thing.Thing(
-                id=fullIgsn(igsn),
-                tcreated=t_created,
-                item_type=None,
-                authority_id=self.authority_id,
-                resolved_url=resolved_url,
-                resolved_status=status,
-                tresolved=t_resolved,
-                resolve_elapsed=resolve_elapsed,
-            )
-            return _thing
-        # SESAR incorrectly returns "application/json;charset=UTF-8" for json-ld content
-        # manually override it here.
-        media_type = MEDIA_JSON_LD
+        # Note: SESAR incorrectly returns "application/json;charset=UTF-8" for json-ld content
+        if media_type is None:
+            media_type = MEDIA_JSON_LD
         _thing = igsn_lib.models.thing.Thing(
-            id=fullIgsn(igsn),
+            id=self.identifier,
             tcreated=t_created,
-            item_type=self.getItemType(),
+            item_type=None,
             authority_id=self.authority_id,
-            related=self.getRelations(t_created),
             resolved_url=resolved_url,
             resolved_status=status,
             tresolved=t_resolved,
-            resolved_media_type=media_type,
-            resolved_content=self.item,
             resolve_elapsed=resolve_elapsed,
         )
+        if not isinstance(self.item, dict):
+            L.error("Item is not an object")
+            return _thing
+        _thing.item_type = self.getItemType()
+        _thing.related = None
+        _thing.resolved_media_type = media_type
+        _thing.resolve_elapsed = resolve_elapsed
+        _thing.resolved_content = self.item
         return _thing
 
 
-def reparseThing(thing):
+def reparseRelations(thing):
+    if not isinstance(thing.resolved_content, dict):
+        raise ValueError("Thing.resolved_content is not an object")
+    if not thing.authority_id == AUTHORITY_ID:
+        raise ValueError("Thing is not a SESAR item")
+    item = SESARItem(thing.id, thing.resolved_content)
+    return item.asRelations()
+
+
+def reparseThing(thing, and_relations=False):
     """Reparse the resolved_content"""
     if not isinstance(thing.resolved_content, dict):
         raise ValueError("Thing.resolved_content is not an object")
     if not thing.authority_id == AUTHORITY_ID:
         raise ValueError("Thing is not a SESAR item")
     item = SESARItem(thing.resolved_content)
-    tstamp = igsn_lib.time.datetimeToJsonStr(thing.tcreated)
-    thing.related = item.getRelations(tstamp)
     thing.item_type = item.getItemType()
     thing.tstamp = igsn_lib.time.dtnow()
-    return thing
+    relations = None
+    if and_relations:
+        relations = item.asRelations()
+    return thing, relations
 
 
-def loadThing(igsn_value, t_created):
+def loadThing(identifier, t_created):
     L = getLogger()
-    L.info("loadThing: %s", igsn_value)
-    response = getSESARItem_jsonld(igsn_value, verify=True)
+    L.info("loadThing: %s", identifier)
+    response = getSESARItem_jsonld(identifier, verify=True)
     t_resolved = igsn_lib.time.dtnow()
     elapsed = igsn_lib.time.datetimeDeltaToSeconds(response.elapsed)
     for h in response.history:
@@ -162,17 +214,18 @@ def loadThing(igsn_value, t_created):
         obj = response.json()
     except Exception as e:
         L.warning(e)
-    item = SESARItem(obj)
-    _thing = item.asThing(igsn_value, t_created, r_status, r_url, t_resolved, elapsed)
-    return _thing
+    item = SESARItem(identifier, obj)
+    thing = item.asThing(t_created, r_status, r_url, t_resolved, elapsed)
+    relations = item.asRelations()
+    return thing, relations
 
 
 def reloadThing(thing):
     """Given an instance of thing, reload from the source and reparse."""
     L = getLogger()
     L.debug("reloadThing id=%s", thing.id)
-    igsn_value = igsn_lib.normalize(thing.id)
-    return loadThing(igsn_value, thing.tcreated)
+    identifier = igsn_lib.normalize(thing.id)
+    return loadThing(identifier, thing.tcreated)
 
 
 class SESARIdentifiersSitemap(isb_lib.core.IdentifierIterator):

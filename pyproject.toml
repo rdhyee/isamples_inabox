@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "isamples_inabox"
-version = "0.2.1"
+version = "0.3.0"
 description = "Python implementation of iSamples-in-a-box components"
 authors = ["datadavev <605409+datadavev@users.noreply.github.com>"]
 license = "Apache 2.0"
@@ -25,6 +25,7 @@ fastapi-cache2 = "^0.1.3"
 pytest = "^6.2.3"
 jupyter = "^1.0.0"
 nbterm = "^0.0.7"
+heartrate = "^0.2.1"
 
 [tool.poetry.scripts]
 sesar_things = "scripts.sesar_things:main"

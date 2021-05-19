@@ -6,7 +6,7 @@ import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.exc
 import igsn_lib
-import isb_lib.sesar_adaptor
+import isb_lib.sesar_adapter
 import igsn_lib.time
 import igsn_lib.models
 import igsn_lib.models.thing
@@ -14,6 +14,7 @@ import asyncio
 import concurrent.futures
 import click
 import click_config_file
+import heartrate
 
 CONCURRENT_DOWNLOADS = 10
 BACKLOG_SIZE = 40
@@ -38,7 +39,7 @@ def getLogger():
 def wrapLoadThing(igsn, tc):
     """Return request information to assist future management"""
     try:
-        return igsn, tc, isb_lib.sesar_adaptor.loadThing(igsn, tc)
+        return igsn, tc, isb_lib.sesar_adapter.loadThing(igsn, tc)
     except:
         pass
     return igsn, tc, None
@@ -54,7 +55,7 @@ async def _loadSesarEntries(session, max_count, start_from=None):
     L = getLogger()
     futures = []
     working = {}
-    ids = isb_lib.sesar_adaptor.SESARIdentifiersSitemap(
+    ids = isb_lib.sesar_adapter.SESARIdentifiersSitemap(
         max_entries=countThings(session) + max_count, date_start=start_from
     )
     total_requested = 0
@@ -78,7 +79,7 @@ async def _loadSesarEntries(session, max_count, start_from=None):
                     try:
                         res = (
                             session.query(igsn_lib.models.thing.Thing.id)
-                            .filter_by(id=isb_lib.sesar_adaptor.fullIgsn(igsn))
+                            .filter_by(id=isb_lib.sesar_adapter.fullIgsn(igsn))
                             .one()
                         )
                         logging.info("Already have %s at %s", igsn, _id[1])
@@ -95,7 +96,7 @@ async def _loadSesarEntries(session, max_count, start_from=None):
             L.debug("%s", working)
             try:
                 for fut in concurrent.futures.as_completed(futures, timeout=1):
-                    igsn, tc, _thing = fut.result()
+                    igsn, tc, _thing, _related = fut.result()
                     futures.remove(fut)
                     if not _thing is None:
                         try:
@@ -104,6 +105,12 @@ async def _loadSesarEntries(session, max_count, start_from=None):
                         except sqlalchemy.exc.IntegrityError as e:
                             session.rollback()
                             logging.error("Item already exists: %s", _id[0])
+                        for _rel in _related:
+                            try:
+                                session.add(_rel)
+                                session.commit()
+                            except sqlalchemy.exc.IntegrityError as e:
+                                L.debug(e)
                         working.pop(igsn)
                         total_completed += 1
                     else:
@@ -157,9 +164,12 @@ def getDBSession(db_url):
 @click.option(
     "-v", "--verbosity", default="INFO", help="Specify logging level", show_default=True
 )
+@click.option(
+    "-H", "--heart_rate", is_flag=True, help="Show heartrate diagnositcs on 9999"
+)
 @click_config_file.configuration_option(config_file_name="sesar.cfg")
 @click.pass_context
-def main(ctx, db_url, verbosity):
+def main(ctx, db_url, verbosity, heart_rate):
     ctx.ensure_object(dict)
     verbosity = verbosity.upper()
     logging.basicConfig(
@@ -173,6 +183,8 @@ def main(ctx, db_url, verbosity):
 
     L.info("Using database at: %s", db_url)
     ctx.obj["db_url"] = db_url
+    if heart_rate:
+        heartrate.trace(browser=True)
 
 
 @main.command("load")
@@ -234,8 +246,49 @@ def reparseRecords(ctx):
         pk = igsn_lib.models.thing.Thing.id
         for thing in _yieldRecordsByPage(qry, pk):
             itype = thing.item_type
-            isb_lib.sesar_adaptor.reparseThing(thing)
+            isb_lib.sesar_adapter.reparseThing(thing)
             L.info("%s: reparse %s, %s -> %s", i, thing.id, itype, thing.item_type)
+            i += 1
+            if i % batch_size == 0:
+                session.commit()
+        # don't forget to commit the remainder!
+        session.commit()
+    finally:
+        session.close()
+
+@main.command("relations")
+@click.pass_context
+def reparseRelations(ctx):
+    def _yieldRecordsByPage(qry, pk):
+        nonlocal session
+        offset = 0
+        page_size = 5000
+        while True:
+            q = qry
+            rec = None
+            n = 0
+            for rec in q.order_by(pk).offset(offset).limit(page_size):
+                n += 1
+                yield rec
+            if n == 0:
+                break
+            offset += page_size
+
+    L = getLogger()
+    batch_size = 50
+    L.info("reparseRecords with batch size: %s", batch_size)
+    session = getDBSession(ctx.obj["db_url"])
+    try:
+        i = 0
+        qry = session.query(igsn_lib.models.thing.Thing).filter(
+            igsn_lib.models.thing.Thing.authority_id==isb_lib.sesar_adapter.AUTHORITY_ID
+        )
+        pk = igsn_lib.models.thing.Thing.id
+        for thing in _yieldRecordsByPage(qry, pk):
+            relations = isb_lib.sesar_adapter.reparseRelations(thing)
+            for relation in relations:
+                session.add(relation)
+            L.info("%s: relations id:%s num_rel:%s, ", i, thing.id, len(relations))
             i += 1
             if i % batch_size == 0:
                 session.commit()

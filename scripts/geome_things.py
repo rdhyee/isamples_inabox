@@ -254,7 +254,7 @@ def reparseRecords(ctx):
         pk = igsn_lib.models.thing.Thing.id
         for thing in _yieldRecordsByPage(qry, pk):
             itype = thing.item_type
-            isb_lib.geome_adaptor.reparseThing(thing, and_relations=False)
+            isb_lib.geome_adapter.reparseThing(thing, and_relations=False)
             L.info("%s: reparse %s, %s -> %s", i, thing.id, itype, thing.item_type)
             i += 1
             if i % batch_size == 0:

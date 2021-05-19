@@ -312,7 +312,7 @@ def reparseThing(thing, and_relations=False):
 
 def loadThing(identifier, t_created):
     L = getLogger()
-    L.info("loadThing: %s", igsn_value)
+    L.info("loadThing: %s", identifier)
     response = getGEOMEItem_json(identifier, verify=True)
     t_resolved = igsn_lib.time.dtnow()
     elapsed = igsn_lib.time.datetimeDeltaToSeconds(response.elapsed)
@@ -336,5 +336,5 @@ def reloadThing(thing):
     """Given an instance of thing, reload from the source and reparse."""
     L = getLogger()
     L.debug("reloadThing id=%s", thing.id)
-    igsn_value = igsn_lib.normalize(thing.id)
-    return loadThing(igsn_value, thing.tcreated)
+    identifier = igsn_lib.normalize(thing.id)
+    return loadThing(identifier, thing.tcreated)
