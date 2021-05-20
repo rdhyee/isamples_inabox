@@ -260,7 +260,6 @@ def reparseRecords(ctx):
 @click.pass_context
 def reparseRelations(ctx):
     def _yieldRecordsByPage(qry, pk):
-        nonlocal session
         offset = 0
         page_size = 5000
         while True:
@@ -274,8 +273,25 @@ def reparseRelations(ctx):
                 break
             offset += page_size
 
+    def _commit(session, relations):
+        L = getLogger()
+        try:
+            session.commit()
+            return
+        except sqlalchemy.exc.IntegrityError as e:
+            session.rollback()
+        if len(relations) < 2:
+            return
+        for relation in relations:
+            try:
+                session.add(relation)
+                session.commit()
+            except sqlalchemy.exc.IntegrityError as e:
+                session.rollback()
+                L.debug("relation already committed: %s", relation.source)
+
     L = getLogger()
-    batch_size = 50
+    batch_size = 500
     L.info("reparseRecords with batch size: %s", batch_size)
     session = getDBSession(ctx.obj["db_url"])
     try:
@@ -284,33 +300,18 @@ def reparseRelations(ctx):
             igsn_lib.models.thing.Thing.authority_id==isb_lib.sesar_adapter.AUTHORITY_ID
         )
         pk = igsn_lib.models.thing.Thing.id
+        relations = []
         for thing in _yieldRecordsByPage(qry, pk):
-            relations = isb_lib.sesar_adapter.reparseRelations(thing)
+            relations = relations + isb_lib.sesar_adapter.reparseRelations(thing)
             for relation in relations:
                 session.add(relation)
             _rel_len = len(relations)
             L.info("%s: relations id:%s num_rel:%s, ", i, thing.id, _rel_len)
-            if _rel_len > 0:
-                _commit_failed = True
-                try:
-                    #try batch commit, much faster for large sets
-                    session.commit()
-                    _commit_failed = False
-                except sqlalchemy.exc.IntegrityError as e:
-                    #L.debug(e)
-                    #at least one failed, try again. The slower way
-                    session.rollback()
-                    #session.expire_all()
-                #don't bother if only one relation
-                if _rel_len > 1:
-                    for relation in relations:
-                        try:
-                            session.add(relation)
-                            session.commit()
-                        except sqlalchemy.exc.IntegrityError as e:
-                            session.rollback()
-                            L.debug("relation already committed: %s", relation.source)
+            if _rel_len > batch_size:
+                _commit(session, relations)
+                relations = []
             i += 1
+        _commit(session, relations)
     finally:
         session.close()
 
