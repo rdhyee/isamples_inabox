@@ -17,13 +17,7 @@ import igsn_lib.models.relation
 import isb_lib.core
 
 HTTP_TIMEOUT = 10.0  # seconds
-AUTHORITY_ID = "GEOME"
 GEOME_API = "https://api.geome-db.org/v1/"
-
-RELATION_TYPE = {
-    "child": "child",
-    "parent": "parent",
-}
 
 
 def getLogger():
@@ -202,8 +196,15 @@ def getGEOMEItem_json(identifier, verify=False):
 
 
 class GEOMEItem(object):
+    AUTHORITY_ID = "GEOME"
+    RELATION_TYPE = {
+        "Event": "has_event",
+        "Tissue": "has_tissue",
+        "Sample_Photo": "has_photo",
+        "Diagnostics": "has_diagnostic",
+        "UNDEFINED":"has_",
+    }
     def __init__(self, identifier, source):
-        self.authority_id = AUTHORITY_ID
         self.identifier = identifier
         self.item = source
 
@@ -212,36 +213,40 @@ class GEOMEItem(object):
             tstamp = igsn_lib.time.datetimeToJsonStr(tstamp)
         related = []
         _id = self.item.get("parent", {}).get("bcid", "")
+        _typ = self.item.get("parent", {}).get("entity", "UNDEFINED")
         if _id != "":
-            related.append((tstamp, RELATION_TYPE["parent"], _id))
+            related.append((tstamp, GEOMEItem.RELATION_TYPE[_typ], _id))
         for child in self.item.get("children", []):
             _id = child.get("bcid")
             if _id != "":
-                related.append((tstamp, RELATION_TYPE["child"], _id))
+                _typ = child.get("entity", "UNDEFINED")
+                related.append((tstamp, GEOMEItem.RELATION_TYPE["child"], _id))
         return related
 
     def asRelations(self):
         related = []
         _id = self.item.get("parent", {}).get("bcid", "")
+        _typ = self.item.get("parent", {}).get("entity", "UNDEFINED")
         if _id != "":
             related.append(
                 igsn_lib.models.relation.Relation(
                     source=self.identifier,
                     name="",
                     s=self.identifier,
-                    p="parent",
+                    p=GEOMEItem.RELATION_TYPE[_typ],
                     o=_id,
                 )
             )
         for child in self.item.get("children", []):
             _id = child.get("bcid")
             if _id != "":
+                _typ = child.get("entity", "UNDEFINED")
                 related.append(
                     igsn_lib.models.relation.Relation(
                         source=self.identifier,
                         name="",
                         s=self.identifier,
-                        p="child",
+                        p=GEOMEItem.RELATION_TYPE[_typ],
                         o=_id,
                     )
                 )
@@ -269,7 +274,7 @@ class GEOMEItem(object):
             id=identifier,
             tcreated=t_created,
             item_type=None,
-            authority_id=self.authority_id,
+            authority_id=GEOMEItem.AUTHORITY_ID,
             resolved_url=resolved_url,
             resolved_status=status,
             tresolved=t_resolved,
@@ -289,7 +294,7 @@ class GEOMEItem(object):
 def reparseRelations(thing):
     if not isinstance(thing.resolved_content, dict):
         raise ValueError("Thing.resolved_content is not an object")
-    if not thing.authority_id == AUTHORITY_ID:
+    if not thing.authority_id == GEOMEItem.AUTHORITY_ID:
         raise ValueError("Thing is not a GEOME item")
     item = GEOMEItem(thing.id, thing.resolved_content)
     return item.asRelations()
@@ -299,7 +304,7 @@ def reparseThing(thing, and_relations=False):
     """Reparse the resolved_content"""
     if not isinstance(thing.resolved_content, dict):
         raise ValueError("Thing.resolved_content is not an object")
-    if not thing.authority_id == AUTHORITY_ID:
+    if not thing.authority_id == GEOMEItem.AUTHORITY_ID:
         raise ValueError("Thing is not a GEOME item")
     item = GEOMEItem(thing.id, thing.resolved_content)
     thing.item_type = item.getItemType()

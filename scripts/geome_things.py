@@ -290,7 +290,7 @@ def reparseRelations(ctx):
     try:
         i = 0
         qry = session.query(igsn_lib.models.thing.Thing).filter(
-            igsn_lib.models.thing.Thing.authority_id==isb_lib.geome_adapter.AUTHORITY_ID
+            igsn_lib.models.thing.Thing.authority_id==isb_lib.geome_adapter.GEOMEItem.AUTHORITY_ID
         )
         pk = igsn_lib.models.thing.Thing.id
         for thing in _yieldRecordsByPage(qry, pk):
@@ -298,8 +298,10 @@ def reparseRelations(ctx):
             relations = isb_lib.geome_adapter.reparseRelations(thing)
             for relation in relations:
                 session.add(relation)
-            L.info("%s: reparse %s, %s -> %s", i, thing.id, itype, thing.item_type)
+            L.info("%s: relations id:%s num_rel:%s, ", i, thing.id, len(relations))
             i += 1
+            L.info("%s: reparse %s, %s -> %s", i, thing.id, itype, thing.item_type)
+            #TODO: need to retry on fail if relation already exists
             if i % batch_size == 0:
                 session.commit()
         # don't forget to commit the remainder!

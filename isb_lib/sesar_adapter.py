@@ -69,7 +69,7 @@ class SESARItem(object):
                     source=self.identifier,
                     name="",
                     s=self.identifier,
-                    p="parent",
+                    p="sesar_parent",
                     o=_id,
                 )
             )
@@ -84,7 +84,7 @@ class SESARItem(object):
                     source=self.identifier,
                     name="",
                     s=self.identifier,
-                    p="child",
+                    p="sesar_child",
                     o=_id,
                 )
             )

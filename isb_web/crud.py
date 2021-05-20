@@ -25,7 +25,7 @@ def getThingMeta(db: sqlalchemy.orm.Session):
             "count", sqlalchemy.func.count(igsn_lib.models.thing.Thing.resolved_status)
         ),
     ).group_by(igsn_lib.models.thing.Thing.resolved_status)
-    meta = {"counts": dbq.all()}
+    meta = {"status": dbq.all()}
     dbq = db.query(
         sqlalchemy.sql.label("authority", igsn_lib.models.thing.Thing.authority_id),
         sqlalchemy.sql.label(
@@ -58,7 +58,33 @@ def getThing(db: sqlalchemy.orm.Session, identifier: str):
     )
 
 
-def getRelatedObjects(db: sqlalchemy.orm.Session, identifier: str, predicate: str = None):
+def getRelations(
+    db: sqlalchemy.orm.Session,
+    s: str = None,
+    p: str = None,
+    o: str = None,
+    source: str = None,
+    name: str = None,
+    offset: int = 0,
+    limit: int = 1000,
+):
+    qry = db.query(igsn_lib.models.relation.Relation)
+    if s is not None:
+        qry = qry.filter(igsn_lib.models.relation.Relation.s == s)
+    if p is not None:
+        qry = qry.filter(igsn_lib.models.relation.Relation.p == p)
+    if o is not None:
+        qry = qry.filter(igsn_lib.models.relation.Relation.o == o)
+    if source is not None:
+        qry = qry.filter(igsn_lib.models.relation.Relation.source == source)
+    if name is not None:
+        qry = qry.filter(igsn_lib.models.relation.Relation.name == name)
+    return qry.offset(offset).limit(limit).all()
+
+
+def getRelatedObjects(
+    db: sqlalchemy.orm.Session, identifier: str, predicate: str = None
+):
     """Relations where identifier is subject."""
     q = db.query(igsn_lib.models.relation.Relation).filter(
         igsn_lib.models.relation.Relation.s == identifier
@@ -68,7 +94,9 @@ def getRelatedObjects(db: sqlalchemy.orm.Session, identifier: str, predicate: st
     return q.all()
 
 
-def getRelatedSubjects(db: sqlalchemy.orm.Session, identifier: str, predicate: str = None):
+def getRelatedSubjects(
+    db: sqlalchemy.orm.Session, identifier: str, predicate: str = None
+):
     """Relations where identifier is subject."""
     q = db.query(igsn_lib.models.relation.Relation).filter(
         igsn_lib.models.relation.Relation.o == identifier

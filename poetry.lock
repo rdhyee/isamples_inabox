@@ -1,4 +1,12 @@
 [[package]]
+name = "accept-types"
+version = "0.4.1"
+description = "Determine the best content to send in an HTTP response"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "aiodns"
 version = "2.0.0"
 description = "Simple DNS resolver for asyncio"
@@ -1561,9 +1569,13 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "f16c6feaa4040afb33af0953111bd38531ceb542e163b31696d5648ea79f3c99"
+content-hash = "a4787a466d56740aaaaa2ee12b851870c00a893d09cf046ba572ad691195aa23"
 
 [metadata.files]
+accept-types = [
+    {file = "accept-types-0.4.1.tar.gz", hash = "sha256:fb27099716d8f0360408c8ca86d69dbfed44455834b70d1506250abe521b535a"},
+    {file = "accept_types-0.4.1-py3-none-any.whl", hash = "sha256:c87feccdffb66b02f9343ff387d7fd5c451ccb2e1221fbd37ea0cedef5cf290f"},
+]
 aiodns = [
     {file = "aiodns-2.0.0-py2.py3-none-any.whl", hash = "sha256:aaa5ac584f40fe778013df0aa6544bf157799bd3f608364b451840ed2c8688de"},
     {file = "aiodns-2.0.0.tar.gz", hash = "sha256:815fdef4607474295d68da46978a54481dd1e7be153c7d60f9e72773cd38d77d"},

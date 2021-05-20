@@ -288,12 +288,29 @@ def reparseRelations(ctx):
             relations = isb_lib.sesar_adapter.reparseRelations(thing)
             for relation in relations:
                 session.add(relation)
-            L.info("%s: relations id:%s num_rel:%s, ", i, thing.id, len(relations))
+            _rel_len = len(relations)
+            L.info("%s: relations id:%s num_rel:%s, ", i, thing.id, _rel_len)
+            if _rel_len > 0:
+                _commit_failed = True
+                try:
+                    #try batch commit, much faster for large sets
+                    session.commit()
+                    _commit_failed = False
+                except sqlalchemy.exc.IntegrityError as e:
+                    #L.debug(e)
+                    #at least one failed, try again. The slower way
+                    session.rollback()
+                    #session.expire_all()
+                #don't bother if only one relation
+                if _rel_len > 1:
+                    for relation in relations:
+                        try:
+                            session.add(relation)
+                            session.commit()
+                        except sqlalchemy.exc.IntegrityError as e:
+                            session.rollback()
+                            L.debug("relation already committed: %s", relation.source)
             i += 1
-            if i % batch_size == 0:
-                session.commit()
-        # don't forget to commit the remainder!
-        session.commit()
     finally:
         session.close()
 
