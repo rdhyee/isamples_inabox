@@ -276,6 +276,7 @@ def reparseRelations(ctx):
     def _commit(session, relations):
         L = getLogger()
         try:
+            session.bulk_save_objects(relations, preserve_order=False)
             session.commit()
             return
         except sqlalchemy.exc.IntegrityError as e:
@@ -291,11 +292,12 @@ def reparseRelations(ctx):
                 L.debug("relation already committed: %s", relation.source)
 
     L = getLogger()
-    batch_size = 500
+    batch_size = 1000
     L.info("reparseRecords with batch size: %s", batch_size)
     session = getDBSession(ctx.obj["db_url"])
     try:
         i = 0
+        n = 0
         qry = session.query(igsn_lib.models.thing.Thing).filter(
             igsn_lib.models.thing.Thing.authority_id==isb_lib.sesar_adapter.AUTHORITY_ID
         )
@@ -303,10 +305,12 @@ def reparseRelations(ctx):
         relations = []
         for thing in _yieldRecordsByPage(qry, pk):
             relations = relations + isb_lib.sesar_adapter.reparseRelations(thing)
-            for relation in relations:
-                session.add(relation)
+            #for relation in relations:
+            #    session.add(relation)
             _rel_len = len(relations)
-            L.info("%s: relations id:%s num_rel:%s, ", i, thing.id, _rel_len)
+            n += _rel_len
+            if i % 25 == 0:
+                L.info("%s: relations id:%s num_rel:%s, ", i, thing.id, _rel_len)
             if _rel_len > batch_size:
                 _commit(session, relations)
                 relations = []
