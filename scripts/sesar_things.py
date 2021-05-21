@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+import json
 import requests
 import sqlalchemy
 import sqlalchemy.orm
@@ -266,13 +267,14 @@ def reparseRelations(ctx):
             q = qry
             rec = None
             n = 0
-            for rec in q.order_by(pk).offset(offset).limit(page_size):
+            for rec in q.offset(offset).limit(page_size):
                 n += 1
                 yield rec
             if n == 0:
                 break
             offset += page_size
 
+    # This method is retained for reference to adding relations to the relations database table
     def _commit(session, relations):
         L = getLogger()
         try:
@@ -291,31 +293,74 @@ def reparseRelations(ctx):
                 session.rollback()
                 L.debug("relation already committed: %s", relation.source)
 
+    def _solrAdd(rsession, relations):
+        """
+        Push records to Solr.
+
+        Existing records with the same id are overwritten with no consideration of version.
+
+        Note that it Solr recommends no manual commits, instead rely on
+        proper configuration of the core.
+
+        Args:
+            rsession: requests.Session
+            relations: list of relations
+
+        Returns: nothing
+
+        """
+        L = getLogger()
+        headers = {"Content-Type":"application/json"}
+        data = json.dumps(relations).encode("utf-8")
+        params = {"overwrite": "true"}
+        url = f"http://localhost:8983/solr/isb_rel/update"
+        res = rsession.post(url, headers=headers, data=data, params=params)
+        L.debug("post status: %s", res.status_code)
+        if res.status_code != 200:
+            L.error(res.text)
+            #TODO: something more elegant for error handling
+            raise ValueError()
+
+
     L = getLogger()
+    rsession = requests.session()
     batch_size = 1000
     L.info("reparseRecords with batch size: %s", batch_size)
     session = getDBSession(ctx.obj["db_url"])
+    allkeys = set()
     try:
         i = 0
         n = 0
         qry = session.query(igsn_lib.models.thing.Thing).filter(
-            igsn_lib.models.thing.Thing.authority_id==isb_lib.sesar_adapter.AUTHORITY_ID
+            igsn_lib.models.thing.Thing.authority_id==isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID
         )
         pk = igsn_lib.models.thing.Thing.id
         relations = []
         for thing in _yieldRecordsByPage(qry, pk):
-            relations = relations + isb_lib.sesar_adapter.reparseRelations(thing)
-            #for relation in relations:
-            #    session.add(relation)
+            batch = isb_lib.sesar_adapter.reparseRelations(thing, as_solr=True)
+            relations = relations + batch
+            for r in relations:
+                allkeys.add(r['id'])
             _rel_len = len(relations)
-            n += _rel_len
+            n += len(batch)
             if i % 25 == 0:
-                L.info("%s: relations id:%s num_rel:%s, ", i, thing.id, _rel_len)
+                L.info("%s: relations id:%s num_rel:%s, total:%s", i, thing.id, _rel_len, n)
             if _rel_len > batch_size:
-                _commit(session, relations)
+                _solrAdd(rsession, relations)
                 relations = []
             i += 1
-        _commit(session, relations)
+        _solrAdd(rsession, relations)
+        print(f"Total keys= {len(allkeys)}")
+        #verify records
+        #for verifying that all records were added to solr
+        #found = 0
+        #for _id in allkeys:
+        #    res = rsession.get(f"http://localhost:8983/solr/isb_rel/get?id={_id}").json()
+        #    if res.get("doc",{}).get("id") == _id:
+        #        found = found +1
+        #    else:
+        #        print(f"Missed: {_id}")
+        #print(f"Found = {found}")
     finally:
         session.close()
 
@@ -333,6 +378,7 @@ def reparseRelations(ctx):
 def reloadRecords(ctx, status_code):
     L = getLogger()
     L.info("reloadRecords, status_code = %s", status_code)
+    raise NotImplementedError("reloadRecords")
     session = getDBSession(ctx.obj["db_url"])
     try:
         pass

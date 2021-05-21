@@ -2,10 +2,13 @@
 
 """
 import logging
+import typing
 import datetime
 import requests
 import sickle.oaiexceptions
 import sickle.utils
+import hashlib
+import json
 import igsn_lib
 import igsn_lib.oai
 import igsn_lib.time
@@ -13,21 +16,24 @@ import igsn_lib.models.thing
 import igsn_lib.models.relation
 import isb_lib.core
 import isb_lib.sitemaps
+import uuid
 
 HTTP_TIMEOUT = 10.0  # seconds
 DEFAULT_IGSN_OAI = "https://doidb.wdc-terra.org/igsnoaip/oai"
 DEFAULT_SESAR_SITEMAP = "https://app.geosamples.org/sitemaps/sitemap-index.xml"
 MEDIA_JSON_LD = "application/ld+json"
-AUTHORITY_ID = "SESAR"
-RELATION_TYPE = {
-    "child": "child",
-    "parent": "parent",
-    "sibling": "sibling",
-}
+
+SOLR_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 def getLogger():
     return logging.getLogger("isb_lib.sesar_adapter")
+
+
+def datetimeToSolrStr(dt):
+    if dt is None:
+        return None
+    return dt.strftime(SOLR_TIME_FORMAT)
 
 
 def fullIgsn(v):
@@ -45,8 +51,19 @@ def getSesarItem_app(igsn_value, verify=False):
     return res
 
 
-def getSESARItem_jsonld(igsn_value, verify=False):
-    # Return JSON-LD representation of SESAR record. This is the preferred as of May 2021.
+def getSESARItem_jsonld(igsn_value: str, verify: bool = True) -> requests.Response:
+    """
+    Return JSON-LD representation of SESAR record.
+
+    This is the preferred mechanism as of May 2021.
+
+    Args:
+        igsn_value: value part of IGSN identifier
+        verify: TLS verify connection
+
+    Returns:
+        response object
+    """
     headers = {"Accept": "application/ld+json, application/json"}
     url = f"https://api.geosamples.org/v1/sample/igsn-ev-json-ld/igsn/{igsn_value}"
     res = requests.get(url, headers=headers, verify=verify, timeout=HTTP_TIMEOUT)
@@ -54,12 +71,17 @@ def getSESARItem_jsonld(igsn_value, verify=False):
 
 
 class SESARItem(object):
+    AUTHORITY_ID = "SESAR"
+    RELATION_TYPE = {
+        "parent": "sesar_parent",
+        "child": "sesar_child",
+    }
+
     def __init__(self, identifier: str, source):
         self.identifier = fullIgsn(identifier)
-        self.authority_id = AUTHORITY_ID
         self.item = source
 
-    def asRelations(self):
+    def asRelations(self) -> typing.List[igsn_lib.models.relation.Relation]:
         related = []
         _id = self.item.get("description", {}).get("parentIdentifier", None)
         if _id is not None:
@@ -69,7 +91,7 @@ class SESARItem(object):
                     source=self.identifier,
                     name="",
                     s=self.identifier,
-                    p="sesar_parent",
+                    p=SESARItem.RELATION_TYPE["parent"],
                     o=_id,
                 )
             )
@@ -84,57 +106,68 @@ class SESARItem(object):
                     source=self.identifier,
                     name="",
                     s=self.identifier,
-                    p="sesar_child",
+                    p=SESARItem.RELATION_TYPE["child"],
                     o=_id,
                 )
             )
         # Don't include siblings.
         # Adding siblings adds about an order of magnitude more relations, and
         # computing the siblings is simple - all the o with parent s
-        #for sibling in (
-        #    self.item.get("description", {})
-        #    .get("supplementMetadata", {})
-        #    .get("siblingIGSN", [])
-        #):
-        #    _id = fullIgsn(sibling)
-        #    related.append(
-        #        igsn_lib.models.relation.Relation(
-        #            source=self.identifier,
-        #            name="",
-        #            s=self.identifier,
-        #            p="sibling",
-        #            o=_id,
-        #        )
-        #    )
         return related
 
-    def getRelations(self, tstamp):
-        """Extract relations from the record
+    def solrRelations(self):
+        """Provides a list of relation dicts suitable for adding to Solr"""
 
-        Result is a list of (tstamp, predicate, object)
-        """
-        if isinstance(tstamp, datetime.datetime):
-            tstamp = igsn_lib.time.datetimeToJsonStr(tstamp)
+        def _solrDoc(
+            ts,
+            source,
+            s,
+            p,
+            o,
+            name,
+        ):
+            doc = {
+                "source": source,
+                "s": s,
+                "p": p,
+                "o": o,
+                "name": name,
+            }
+            doc["id"] = hashlib.md5(json.dumps(doc).encode("utf-8")).hexdigest()
+            # doc["id"] = str(uuid.uuid4())
+            doc["tstamp"] = datetimeToSolrStr(ts)
+            return doc
+
         related = []
-        _parent = self.item.get("description", {}).get("parentIdentifier", None)
-        if not _parent is None:
-            related.append((tstamp, RELATION_TYPE["parent"], fullIgsn(_parent)))
-        related += list(
-            map(
-                lambda V: (tstamp, RELATION_TYPE["child"], fullIgsn(V)),
-                self.item.get("description", {})
-                .get("supplementMetadata", {})
-                .get("childIGSN", []),
+        _id = self.item.get("description", {}).get("parentIdentifier", None)
+        if _id is not None:
+            _id = fullIgsn(_id)
+            related.append(
+                _solrDoc(
+                    igsn_lib.time.dtnow(),
+                    self.identifier,
+                    self.identifier,
+                    SESARItem.RELATION_TYPE["parent"],
+                    _id,
+                    "",
+                )
             )
-        )
-        related += list(
-            map(
-                lambda V: (tstamp, RELATION_TYPE["sibling"], fullIgsn(V)),
-                self.item.get("description", {})
-                .get("supplementMetadata", {})
-                .get("siblingIGSN", []),
+        for child in (
+            self.item.get("description", {})
+            .get("supplementMetadata", {})
+            .get("childIGSN", [])
+        ):
+            _id = fullIgsn(child)
+            related.append(
+                _solrDoc(
+                    igsn_lib.time.dtnow(),
+                    self.identifier,
+                    self.identifier,
+                    SESARItem.RELATION_TYPE["child"],
+                    _id,
+                    "",
+                )
             )
-        )
         return related
 
     def getItemType(self):
@@ -148,7 +181,7 @@ class SESARItem(object):
         t_resolved: datetime.datetime,
         resolve_elapsed: float,
         media_type: str = None,
-    ):
+    ) -> igsn_lib.models.thing.Thing:
         L = getLogger()
         L.debug("SESARItem.asThing")
         # Note: SESAR incorrectly returns "application/json;charset=UTF-8" for json-ld content
@@ -158,7 +191,7 @@ class SESARItem(object):
             id=self.identifier,
             tcreated=t_created,
             item_type=None,
-            authority_id=self.authority_id,
+            authority_id=SESARItem.AUTHORITY_ID,
             resolved_url=resolved_url,
             resolved_status=status,
             tresolved=t_resolved,
@@ -175,31 +208,44 @@ class SESARItem(object):
         return _thing
 
 
-def reparseRelations(thing):
+def reparseRelations(thing: igsn_lib.models.thing.Thing, as_solr: bool = False):
     if not isinstance(thing.resolved_content, dict):
         raise ValueError("Thing.resolved_content is not an object")
-    if not thing.authority_id == AUTHORITY_ID:
+    if not thing.authority_id == SESARItem.AUTHORITY_ID:
         raise ValueError("Thing is not a SESAR item")
     item = SESARItem(thing.id, thing.resolved_content)
+    if as_solr:
+        return item.solrRelations()
     return item.asRelations()
 
 
-def reparseThing(thing, and_relations=False):
+def reparseThing(thing: igsn_lib.models.thing.Thing) -> igsn_lib.models.thing.Thing:
     """Reparse the resolved_content"""
     if not isinstance(thing.resolved_content, dict):
         raise ValueError("Thing.resolved_content is not an object")
-    if not thing.authority_id == AUTHORITY_ID:
+    if not thing.authority_id == SESARItem.AUTHORITY_ID:
         raise ValueError("Thing is not a SESAR item")
     item = SESARItem(thing.resolved_content)
     thing.item_type = item.getItemType()
     thing.tstamp = igsn_lib.time.dtnow()
-    relations = None
-    if and_relations:
-        relations = item.asRelations()
-    return thing, relations
+    return thing
 
 
-def loadThing(identifier, t_created):
+def loadThing(
+    identifier: str, t_created: datetime.datetime
+) -> igsn_lib.models.thing.Thing:
+    """
+    Load a thing from its source.
+
+    Minimal parsing of the thing is performed to populate the database record.
+
+    Args:
+        identifier: Identifier for the thing.
+        t_created: Hint as to when the thing was created, according to the source.
+
+    Returns:
+        Instance of Thing
+    """
     L = getLogger()
     L.info("loadThing: %s", identifier)
     response = getSESARItem_jsonld(identifier, verify=True)
@@ -216,12 +262,11 @@ def loadThing(identifier, t_created):
         L.warning(e)
     item = SESARItem(identifier, obj)
     thing = item.asThing(t_created, r_status, r_url, t_resolved, elapsed)
-    relations = item.asRelations()
-    return thing, relations
+    return thing
 
 
 def reloadThing(thing):
-    """Given an instance of thing, reload from the source and reparse."""
+    """Given an instance of thing, reload from the origin source."""
     L = getLogger()
     L.debug("reloadThing id=%s", thing.id)
     identifier = igsn_lib.normalize(thing.id)
