@@ -2,6 +2,7 @@ import os
 import uvicorn
 import datetime
 import typing
+import requests
 import fastapi.staticfiles
 import fastapi.templating
 import fastapi.middleware.cors
@@ -121,11 +122,14 @@ async def get_thing(
     "/related",
     response_model=typing.List[schemas.RelationListMeta],
 )
-async def relation_metadata(db: sqlalchemy.orm.Session = fastapi.Depends((getDb))):
+#async def relation_metadata(db: sqlalchemy.orm.Session = fastapi.Depends((getDb))):
+async def relation_metadata():
     """List of predicates with counts"""
-    return crud.getPredicateCounts(db)
+    #return crud.getPredicateCounts(db)
+    session = requests.session()
+    return crud.getPredicateCountsSolr(session)
 
-
+'''
 @app.get(
     "/related/",
     response_model=typing.List[schemas.RelationListEntry],
@@ -170,7 +174,52 @@ async def get_related(
             "\n".join(rows), media_type=MEDIA_NQUADS
         )
     return res
+'''
 
+@app.get(
+    "/related/",
+    response_model=typing.List[schemas.RelationListEntry],
+    responses={
+        200: {
+            "content": {
+                MEDIA_NQUADS: {
+                    "example": "s p o [name]  .\n"
+                    "s p o [name]  .\n"
+                    "s p o [name]  .\n"
+                }
+            }
+        }
+    },
+)
+async def get_related_solr(
+    s: str = None,
+    p: str = None,
+    o: str = None,
+    source: str = None,
+    name: str = None,
+    offset: int = 0,
+    limit: int = 1000,
+    accept: typing.Optional[str] = fastapi.Header("application/json"),
+):
+    """Relations that match provided s, p, o, source, name.
+
+    Each property is optional. Exact matches only.
+    """
+    return_type = accept_types.get_best_match(accept, [MEDIA_JSON, MEDIA_NQUADS])
+    rsession = requests.Session()
+    res = crud.getRelationsSolr(rsession, s, p, o, source, name, offset, limit)
+    if return_type == MEDIA_NQUADS:
+        rows = []
+        for row in res:
+            quad = [row.s, predicateToURI(row.p), row.o]
+            if row.name is not None or row.name != "":
+                quad.append(row.name)
+            quad.append(".")
+            rows.append(" ".join(quad))
+        return fastapi.responses.PlainTextResponse(
+            "\n".join(rows), media_type=MEDIA_NQUADS
+        )
+    return res
 
 @app.get("/", include_in_schema=False)
 async def root(request: fastapi.Request):

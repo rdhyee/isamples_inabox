@@ -1,3 +1,4 @@
+import requests
 import sqlalchemy.sql
 import sqlalchemy.orm
 
@@ -82,28 +83,43 @@ def getRelations(
     return qry.offset(offset).limit(limit).all()
 
 
-def getRelatedObjects(
-    db: sqlalchemy.orm.Session, identifier: str, predicate: str = None
-):
-    """Relations where identifier is subject."""
-    q = db.query(igsn_lib.models.relation.Relation).filter(
-        igsn_lib.models.relation.Relation.s == identifier
-    )
-    if not predicate is None:
-        q = q.filter(igsn_lib.models.relation.Relation.p == predicate)
-    return q.all()
+def solrEscape(s):
+    return s
 
-
-def getRelatedSubjects(
-    db: sqlalchemy.orm.Session, identifier: str, predicate: str = None
+def getRelationsSolr(
+        rsession: requests.Session,
+        s: str = None,
+        p: str = None,
+        o: str = None,
+        source: str = None,
+        name: str = None,
+        offset: int = 0,
+        limit: int = 1000,
+        url:str ="http://localhost:8983/solr/isb_rel/"
 ):
-    """Relations where identifier is subject."""
-    q = db.query(igsn_lib.models.relation.Relation).filter(
-        igsn_lib.models.relation.Relation.o == identifier
-    )
-    if not predicate is None:
-        q = q.filter(igsn_lib.models.relation.Relation.p == predicate)
-    return q.all()
+    q = []
+    if not s is None:
+        q.append(f"s:{solrEscape(s)}")
+    if not p is None:
+        q.append(f"p:{solrEscape(p)}")
+    if not o is None:
+        q.append(f"o:{solrEscape(o)}")
+    if not source is None:
+        q.append(f"source:{solrEscape(source)}")
+    if not name is None:
+        q.append(f"name:{solrEscape(name)}")
+    if len(q) == 0:
+        q.append("*:*")
+    headers = {"Accept":"application/json"}
+    params = {
+        "q": " AND ".join(q),
+        "wt":"json",
+        "rows": limit,
+        "start":offset,
+    }
+    _url = f"{url}select"
+    res = rsession.get(_url, headers=headers, params=params).json()
+    return res.get("response",{}).get("docs",[])
 
 
 def getPredicateCounts(db: sqlalchemy.orm.Session):
@@ -114,6 +130,23 @@ def getPredicateCounts(db: sqlalchemy.orm.Session):
         ),
     ).group_by(igsn_lib.models.relation.Relation.p)
     return q.all()
+
+def getPredicateCountsSolr(rsession: requests.Session, url="http://localhost:8983/solr/isb_rel/"):
+    params = {
+        "q":"*:*",
+        "rows":"0",
+        "facet":"true",
+        "facet.field":"p"
+    }
+    headers = {"Accept":"application/json"}
+    _url = f"{url}select"
+    res = rsession.get(_url, headers=headers, params=params).json()
+    fc = res.get("facet_counts",{}).get("facet_fields",{}).get("p",[])
+    result = []
+    for i in range(0, len(fc), 2):
+        entry = {"predicate":fc[i], "count":fc[i+1]}
+        result.append(entry)
+    return result
 
 
 def getSampleTypes(db: sqlalchemy.orm.Session):
