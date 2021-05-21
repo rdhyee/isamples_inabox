@@ -6,6 +6,7 @@ import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.exc
 import igsn_lib
+import isb_lib.core
 import isb_lib.geome_adapter
 import igsn_lib.time
 import igsn_lib.models
@@ -104,7 +105,7 @@ async def _loadGEOMEEntries(session, max_count, start_from=None):
             L.debug("%s", working)
             try:
                 for fut in concurrent.futures.as_completed(futures, timeout=1):
-                    identifier, tc, _thing, _related = fut.result()
+                    identifier, tc, _thing = fut.result()
                     futures.remove(fut)
                     if not _thing is None:
                         try:
@@ -113,12 +114,12 @@ async def _loadGEOMEEntries(session, max_count, start_from=None):
                         except sqlalchemy.exc.IntegrityError as e:
                             session.rollback()
                             logging.error("Item already exists: %s", _id[0])
-                        for _rel in _related:
-                            try:
-                                session.add(_rel)
-                                session.commit()
-                            except sqlalchemy.exc.IntegrityError as e:
-                                L.debug(e)
+                        # for _rel in _related:
+                        #    try:
+                        #        session.add(_rel)
+                        #        session.commit()
+                        #    except sqlalchemy.exc.IntegrityError as e:
+                        #        L.debug(e)
                         working.pop(identifier)
                         total_completed += 1
                     else:
@@ -284,28 +285,40 @@ def reparseRelations(ctx):
             offset += page_size
 
     L = getLogger()
-    batch_size = 50
+    rsession = requests.session()
+    batch_size = 1000
     L.info("reparseRecords with batch size: %s", batch_size)
     session = getDBSession(ctx.obj["db_url"])
+    allkeys = set()
     try:
         i = 0
+        n = 0
         qry = session.query(igsn_lib.models.thing.Thing).filter(
-            igsn_lib.models.thing.Thing.authority_id==isb_lib.geome_adapter.GEOMEItem.AUTHORITY_ID
+            igsn_lib.models.thing.Thing.authority_id
+            == isb_lib.geome_adapter.GEOMEItem.AUTHORITY_ID
         )
         pk = igsn_lib.models.thing.Thing.id
+        relations = []
         for thing in _yieldRecordsByPage(qry, pk):
-            itype = thing.item_type
-            relations = isb_lib.geome_adapter.reparseRelations(thing)
+            batch = isb_lib.geome_adapter.reparseRelations(thing)
+            relations = relations + batch
             for relation in relations:
-                session.add(relation)
-            L.info("%s: relations id:%s num_rel:%s, ", i, thing.id, len(relations))
+                allkeys.add(relation["id"])
+            _rel_len = len(relations)
+            n += len(batch)
+            if i % 25 == 0:
+                L.info(
+                    "%s: relations id:%s num_rel:%s, total:%s", i, thing.id, _rel_len, n
+                )
+            if _rel_len > batch_size:
+                isb_lib.core.solrAddRecords(rsession, relations)
+                relations = []
             i += 1
-            L.info("%s: reparse %s, %s -> %s", i, thing.id, itype, thing.item_type)
-            #TODO: need to retry on fail if relation already exists
-            if i % batch_size == 0:
-                session.commit()
-        # don't forget to commit the remainder!
-        session.commit()
+        # don't forget to add the remainder!
+        isb_lib.core.solrAddRecords(rsession, relations)
+        L.info("%s: relations num_rel:%s, total:%s", i, len(relations), n)
+        print(f"Total keys= {len(allkeys)}")
+        isb_lib.core.solrCommit(rsession)
     finally:
         session.close()
 

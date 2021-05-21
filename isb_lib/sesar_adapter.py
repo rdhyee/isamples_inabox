@@ -23,17 +23,9 @@ DEFAULT_IGSN_OAI = "https://doidb.wdc-terra.org/igsnoaip/oai"
 DEFAULT_SESAR_SITEMAP = "https://app.geosamples.org/sitemaps/sitemap-index.xml"
 MEDIA_JSON_LD = "application/ld+json"
 
-SOLR_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-
 
 def getLogger():
     return logging.getLogger("isb_lib.sesar_adapter")
-
-
-def datetimeToSolrStr(dt):
-    if dt is None:
-        return None
-    return dt.strftime(SOLR_TIME_FORMAT)
 
 
 def fullIgsn(v):
@@ -118,32 +110,12 @@ class SESARItem(object):
     def solrRelations(self):
         """Provides a list of relation dicts suitable for adding to Solr"""
 
-        def _solrDoc(
-            ts,
-            source,
-            s,
-            p,
-            o,
-            name,
-        ):
-            doc = {
-                "source": source,
-                "s": s,
-                "p": p,
-                "o": o,
-                "name": name,
-            }
-            doc["id"] = hashlib.md5(json.dumps(doc).encode("utf-8")).hexdigest()
-            # doc["id"] = str(uuid.uuid4())
-            doc["tstamp"] = datetimeToSolrStr(ts)
-            return doc
-
         related = []
         _id = self.item.get("description", {}).get("parentIdentifier", None)
         if _id is not None:
             _id = fullIgsn(_id)
             related.append(
-                _solrDoc(
+                isb_lib.core.relationAsSolrDoc(
                     igsn_lib.time.dtnow(),
                     self.identifier,
                     self.identifier,
@@ -159,7 +131,7 @@ class SESARItem(object):
         ):
             _id = fullIgsn(child)
             related.append(
-                _solrDoc(
+                isb_lib.core.relationAsSolrDoc(
                     igsn_lib.time.dtnow(),
                     self.identifier,
                     self.identifier,

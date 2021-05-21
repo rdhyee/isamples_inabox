@@ -7,6 +7,7 @@ import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.exc
 import igsn_lib
+import isb_lib.core
 import isb_lib.sesar_adapter
 import igsn_lib.time
 import igsn_lib.models
@@ -97,7 +98,7 @@ async def _loadSesarEntries(session, max_count, start_from=None):
             L.debug("%s", working)
             try:
                 for fut in concurrent.futures.as_completed(futures, timeout=1):
-                    igsn, tc, _thing, _related = fut.result()
+                    igsn, tc, _thing = fut.result()
                     futures.remove(fut)
                     if not _thing is None:
                         try:
@@ -106,12 +107,12 @@ async def _loadSesarEntries(session, max_count, start_from=None):
                         except sqlalchemy.exc.IntegrityError as e:
                             session.rollback()
                             logging.error("Item already exists: %s", _id[0])
-                        for _rel in _related:
-                            try:
-                                session.add(_rel)
-                                session.commit()
-                            except sqlalchemy.exc.IntegrityError as e:
-                                L.debug(e)
+                        # for _rel in _related:
+                        #    try:
+                        #        session.add(_rel)
+                        #        session.commit()
+                        #    except sqlalchemy.exc.IntegrityError as e:
+                        #        L.debug(e)
                         working.pop(igsn)
                         total_completed += 1
                     else:
@@ -257,6 +258,7 @@ def reparseRecords(ctx):
     finally:
         session.close()
 
+
 @main.command("relations")
 @click.pass_context
 def reparseRelations(ctx):
@@ -267,7 +269,7 @@ def reparseRelations(ctx):
             q = qry
             rec = None
             n = 0
-            for rec in q.offset(offset).limit(page_size):
+            for rec in q.order_by(pk).offset(offset).limit(page_size):
                 n += 1
                 yield rec
             if n == 0:
@@ -293,35 +295,6 @@ def reparseRelations(ctx):
                 session.rollback()
                 L.debug("relation already committed: %s", relation.source)
 
-    def _solrAdd(rsession, relations):
-        """
-        Push records to Solr.
-
-        Existing records with the same id are overwritten with no consideration of version.
-
-        Note that it Solr recommends no manual commits, instead rely on
-        proper configuration of the core.
-
-        Args:
-            rsession: requests.Session
-            relations: list of relations
-
-        Returns: nothing
-
-        """
-        L = getLogger()
-        headers = {"Content-Type":"application/json"}
-        data = json.dumps(relations).encode("utf-8")
-        params = {"overwrite": "true"}
-        url = f"http://localhost:8983/solr/isb_rel/update"
-        res = rsession.post(url, headers=headers, data=data, params=params)
-        L.debug("post status: %s", res.status_code)
-        if res.status_code != 200:
-            L.error(res.text)
-            #TODO: something more elegant for error handling
-            raise ValueError()
-
-
     L = getLogger()
     rsession = requests.session()
     batch_size = 1000
@@ -332,7 +305,8 @@ def reparseRelations(ctx):
         i = 0
         n = 0
         qry = session.query(igsn_lib.models.thing.Thing).filter(
-            igsn_lib.models.thing.Thing.authority_id==isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID
+            igsn_lib.models.thing.Thing.authority_id
+            == isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID
         )
         pk = igsn_lib.models.thing.Thing.id
         relations = []
@@ -340,27 +314,30 @@ def reparseRelations(ctx):
             batch = isb_lib.sesar_adapter.reparseRelations(thing, as_solr=True)
             relations = relations + batch
             for r in relations:
-                allkeys.add(r['id'])
+                allkeys.add(r["id"])
             _rel_len = len(relations)
             n += len(batch)
             if i % 25 == 0:
-                L.info("%s: relations id:%s num_rel:%s, total:%s", i, thing.id, _rel_len, n)
+                L.info(
+                    "%s: relations id:%s num_rel:%s, total:%s", i, thing.id, _rel_len, n
+                )
             if _rel_len > batch_size:
-                _solrAdd(rsession, relations)
+                isb_lib.core.solrAddRecords(rsession, relations)
                 relations = []
             i += 1
-        _solrAdd(rsession, relations)
+        isb_lib.core.solrAddRecords(rsession, relations)
+        isb_lib.core.solrCommit(rsession)
         print(f"Total keys= {len(allkeys)}")
-        #verify records
-        #for verifying that all records were added to solr
-        #found = 0
-        #for _id in allkeys:
+        # verify records
+        # for verifying that all records were added to solr
+        # found = 0
+        # for _id in allkeys:
         #    res = rsession.get(f"http://localhost:8983/solr/isb_rel/get?id={_id}").json()
         #    if res.get("doc",{}).get("id") == _id:
         #        found = found +1
         #    else:
         #        print(f"Missed: {_id}")
-        #print(f"Found = {found}")
+        # print(f"Found = {found}")
     finally:
         session.close()
 

@@ -202,26 +202,12 @@ class GEOMEItem(object):
         "Tissue": "has_tissue",
         "Sample_Photo": "has_photo",
         "Diagnostics": "has_diagnostic",
-        "UNDEFINED":"has_",
+        "UNDEFINED": "has_",
     }
+
     def __init__(self, identifier, source):
         self.identifier = identifier
         self.item = source
-
-    def _getRelations(self, tstamp):
-        if isinstance(tstamp, datetime.datetime):
-            tstamp = igsn_lib.time.datetimeToJsonStr(tstamp)
-        related = []
-        _id = self.item.get("parent", {}).get("bcid", "")
-        _typ = self.item.get("parent", {}).get("entity", "UNDEFINED")
-        if _id != "":
-            related.append((tstamp, GEOMEItem.RELATION_TYPE[_typ], _id))
-        for child in self.item.get("children", []):
-            _id = child.get("bcid")
-            if _id != "":
-                _typ = child.get("entity", "UNDEFINED")
-                related.append((tstamp, GEOMEItem.RELATION_TYPE["child"], _id))
-        return related
 
     def asRelations(self):
         related = []
@@ -248,6 +234,37 @@ class GEOMEItem(object):
                         s=self.identifier,
                         p=GEOMEItem.RELATION_TYPE[_typ],
                         o=_id,
+                    )
+                )
+        return related
+
+    def solrRelations(self):
+        related = []
+        _id = self.item.get("parent", {}).get("bcid", "")
+        _typ = self.item.get("parent", {}).get("entity", "UNDEFINED")
+        if _id != "":
+            related.append(
+                isb_lib.core.relationAsSolrDoc(
+                    igsn_lib.time.dtnow(),
+                    self.identifier,
+                    self.identifier,
+                    GEOMEItem.RELATION_TYPE[_typ],
+                    _id,
+                    "",
+                )
+            )
+        for child in self.item.get("children", []):
+            _id = child.get("bcid")
+            if _id != "":
+                _typ = child.get("entity", "UNDEFINED")
+                related.append(
+                    isb_lib.core.relationAsSolrDoc(
+                        igsn_lib.time.dtnow(),
+                        self.identifier,
+                        self.identifier,
+                        GEOMEItem.RELATION_TYPE[_typ],
+                        _id,
+                        "",
                     )
                 )
         return related
@@ -297,10 +314,11 @@ def reparseRelations(thing):
     if not thing.authority_id == GEOMEItem.AUTHORITY_ID:
         raise ValueError("Thing is not a GEOME item")
     item = GEOMEItem(thing.id, thing.resolved_content)
-    return item.asRelations()
+    return item.solrRelations()
+    #return item.asRelations()
 
 
-def reparseThing(thing, and_relations=False):
+def reparseThing(thing):
     """Reparse the resolved_content"""
     if not isinstance(thing.resolved_content, dict):
         raise ValueError("Thing.resolved_content is not an object")
@@ -309,10 +327,7 @@ def reparseThing(thing, and_relations=False):
     item = GEOMEItem(thing.id, thing.resolved_content)
     thing.item_type = item.getItemType()
     thing.tstamp = igsn_lib.time.dtnow()
-    relations = None
-    if and_relations:
-        relations = item.asRelations()
-    return thing, relations
+    return thing
 
 
 def loadThing(identifier, t_created):
@@ -333,8 +348,7 @@ def loadThing(identifier, t_created):
         L.warning(e)
     item = GEOMEItem(identifier, obj)
     thing = item.asThing(t_created, r_status, r_url, t_resolved, elapsed, media_type)
-    relations = item.asRelations()
-    return thing, relations
+    return thing
 
 
 def reloadThing(thing):
