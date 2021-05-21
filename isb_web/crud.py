@@ -5,6 +5,32 @@ import sqlalchemy.orm
 import igsn_lib.models.thing
 import igsn_lib.models.relation
 
+SOLR_RESERVED_CHAR_LIST = [
+    "+",
+    "-",
+    "&",
+    "|",
+    "!",
+    "(",
+    ")",
+    "{",
+    "}",
+    "[",
+    "]",
+    "^",
+    '"',
+    "~",
+    "*",
+    "?",
+    ":",
+]
+
+
+def escapeSolrQueryTerm(term):
+    term = term.replace("\\", "\\\\")
+    for c in SOLR_RESERVED_CHAR_LIST:
+        term = term.replace(c, "\{}".format(c))
+    return term
 
 def thingExists(db: sqlalchemy.orm.Session, identifier):
     try:
@@ -83,9 +109,6 @@ def getRelations(
     return qry.offset(offset).limit(limit).all()
 
 
-def solrEscape(s):
-    return s
-
 def getRelationsSolr(
         rsession: requests.Session,
         s: str = None,
@@ -99,15 +122,15 @@ def getRelationsSolr(
 ):
     q = []
     if not s is None:
-        q.append(f"s:{solrEscape(s)}")
+        q.append(f"s:{escapeSolrQueryTerm(s)}")
     if not p is None:
-        q.append(f"p:{solrEscape(p)}")
+        q.append(f"p:{escapeSolrQueryTerm(p)}")
     if not o is None:
-        q.append(f"o:{solrEscape(o)}")
+        q.append(f"o:{escapeSolrQueryTerm(o)}")
     if not source is None:
-        q.append(f"source:{solrEscape(source)}")
+        q.append(f"source:{escapeSolrQueryTerm(source)}")
     if not name is None:
-        q.append(f"name:{solrEscape(name)}")
+        q.append(f"name:{escapeSolrQueryTerm(name)}")
     if len(q) == 0:
         q.append("*:*")
     headers = {"Accept":"application/json"}
