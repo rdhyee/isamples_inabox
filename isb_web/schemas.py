@@ -11,6 +11,9 @@ class ThingListEntry(pydantic.BaseModel):
     class Config:
         orm_mode = True
 
+class ThingPage(pydantic.BaseModel):
+    last_page: int
+    data: typing.List[ThingListEntry]
 
 class ThingType(pydantic.BaseModel):
     item_type: str

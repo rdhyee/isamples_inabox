@@ -76,19 +76,21 @@ async def thing_list_metadata(
     return meta
 
 
-@app.get("/thing/", response_model=typing.List[schemas.ThingListEntry])
+@app.get("/thing/", response_model=schemas.ThingPage)
 async def thing_list(
-    offset: int = 0,
-    limit: int = 1000,
+    offset: int = fastapi.Query(0,gt=0),
+    limit: int = fastapi.Query(1000,lt=10000, gt=0),
     status: int = 200,
-    authority: str = None,
+    authority: str = fastapi.Query(None),
     db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
 ):
     """List identifiers of all Things on this service"""
-    things = crud.getThings(
+    if limit <= 0:
+        return "limit must be > 0"
+    npages, things = crud.getThings(
         db, offset=offset, limit=limit, status=status, authority_id=authority
     )
-    return things
+    return {"last_page": npages, "data": things}
 
 
 @app.get("/thing/types", response_model=typing.List[schemas.ThingType])

@@ -70,11 +70,17 @@ def getThings(
     status: int = 200,
     authority_id: str = None,
 ):
+    nrec_qry = db.query(igsn_lib.models.thing.Thing.id)
+    nrec_qry.filter(igsn_lib.models.thing.Thing.resolved_status == status)
+    if not authority_id is None:
+        nrec_qry = nrec_qry.filter(igsn_lib.models.thing.Thing.authority_id == authority_id)
+    nrecs = nrec_qry.count()
+    npages = nrecs/limit
     qry = db.query(igsn_lib.models.thing.Thing)
     qry = qry.filter(igsn_lib.models.thing.Thing.resolved_status == status)
     if not authority_id is None:
         qry = qry.filter(igsn_lib.models.thing.Thing.authority_id == authority_id)
-    return qry.offset(offset).limit(limit).all()
+    return npages, qry.offset(offset).limit(limit).all()
 
 
 def getThing(db: sqlalchemy.orm.Session, identifier: str):
