@@ -78,7 +78,7 @@ async def thing_list_metadata(
 
 @app.get("/thing/", response_model=schemas.ThingPage)
 async def thing_list(
-    offset: int = fastapi.Query(0,gt=0),
+    offset: int = fastapi.Query(0,ge=0),
     limit: int = fastapi.Query(1000,lt=10000, gt=0),
     status: int = 200,
     authority: str = fastapi.Query(None),
