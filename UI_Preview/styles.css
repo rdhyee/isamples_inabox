@@ -1,0 +1,23 @@
+body {
+    background-color: #F0F0F0;
+    padding: 10px;
+}
+
+pre {
+    overflow: scroll;
+    height: 900px;
+    width: 50%;
+    float: left;
+}
+
+.show {
+    background-color: white;
+    width: 99.4%;
+    padding: 10px 5px;
+    margin: 1px;
+    float: left;
+}
+
+.tabs {
+    background-color: #E8E8E8;
+}
