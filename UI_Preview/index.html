@@ -19,14 +19,14 @@
 
 <body>
     <!-- Top -->
-    <div class="top">
-        <p>
-            <span>Raw Record Preview</span>&nbsp;&nbsp;&nbsp;&nbsp;
+    <div class="top" id="topD">
+        <div class="header">
+            <span class="logo">Raw Record Preview</span>&nbsp;&nbsp;&nbsp;&nbsp;
             <span>id: </span>
             <input id="id_filter" size=40>
             <button id="bt_fillter" onclick="doIdFilter('id_filter')">submit</button>&nbsp;&nbsp;&nbsp;&nbsp; Total records loaded:
-            <span id="total_records"> 100</span><br>
-        </p>
+            <span id="total_records">0</span>
+        </div>
         <div id="records_table"></div>
     </div>
     <!-- Bottom -->
@@ -51,7 +51,6 @@
         placeholder: "No data availble",
         ajaxURL: "https://mars.cyverse.org/thing/",
         ajaxProgressiveLoad: "scroll",
-        paginationSize: 50,
         ajaxParams: {
             key1: "id",
             keys: "tcreated"

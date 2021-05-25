@@ -31,6 +31,6 @@ function doIdFilter(eid) {
 function Dataloaded(url, params, response) {
     var e = document.getElementById("total_records");
     console.log(response);
-    e.innerHTML = response.data.length;
+    e.innerHTML = parseInt(e.innerHTML) + response.data.length;
     return response;
 }
