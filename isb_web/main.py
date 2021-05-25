@@ -87,10 +87,10 @@ async def thing_list(
     """List identifiers of all Things on this service"""
     if limit <= 0:
         return "limit must be > 0"
-    npages, things = crud.getThings(
+    total_records, npages, things = crud.getThings(
         db, offset=offset, limit=limit, status=status, authority_id=authority
     )
-    return {"last_page": npages, "data": things}
+    return {"last_page": npages, "total_records": total_records, "data": things}
 
 
 @app.get("/thing/types", response_model=typing.List[schemas.ThingType])
