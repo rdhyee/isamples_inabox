@@ -5,8 +5,11 @@ import datetime
 
 class ThingListEntry(pydantic.BaseModel):
     id: str
+    authority_id: str
     tcreated: typing.Optional[datetime.datetime]
     resolved_status: int
+    resolved_url: str
+    resolve_elapsed: float
 
     class Config:
         orm_mode = True
