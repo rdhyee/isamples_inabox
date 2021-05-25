@@ -3,10 +3,6 @@
 
 <head>
     <meta charset="UTF-8">
-    <!-- js library Metro 4 -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="stylesheet" href="https://cdn.metroui.org.ua/v4/css/metro-all.min.css">
-    <script src="https://cdn.metroui.org.ua/v4/js/metro.min.js"></script>
     <!-- js library tabulator -->
     <link href="https://unpkg.com/tabulator-tables@4.9.3/dist/css/tabulator.min.css" rel="stylesheet">
     <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.9.3/dist/js/tabulator.min.js"></script>
@@ -17,36 +13,33 @@
     <!-- load js and css files-->
     <link rel=stylesheet type="text/css" href="styles.css" />
     <script type="text/javascript" src="script.js"></script>
+    <!-- load split.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/split.js/1.6.0/split.min.js"></script>
 </head>
 
 <body>
-    <p>
-        <span>Raw Record Preview</span>
-        <span>id: </span>
-        <input id="id_filter" size=40>
-        <button id="bt_fillter" onclick="doIdFilter('id_filter')">submit</button>&nbsp;&nbsp;&nbsp;&nbsp; Total records loaded:
-        <span id="total_records"> 100</span><br>
-    </p>
-    <div id="records_table"></div>
-    <div class="tab">
-        <ul id="tabs" data-role="tabs" data-expand="true">
-            <li><a href="#" onclick="openTab('object_tab')">object</a></li>
-            <li><a href="#" onclick="openTab('other_tab1')">tab1</a></li>
-            <li><a href="#" onclick="openTab('other_tab2')">tab2</a></li>
-        </ul>
+    <!-- Top -->
+    <div class="top">
+        <p>
+            <span>Raw Record Preview</span>&nbsp;&nbsp;&nbsp;&nbsp;
+            <span>id: </span>
+            <input id="id_filter" size=40>
+            <button id="bt_fillter" onclick="doIdFilter('id_filter')">submit</button>&nbsp;&nbsp;&nbsp;&nbsp; Total records loaded:
+            <span id="total_records"> 100</span><br>
+        </p>
+        <div id="records_table"></div>
     </div>
-    <div class="show" id="data">
-        <div id="object_tab" style="display: block;">
-            <pre id="object_show"></pre>
-            <pre>iSample transformed record</pre>
-        </div>
-        <div id="other_tab1" style="display: none;">
-            <pre id="other_show1">content1</pre>
-            <pre>iSample transformed record</pre>
-        </div>
-        <div id="other_tab2" style="display: none;">
-            <pre id="other_show2">content2</pre>
-            <pre>iSample transformed record</pre>
+    <!-- Bottom -->
+    <div class="records">
+        <div class="container">
+            <div class="container_child" id="left">
+                <span class="label">Raw record</span>
+                <pre id="records_show"></pre>
+            </div>
+            <div class="container_child" id="right">
+                <span class="label">iSample record</span>
+                <pre>iSample transformed record</pre>
+            </div>
         </div>
     </div>
 </body>
@@ -58,6 +51,7 @@
         placeholder: "No data availble",
         ajaxURL: "https://mars.cyverse.org/thing/",
         ajaxProgressiveLoad: "scroll",
+        paginationSize: 50,
         ajaxParams: {
             key1: "id",
             keys: "tcreated"
@@ -66,12 +60,31 @@
             "title": "id",
             field: "id",
         }, {
+            "title": "authority_id",
+            field: "authority_id",
+            width: 150
+        }, {
             "title": "time created",
             field: "tcreated"
+        }, {
+            "title": "status",
+            field: "resolved_status",
+            width: 70
+        }, {
+            "title": "url",
+            field: "resolved_url"
+        }, {
+            "title": "elapsed",
+            field: "resolve_elapsed"
         }],
+        ajaxResponse: Dataloaded,
         rowClick: rowClick,
         ajaxSorting: true,
         selectable: 1
+    });
+
+    Split(["#left", "#right"], {
+        gutterSize: 10,
     });
 </script>
 
