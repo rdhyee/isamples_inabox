@@ -80,7 +80,7 @@ def getThings(
     qry = qry.filter(igsn_lib.models.thing.Thing.resolved_status == status)
     if not authority_id is None:
         qry = qry.filter(igsn_lib.models.thing.Thing.authority_id == authority_id)
-    return npages, qry.offset(offset).limit(limit).all()
+    return nrecs, npages, qry.offset(offset).limit(limit).all()
 
 
 def getThing(db: sqlalchemy.orm.Session, identifier: str):
