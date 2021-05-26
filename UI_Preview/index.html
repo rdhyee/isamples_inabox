@@ -24,7 +24,8 @@
             <span class="logo">Raw Record Preview</span>&nbsp;&nbsp;&nbsp;&nbsp;
             <span>id: </span>
             <input id="id_filter" size=40>
-            <button id="bt_fillter" onclick="doIdFilter('id_filter')">submit</button>&nbsp;&nbsp;&nbsp;&nbsp; Total records loaded:
+            <button id="bt_fillter" onclick="doIdFilter('id_filter')">submit</button>&nbsp;&nbsp;&nbsp;&nbsp; Records loaded:
+            <span id="records_load">0</span>&nbsp;&nbsp;&nbsp;&nbsp; Total records:
             <span id="total_records">0</span>
         </div>
         <div id="records_table"></div>
@@ -64,11 +65,12 @@
             width: 150
         }, {
             "title": "time created",
-            field: "tcreated"
+            field: "tcreated",
+            width: 300
         }, {
             "title": "status",
             field: "resolved_status",
-            width: 70
+            width: 150
         }, {
             "title": "url",
             field: "resolved_url"

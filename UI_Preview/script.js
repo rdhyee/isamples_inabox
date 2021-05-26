@@ -29,8 +29,10 @@ function doIdFilter(eid) {
 
 //update load data
 function Dataloaded(url, params, response) {
-    var e = document.getElementById("total_records");
+    var e1 = document.getElementById("records_load");
+    var e2 = document.getElementById("total_records");
     console.log(response);
-    e.innerHTML = parseInt(e.innerHTML) + response.data.length;
+    e1.innerHTML = parseInt(e1.innerHTML) + response.data.length;
+    e2.innerHTML = response.total_records;
     return response;
 }
