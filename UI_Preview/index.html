@@ -18,8 +18,8 @@
 </head>
 
 <body>
-    <!-- Top -->
-    <div class="top" id="topD">
+    <!--header -->
+    <div class="box">
         <div class="header">
             <span class="logo">Raw Record Preview</span>&nbsp;&nbsp;&nbsp;&nbsp;
             <span>id: </span>
@@ -28,18 +28,21 @@
             <span id="records_load">0</span>&nbsp;&nbsp;&nbsp;&nbsp; Total records:
             <span id="total_records">0</span>
         </div>
-        <div id="records_table"></div>
-    </div>
-    <!-- Bottom -->
-    <div class="records">
-        <div class="container">
-            <div class="container_child" id="left">
-                <span class="label">Raw record</span>
-                <pre id="records_show"></pre>
-            </div>
-            <div class="container_child" id="right">
-                <span class="label">iSample record</span>
-                <pre>iSample transformed record</pre>
+        <div class="content">
+            <!-- Top -->
+            <div id="records_table">asd</div>
+            <!-- Bottom -->
+            <div class="records" id="bottom">
+                <div class="container">
+                    <div class="container_child" id="left">
+                        <span class="label">Raw record</span>
+                        <pre id="records_show"></pre>
+                    </div>
+                    <div class="container_child" id="right">
+                        <span class="label">iSample record</span>
+                        <pre>iSample transformed record</pre>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -48,10 +51,18 @@
     //load records from server into tabulator
     var table = new Tabulator("#records_table", {
         layout: "fitColumns",
-        height: 290,
+        height: 300,
         placeholder: "No data availble",
-        ajaxURL: "https://mars.cyverse.org/thing/",
+        ajaxURL: "https://mars.cyverse.org/thing/?offset=0&limit=1000&status=200",
+        paginationDataSent: {
+            "page": "offset",
+            "size": "limit",
+        },
+        ajaxURLGenerator: function(url, config, params) {
+            return url + `?offset=${params.offset}&limit=${params.limit}&status=200`;
+        },
         ajaxProgressiveLoad: "scroll",
+        paginationSize: 1000,
         ajaxParams: {
             key1: "id",
             keys: "tcreated"
@@ -84,6 +95,11 @@
         selectable: 1
     });
 
+    Split(["#records_table", "#bottom"], {
+        gutterSize: 30,
+        direction: "vertical",
+        sizes: [30, 70],
+    });
     Split(["#left", "#right"], {
         gutterSize: 10,
     });

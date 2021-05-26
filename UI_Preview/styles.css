@@ -1,12 +1,19 @@
+html,
 body {
     background-color: #D3D3D3;
-    padding: 10px;
+    height: 100%;
 }
 
 pre {
     overflow: scroll;
-    height: inherit;
+    height: 98%;
     border: 1px solid;
+    margin: 0px;
+}
+
+.content {
+    box-sizing: border-box;
+    height: 92%;
 }
 
 .logo {
@@ -15,13 +22,14 @@ pre {
 }
 
 .top {
-    position: sticky;
-    top: 0;
     background-color: #F0F0F0;
+    overflow-x: hidden;
 }
 
 .header {
     padding: 5px;
+    overflow-y: hidden;
+    margin: 0px;
 }
 
 .label {
@@ -31,26 +39,41 @@ pre {
     font-size: 20px;
 }
 
+.box {
+    display: flex;
+    flex-flow: column;
+    height: 100%;
+    padding: 0px;
+}
+
 .container {
     display: flex;
     width: 100%;
     height: 100%;
-    margin-top: -10px;
+    margin: 0px;
+    padding: 0px;
 }
 
 .container_child {
-    height: 900px;
+    margin: 0px;
+    height: 100%;
 }
 
 .records {
     background-color: white;
-    width: 99.5%;
     padding: 10px 5px;
-    margin: 2px;
+    margin: 0px;
     height: 100%;
+    overflow-y: hidden;
 }
 
 .gutter {
-    background: #C8C8C8;
-    height: 935px;
+    background: black;
+    height: 100%;
+    overflow-y: hidden;
+    margin: 0px;
+}
+
+.gutter.gutter-vertical {
+    background: grey;
 }
