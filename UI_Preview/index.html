@@ -12,12 +12,12 @@
     <title>Raw Record Preview</title>
     <!-- load js and css files-->
     <link rel=stylesheet type="text/css" href="styles.css" />
-    <script type="text/javascript" src="script.js"></script>
+
     <!-- load split.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/split.js/1.6.0/split.min.js"></script>
 </head>
 
-<body onload="tableAndSplit()">
+<body>
     <!--header -->
     <div class="box">
         <div class="header">
@@ -26,11 +26,22 @@
             <input id="id_filter" size=40>
             <button id="bt_fillter" onclick="doIdFilter('id_filter')">submit</button>&nbsp;&nbsp;&nbsp;&nbsp; Records loaded:
             <span id="records_load">0</span>&nbsp;&nbsp;&nbsp;&nbsp; Total records:
-            <span id="total_records">0</span>
+            <span id="total_records">0</span>&nbsp;&nbsp;&nbsp;&nbsp;
+            <button id="bt_types">Types</button>
+        </div>
+        <div id="types" class="model">
+            <div class="model-content">
+                <div class="typeHeader">
+                    <h3>Types</h3>
+                    <span id="close" class="closeBt">&times;</span>
+                </div>
+                <div id="types_table"></div>
+                </table>
+            </div>
         </div>
         <div class="content">
             <!-- Top -->
-            <div id="records_table">asd</div>
+            <div id="records_table"></div>
             <!-- Bottom -->
             <div class="records" id="bottom">
                 <div class="container">
@@ -46,6 +57,7 @@
             </div>
         </div>
     </div>
+    <script type="text/javascript" src="script.js"></script>
 </body>
 
 </html>
