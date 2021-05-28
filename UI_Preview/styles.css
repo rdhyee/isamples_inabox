@@ -129,10 +129,6 @@ td[scope="header"] {
     box-shadow: 0 5px 8px 0 rgba(0, 0, 0, 0.2), 0 7px 20px 0 rgba(0, 0, 0, 0.2);
 }
 
-.typeHeader {
-    margin: 0;
-}
-
 #types_table {
     overflow-x: scroll;
 }
@@ -143,6 +139,7 @@ td[scope="header"] {
     position: absolute;
     top: 0;
     right: 0;
+    margin: 0;
 }
 
 .closeBt:hover,

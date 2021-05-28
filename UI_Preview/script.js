@@ -73,6 +73,8 @@ function Dataloaded(url, params, response) {
     e1.innerHTML = parseInt(e1.innerHTML) + response.data.length;
     e2.innerHTML = response.total_records;
     showTypes();
+    var a = table.getAjaxUrl();
+    console.log(a);
     return response;
 }
 //load records from server into tabulator
@@ -80,13 +82,18 @@ var table = new Tabulator("#records_table", {
     layout: "fitColumns",
     height: 300,
     placeholder: "No data availble",
-    ajaxURL: "https://mars.cyverse.org/thing/?offset=0&limit=1000&status=200",
+    ajaxURL: "https://mars.cyverse.org/thing/",
     paginationDataSent: {
         "page": "offset",
         "size": "limit",
     },
+
     ajaxURLGenerator: function(url, config, params) {
         return url + `?offset=${params.offset}&limit=${params.limit}&status=200`;
+    },
+    ajaxRequesting: function(url, params) {
+        console.log(url);
+        console.log(params);
     },
     ajaxProgressiveLoad: "scroll",
     paginationSize: 1000,
@@ -120,7 +127,6 @@ var table = new Tabulator("#records_table", {
     }],
     ajaxResponse: Dataloaded,
     rowClick: rowClick,
-    ajaxSorting: true,
     selectable: 1
 });
 
