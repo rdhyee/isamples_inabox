@@ -1,9 +1,12 @@
 import requests
 import sqlalchemy.sql
 import sqlalchemy.orm
-
+import logging
 import igsn_lib.models.thing
 import igsn_lib.models.relation
+
+def getLogger():
+    return logging.getLogger("isb_web")
 
 SOLR_RESERVED_CHAR_LIST = [
     "+",
@@ -70,17 +73,30 @@ def getThings(
     status: int = 200,
     authority_id: str = None,
 ):
+    L = getLogger()
+    L.info(f"offset: {offset}")
+    L.info("%s %s %s %s %s", offset, "", "", "", "")
     nrec_qry = db.query(igsn_lib.models.thing.Thing.id)
     nrec_qry.filter(igsn_lib.models.thing.Thing.resolved_status == status)
     if not authority_id is None:
         nrec_qry = nrec_qry.filter(igsn_lib.models.thing.Thing.authority_id == authority_id)
     nrecs = nrec_qry.count()
     npages = nrecs/limit
-    qry = db.query(igsn_lib.models.thing.Thing)
-    qry = qry.filter(igsn_lib.models.thing.Thing.resolved_status == status)
-    if not authority_id is None:
-        qry = qry.filter(igsn_lib.models.thing.Thing.authority_id == authority_id)
-    return nrecs, npages, qry.offset(offset).limit(limit).all()
+    sql = "SELECT * FROM thing WHERE resolved_status=:status"
+    params = {"status":status,}
+    if authority_id is not None:
+        sql = sql + " AND authority_id=:authority_id"
+        params["authority_id"] = authority_id
+    sql = sql + " ORDER BY _id OFFSET :offset FETCH NEXT :limit ROWS ONLY"
+    params["offset"] = offset
+    params["limit"] = limit
+    qry = db.execute(sql, params)
+    #qry = db.query(igsn_lib.models.thing.Thing)
+    #qry = qry.filter(igsn_lib.models.thing.Thing.resolved_status == status)
+    #if not authority_id is None:
+    #    qry = qry.filter(igsn_lib.models.thing.Thing.authority_id == authority_id)
+    #return nrecs, npages, qry.order_by(igsn_lib.models.thing.Thing._id).fetch(limit).all()
+    return nrecs, npages, qry.all()
 
 
 def getThing(db: sqlalchemy.orm.Session, identifier: str):

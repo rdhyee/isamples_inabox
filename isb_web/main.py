@@ -3,15 +3,20 @@ import uvicorn
 import datetime
 import typing
 import requests
+from fastapi.logger import logger as fastapi_logger
 import fastapi.staticfiles
 import fastapi.templating
 import fastapi.middleware.cors
 import sqlalchemy.orm
 import accept_types
+import pydantic
 from isb_web import database
 from isb_web import schemas
 from isb_web import crud
 from isb_web import config
+
+import logging
+
 
 THIS_PATH = os.path.dirname(os.path.abspath(__file__))
 WEB_ROOT = config.Settings().web_root
@@ -75,7 +80,6 @@ async def thing_list_metadata(
     meta = crud.getThingMeta(db)
     return meta
 
-
 @app.get("/thing/", response_model=schemas.ThingPage)
 async def thing_list(
     offset: int = fastapi.Query(0,ge=0),
@@ -85,12 +89,14 @@ async def thing_list(
     db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
 ):
     """List identifiers of all Things on this service"""
+    fastapi_logger.info("test")
     if limit <= 0:
         return "limit must be > 0"
     total_records, npages, things = crud.getThings(
         db, offset=offset, limit=limit, status=status, authority_id=authority
     )
-    return {"last_page": npages, "total_records": total_records, "data": things}
+    params = {"limit":limit, "offset":offset, "status":status, "authority":authority}
+    return {"params":params, "last_page": npages, "total_records": total_records, "data": things}
 
 
 @app.get("/thing/types", response_model=typing.List[schemas.ThingType])
@@ -229,8 +235,17 @@ async def root(request: fastapi.Request):
 
 
 def main():
+    logging.basicConfig(level=logging.DEBUG)
     uvicorn.run("isb_web.main:app", host="0.0.0.0", port=8000, reload=True)
 
 
 if __name__ == "__main__":
+    formatter = logging.Formatter(
+        "[%(asctime)s.%(msecs)03d] %(levelname)s [%(thread)d] - %(message)s", "%Y-%m-%d %H:%M:%S")
+    handler = logging.StreamHandler() #RotatingFileHandler('/log/abc.log', backupCount=0)
+    logging.getLogger().setLevel(logging.NOTSET)
+    fastapi_logger.addHandler(handler)
+    handler.setFormatter(formatter)
+
+    fastapi_logger.info('****************** Starting Server *****************')
     main()
