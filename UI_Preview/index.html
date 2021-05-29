@@ -12,79 +12,52 @@
     <title>Raw Record Preview</title>
     <!-- load js and css files-->
     <link rel=stylesheet type="text/css" href="styles.css" />
-    <script type="text/javascript" src="script.js"></script>
+
     <!-- load split.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/split.js/1.6.0/split.min.js"></script>
 </head>
 
 <body>
-    <!-- Top -->
-    <div class="top" id="topD">
+    <!--header -->
+    <div class="box">
         <div class="header">
             <span class="logo">Raw Record Preview</span>&nbsp;&nbsp;&nbsp;&nbsp;
             <span>id: </span>
             <input id="id_filter" size=40>
-            <button id="bt_fillter" onclick="doIdFilter('id_filter')">submit</button>&nbsp;&nbsp;&nbsp;&nbsp; Total records loaded:
-            <span id="total_records">0</span>
+            <button id="bt_fillter" onclick="doIdFilter('id_filter')">submit</button>&nbsp;&nbsp;&nbsp;&nbsp; Records loaded:
+            <span id="records_load">0</span>&nbsp;&nbsp;&nbsp;&nbsp; Total records:
+            <span id="total_records">0</span>&nbsp;&nbsp;&nbsp;&nbsp;
+            <button id="bt_types">Types</button>
         </div>
-        <div id="records_table"></div>
-    </div>
-    <!-- Bottom -->
-    <div class="records">
-        <div class="container">
-            <div class="container_child" id="left">
-                <span class="label">Raw record</span>
-                <pre id="records_show"></pre>
-            </div>
-            <div class="container_child" id="right">
-                <span class="label">iSample record</span>
-                <pre>iSample transformed record</pre>
+        <div id="types" class="model">
+            <div class="model-content">
+                <div class="typeHeader">
+                    <h3>Types</h3>
+                    <span id="close" class="closeBt">&times;</span>
+                </div>
+                <div id="types_table"></div>
+                </table>
             </div>
         </div>
+        <div class="content">
+            <!-- Top -->
+            <div id="records_table"></div>
+            <!-- Bottom -->
+            <div class="records" id="bottom">
+                <div class="container">
+                    <div class="container_child" id="left">
+                        <span class="label">Raw record</span>
+                        <pre id="records_show"></pre>
+                    </div>
+                    <div class="container_child" id="right">
+                        <span class="label">iSample record</span>
+                        <pre>iSample transformed record</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+    <script type="text/javascript" src="script.js"></script>
 </body>
-<script>
-    //load records from server into tabulator
-    var table = new Tabulator("#records_table", {
-        layout: "fitColumns",
-        height: 290,
-        placeholder: "No data availble",
-        ajaxURL: "https://mars.cyverse.org/thing/",
-        ajaxProgressiveLoad: "scroll",
-        ajaxParams: {
-            key1: "id",
-            keys: "tcreated"
-        },
-        columns: [{
-            "title": "id",
-            field: "id",
-        }, {
-            "title": "authority_id",
-            field: "authority_id",
-            width: 150
-        }, {
-            "title": "time created",
-            field: "tcreated"
-        }, {
-            "title": "status",
-            field: "resolved_status",
-            width: 70
-        }, {
-            "title": "url",
-            field: "resolved_url"
-        }, {
-            "title": "elapsed",
-            field: "resolve_elapsed"
-        }],
-        ajaxResponse: Dataloaded,
-        rowClick: rowClick,
-        ajaxSorting: true,
-        selectable: 1
-    });
-
-    Split(["#left", "#right"], {
-        gutterSize: 10,
-    });
-</script>
 
 </html>
