@@ -1,0 +1,176 @@
+html,
+body {
+    background-color: #B8B8B8;
+    font-family: 'Courier New', Courier, monospace;
+    margin: 0;
+    height: 100%;
+    padding: 0px 5px;
+}
+
+button {
+    cursor: pointer;
+    background-color: #D3D3D3;
+}
+
+button:hover {
+    box-shadow: 2px 4px #606060;
+}
+
+pre {
+    border-top: 1px solid;
+    border-left: 1px solid;
+    height: calc(100%-25px);
+    height: -moz-calc(100% - 25px);
+    height: -webkit-calc(100% - 25px);
+    margin: 0;
+    overflow: scroll;
+}
+
+table,
+td {
+    border: 1px solid black;
+    padding: 5px;
+}
+
+table {
+    border-collapse: collapse;
+}
+
+td:nth-child(odd) {
+    background-color: #D8D8D8;
+}
+
+td[scope="header"] {
+    background-color: #A9A9A9;
+}
+
+.header {
+    position: relative;
+    height: 55px;
+}
+
+.header-chlid.right {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+}
+
+.bts_right {
+    border: none;
+    padding: 5px 10px;
+}
+
+.logo {
+    font-size: 40px;
+    font-family: system-ui;
+    text-shadow: 5px 5px #BEBEBE;
+    margin-right: 50px;
+}
+
+.content {
+    height: calc(100%-65px);
+    height: -moz-calc(100% - 65px);
+    height: -webkit-calc(100% - 65px);
+    position: relative;
+    box-sizing: border-box;
+}
+
+.changePanes {
+    border: 1px solid;
+    position: absolute;
+    right: 0;
+    background-color: #D3D3D3;
+}
+
+.infoContainer {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.infoChild {
+    width: 100%;
+    height: 100%;
+    background-color: white;
+}
+
+.label {
+    padding: 0px 5px;
+    font-size: 20px;
+    border-left: 1px solid;
+    border-right: 1px solid;
+    text-shadow: 2px 2px #BEBEBE;
+}
+
+.gutter {
+    background: #C8C8C8;
+    box-sizing: border-box;
+}
+
+.gutter-horizontal {
+    cursor: e-resize;
+}
+
+.gutter-vertical {
+    cursor: n-resize;
+}
+
+.types {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.typesModel {
+    position: relative;
+    background-color: white;
+    margin: 10% auto;
+    width: 80%;
+    height: auto;
+    box-sizing: border-box;
+    box-shadow: 0 5px 8px 0 rgba(0, 0, 0, 0.2), 0 7px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+.TypesHeader {
+    height: 40px;
+}
+
+.closeBt {
+    color: #CCC;
+    font-size: 50px;
+    position: absolute;
+    top: -10px;
+    right: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.closeBt:hover,
+.closeBt:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#info {
+    border: 1px solid;
+}
+
+#records_table {
+    background: #F0F0F0;
+}
+
+#bt_filter {
+    margin-right: 50px;
+}
+
+#types_table {
+    overflow: scroll;
+    padding: 5px;
+}
