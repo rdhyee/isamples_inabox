@@ -262,14 +262,22 @@ def reparseRecords(ctx):
 @main.command("relations")
 @click.pass_context
 def reparseRelations(ctx):
-    def _yieldRecordsByPage(qry, pk):
+    def _yieldRecordsByPage(session, authority_id="SESAR", status=200, page_size=5000):
         offset = 0
-        page_size = 5000
         while True:
-            q = qry
-            rec = None
             n = 0
-            for rec in q.order_by(pk).offset(offset).limit(page_size):
+            sql = "SELECT * FROM thing WHERE resolved_status=:status"
+            params = {
+                "status": status,
+            }
+            if authority_id is not None:
+                sql = sql + " AND authority_id=:authority_id"
+                params["authority_id"] = authority_id
+            sql = sql + " ORDER BY _id OFFSET :offset FETCH NEXT :limit ROWS ONLY"
+            params["offset"] = offset
+            params["limit"] = page_size
+            qry = session.execute(sql, params)
+            for rec in qry:
                 n += 1
                 yield rec
             if n == 0:
@@ -297,20 +305,19 @@ def reparseRelations(ctx):
 
     L = getLogger()
     rsession = requests.session()
-    batch_size = 1000
+    batch_size = 5000
     L.info("reparseRecords with batch size: %s", batch_size)
     session = getDBSession(ctx.obj["db_url"])
     allkeys = set()
     try:
         i = 0
         n = 0
-        qry = session.query(igsn_lib.models.thing.Thing).filter(
-            igsn_lib.models.thing.Thing.authority_id
-            == isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID
-        )
-        pk = igsn_lib.models.thing.Thing.id
         relations = []
-        for thing in _yieldRecordsByPage(qry, pk):
+        for thing in _yieldRecordsByPage(
+            session,
+            authority_id=isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID,
+            page_size=batch_size,
+        ):
             batch = isb_lib.sesar_adapter.reparseRelations(thing, as_solr=True)
             relations = relations + batch
             for r in relations:
