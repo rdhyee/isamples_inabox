@@ -119,7 +119,7 @@ function Dataloaded(url, params, response) {
 var table = new Tabulator("#records_table", {
     layout: "fitColumns",
     placeholder: "No data availble",
-    ajaxURL: "https://mars.cyverse.org/thing/?offset=0&limit=1000&status=200",
+    ajaxURL: "https://mars.cyverse.org/thing/",
     paginationDataSent: {
         "page": "offset",
         "size": "limit",
@@ -128,7 +128,9 @@ var table = new Tabulator("#records_table", {
     ajaxRequesting: function(url, params) {
         console.log(url);
         console.log(params);
-        return `https://mars.cyverse.org/thing/?offset=${params.offset}&limit=${params.limit}&status=200`;
+        params.offset = "" + (parseInt(params.offset) - 1) * parseInt(params.limit);
+        delete params.key1;
+        delete params.keys;
     },
     ajaxProgressiveLoad: "scroll",
     paginationSize: 1000,
@@ -160,6 +162,7 @@ var table = new Tabulator("#records_table", {
         field: "resolve_elapsed",
         width: 150
     }],
+    ajaxFiltering: true,
     ajaxResponse: Dataloaded,
     rowClick: rowClick,
     selectable: 1
