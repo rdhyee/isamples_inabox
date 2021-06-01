@@ -162,7 +162,6 @@ var table = new Tabulator("#records_table", {
         field: "resolve_elapsed",
         width: 150
     }],
-    ajaxFiltering: true,
     ajaxResponse: Dataloaded,
     rowClick: rowClick,
     selectable: 1
@@ -193,4 +192,10 @@ function openTypes() {
 
 function closeTypes() {
     modal.style.display = "none";
+}
+
+window.onclick = function(event) {
+    if (event.target == modal) {
+        modal.style.display = "none";
+    }
 }

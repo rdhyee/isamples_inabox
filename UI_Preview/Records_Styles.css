@@ -76,10 +76,19 @@ td[scope="header"] {
 }
 
 .changePanes {
-    border: 1px solid;
     position: absolute;
     right: 0;
     background-color: #D3D3D3;
+    padding: 0;
+    display: flex;
+    box-sizing: border-box;
+    border-left: 1px solid;
+    border-right: 1px solid;
+}
+
+.radioImg {
+    width: 22.5px;
+    height: 22.5px;
 }
 
 .infoContainer {
@@ -133,6 +142,7 @@ td[scope="header"] {
     margin: 10% auto;
     width: 80%;
     height: auto;
+    border-radius: 10px;
     box-sizing: border-box;
     box-shadow: 0 5px 8px 0 rgba(0, 0, 0, 0.2), 0 7px 20px 0 rgba(0, 0, 0, 0.2);
 }
@@ -160,6 +170,7 @@ td[scope="header"] {
 
 #info {
     border: 1px solid;
+    box-sizing: border-box;
 }
 
 #records_table {

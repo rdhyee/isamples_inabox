@@ -24,7 +24,8 @@
             <span class="logo">Raw Records Preview</span>
             <span>id:</span>
             <input id="id_filter" size=40>
-            <button id="bt_filter" onclick="doIdFilter('id_filter')">submit</button>
+            <button id="bt_filter" onclick="doIdFilter('id_filter')">
+                <img src="./img/search.png" alt="submit" width="10" height="10"></button>
             <span>
                 Records Load: <i><span id="records_loaded">0</span></i> Total Reocrds: <i><span id="total_records">0</span></i>
             </span>
@@ -44,8 +45,10 @@
         <!-- records content-->
         <div id="info">
             <div class="changePanes">
-                <input type="radio" name="dir" onchange="changePanes('h')" checked>horizontal</input>
-                <input type="radio" name="dir" onchange="changePanes('v')">vertical</input>
+                <input type="radio" name="dir" onchange="changePanes('h')" checked>
+                <img class="radioImg" src="./img/row.png" alt="horizontal">
+                <input type="radio" name="dir" onchange="changePanes('v')">
+                <img class="radioImg" src="./img/col.png" alt="vertical">
             </div>
             <div class="infoContainer">
                 <div class="infoChild" id="InfoLeft">
