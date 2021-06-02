@@ -45,7 +45,7 @@ Create a database, e.g:
 ```
 psql postgres
 CREATE DATABASE isb_1;
-CREATE USERr isb_writer WITH ENCRYPTED PASSWORD 'some_password';
+CREATE USER isb_writer WITH ENCRYPTED PASSWORD 'some_password';
 GRANT ALL PRIVILEGES ON DATABASE isb_1 TO isb_writer;
 ```
 
