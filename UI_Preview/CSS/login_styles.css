@@ -1,0 +1,59 @@
+html,
+body {
+    font-family: 'Courier New', Courier, monospace;
+    margin: 0;
+    height: 100%;
+    padding: 0px 5px;
+    position: relative;
+}
+
+input {
+    height: 20px;
+}
+
+.about {
+    position: absolute;
+    top: 10px;
+    left: 20px;
+}
+
+.title {
+    font-size: 50px;
+    text-align: center;
+    padding-bottom: 20px;
+}
+
+.Users {
+    font-size: 25px;
+    margin: 5px 0px;
+}
+
+.NF_users {
+    font-size: 15px;
+    text-align: right;
+    padding-right: 10px;
+    margin-bottom: 20px;
+}
+
+.NF {
+    padding-right: 35px;
+}
+
+.bt_enter {
+    font-size: 20px;
+    width: 255px;
+    margin-top: 20px;
+    background-color: white;
+}
+
+.otherLogin {
+    text-align: center;
+}
+
+#loginForm {
+    width: 395px;
+    position: absolute;
+    top: 30%;
+    border: 1px solid;
+    margin-left: 200px;
+}

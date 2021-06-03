@@ -10,6 +10,12 @@ var infoSplit = Split(["#InfoLeft", "#InfoRight"], {
     minSize: [200, 200],
 })
 
+//log out
+var logout = document.getElementById("logout");
+logout.addEventListener('click', function() {
+    location.href = "./login.html";
+})
+
 //change the raw data and iSample data panels directions
 function changePanes(direction) {
     var container = document.getElementsByClassName("infoContainer")[0];
@@ -94,6 +100,8 @@ function typeTable(data) {
 function rowClick(e, row) {
     console.log(row._row);
     var id = row._row.data.id;
+    var reportId = document.getElementById('currentID');
+    reportId.innerHTML = id;
     showRawRecord(id);
 }
 
@@ -166,36 +174,49 @@ var table = new Tabulator("#records_table", {
     rowClick: rowClick,
     selectable: 1
 });
-//table ---------------------------------------------------------------------
-
 
 //enable input submit when users press enter
 var inputText = document.getElementById("id_filter");
 inputText.addEventListener("keyup", function(event) {
-    if (event.keyCode === 13) {
-        event.preventDefault();
-        document.getElementById("bt_filter").click();
-    }
-})
+        if (event.keyCode === 13) {
+            event.preventDefault();
+            document.getElementById("bt_filter").click();
+        }
+    })
+    //table ---------------------------------------------------------------------
+
+//type popup-----------------------------------------------------------------
+
 
 //add types in a popup box
 var modal = document.getElementsByClassName("types")[0];
 var bt_types = document.getElementById("bt_types");
 var closeBt = document.getElementsByClassName("closeBt")[0];
 
-bt_types.addEventListener('click', openTypes);
-closeBt.addEventListener('click', closeTypes);
+bt_types.addEventListener('click', function() { modal.style.display = "block"; });
+closeBt.addEventListener('click', function() { modal.style.display = "none"; });
 
-function openTypes() {
-    modal.style.display = "block";
-}
 
-function closeTypes() {
-    modal.style.display = "none";
-}
+
+//report popup-----------------------------------------------------------------
+var reportModel = document.getElementsByClassName("report")[0];
+var bt_report = document.getElementsByClassName("bt_report")[0];
+var repClose = document.getElementById("repClose");
+var repText = document.getElementsByClassName("retext")[0];
+
+bt_report.addEventListener("click", function() {
+    reportModel.style.display = "block";
+    repText.value = "";
+    repText.placeholder = "Please enter bug";
+});
+repClose.addEventListener("click", function() { reportModel.style.display = "none"; })
 
 window.onclick = function(event) {
     if (event.target == modal) {
         modal.style.display = "none";
+    }
+
+    if (event.target == reportModel) {
+        reportModel.style.display = "none";
     }
 }
