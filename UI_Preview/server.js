@@ -19,8 +19,12 @@ var access_token = "";
 
 console.log(__dirname)
 
+app.use('/img', express.static('img'))
+app.use('/CSS', express.static('CSS'))
+app.use('/js', express.static('js'))
+
 app.get('/', function(req, res) {
-    res.redirect('../login.html');
+    res.sendFile(path.join(__dirname, "/login.html"))
 });
 
 // Declare the callback route
@@ -43,7 +47,7 @@ app.get('/github/callback', (req, res) => {
 })
 
 app.get('/success', function(req, res) {
-    res.redirect(path.join(__dirname, "../Records_View.html"))
+    res.sendFile(path.join(__dirname, "/Records_View.html"))
 });
 
 app.get('/issues', function(req, res) {

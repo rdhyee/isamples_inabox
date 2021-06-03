@@ -13,7 +13,7 @@ var infoSplit = Split(["#InfoLeft", "#InfoRight"], {
 //log out
 var logout = document.getElementById("logout");
 logout.addEventListener('click', function() {
-    location.href = "./login.html";
+    location.href = "http://localhost:2400/";
 })
 
 //change the raw data and iSample data panels directions
@@ -101,6 +101,7 @@ function rowClick(e, row) {
     console.log(row._row);
     var id = row._row.data.id;
     var reportId = document.getElementById('currentID');
+    reportId.value = id;
     reportId.innerHTML = id;
     showRawRecord(id);
 }
@@ -210,6 +211,25 @@ bt_report.addEventListener("click", function() {
     repText.placeholder = "Please enter bug";
 });
 repClose.addEventListener("click", function() { reportModel.style.display = "none"; })
+
+var reportTitle = document.getElementById('currentID');
+var reportBody = document.getElementById('reportBody');
+var bt_issue = document.getElementById('bt_issue');
+bt_issue.addEventListener('click', createIssue);
+async function createIssue() {
+    if (reportTitle.value == undefined) {
+        alert("Please choose a record!");
+    } else {
+        const url = `http://localhost:2400/issues?title=${reportTitle.value}&report=${reportBody.value}`
+        fetch(url)
+            .then(res => { console.log("success") })
+
+        reportModel.style.display = "none";
+    }
+
+
+}
+
 
 window.onclick = function(event) {
     if (event.target == modal) {
