@@ -14,10 +14,10 @@ from isb_web import database
 from isb_web import schemas
 from isb_web import crud
 from isb_web import config
+from isb_web import isb_format
 from isamples_metadata.SESARTransformer import SESARTransformer
 
 import logging
-
 
 THIS_PATH = os.path.dirname(os.path.abspath(__file__))
 WEB_ROOT = config.Settings().web_root
@@ -112,7 +112,7 @@ async def thing_list_types(
 async def get_thing(
     identifier: str,
     full: bool = False,
-    format: str = "original",
+    format: isb_format.ISBFormat = isb_format.ISBFormat.ORIGINAL,
     db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
 ):
     """Record for the specified identifier"""
@@ -121,15 +121,15 @@ async def get_thing(
         raise fastapi.HTTPException(
             status_code=404, detail=f"Thing not found: {identifier}"
         )
-    if full or format == "full":
+    if full or format == isb_format.ISBFormat.FULL:
         return item
-    if format == "core":
+    if format == isb_format.ISBFormat.CORE:
         authority_id = item.authority_id
         if authority_id == "SESAR":
             content = SESARTransformer(item.resolved_content).transform()
         else:
             raise fastapi.HTTPException(
-                status_code=404,
+                status_code=400,
                 detail=f"Core format not available for authority_id: {authority_id}",
             )
     else:
