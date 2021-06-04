@@ -5,6 +5,9 @@ body {
     height: 100%;
     padding: 0px 5px;
     position: relative;
+    background-image: url("../img/earth.jpg");
+    background-repeat: no-repeat;
+    background-size: 120%;
 }
 
 input {
@@ -21,11 +24,13 @@ input {
     font-size: 50px;
     text-align: center;
     padding-bottom: 20px;
+    color: white;
 }
 
 .Users {
     font-size: 25px;
     margin: 5px 0px;
+    color: white;
 }
 
 .NF_users {
@@ -33,6 +38,7 @@ input {
     text-align: right;
     padding-right: 10px;
     margin-bottom: 20px;
+    color: white;
 }
 
 .NF {
