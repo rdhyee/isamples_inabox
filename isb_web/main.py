@@ -2,6 +2,7 @@ import os
 import uvicorn
 import datetime
 import typing
+import urllib.parse
 import requests
 from fastapi.logger import logger as fastapi_logger
 import fastapi.staticfiles
@@ -10,19 +11,26 @@ import fastapi.middleware.cors
 import sqlalchemy.orm
 import accept_types
 import pydantic
+import httpx_oauth.integrations.fastapi
+import httpx_oauth.oauth2
+import httpx_oauth.clients.github
 from isb_web import database
 from isb_web import schemas
 from isb_web import crud
 from isb_web import config
 
 import logging
-
+logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
 
 THIS_PATH = os.path.dirname(os.path.abspath(__file__))
 WEB_ROOT = config.Settings().web_root
+CLIENT_ID = config.Settings().client_id
+CLIENT_SECRET = config.Settings().client_secret
 MEDIA_JSON = "application/json"
 MEDIA_NQUADS = "application/n-quads"
 
+oauth_client = httpx_oauth.clients.github.GitHubOAuth2(CLIENT_ID, CLIENT_SECRET,)
+oauth2_authorize_callback = httpx_oauth.integrations.fastapi.OAuth2AuthorizeCallback(oauth_client, "oauth-callback")
 app = fastapi.FastAPI(root_path=WEB_ROOT)
 
 app.add_middleware(
@@ -41,6 +49,9 @@ templates = fastapi.templating.Jinja2Templates(
     directory=os.path.join(THIS_PATH, "templates")
 )
 
+
+def getLogger():
+    return logging.getLogger("main")
 
 def predicateToURI(p: str):
     """
@@ -72,6 +83,28 @@ def getDb():
         db.close()
 
 
+@app.get("/oauth-callback", name="oauth-callback")
+async def oauth_callback(access_token_state=fastapi.Depends(oauth2_authorize_callback)):
+#async def oauth_callback(access_token_state):
+    L = getLogger()
+    atoken, state = access_token_state
+    L.info("TOKEN = %s", atoken)
+    L.info("STATE = %s", state)
+    token = await oauth_client.get_access_token(atoken, "http://localhost:8000/")
+    return token
+
+@app.get("/login", include_in_schema=False)
+async def root(request: fastapi.Request)-> schemas.Url:
+    L = getLogger()
+    L.info("Login")
+    params = {
+        "client_id": config.Settings().client_id,
+        "redirect_url": "http://localhost:8000/oauth-callback",
+        "state": "hello",
+    }
+    return schemas.Url(url=f"https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}")
+
+
 @app.get("/thing", response_model=schemas.ThingListMeta)
 async def thing_list_metadata(
     db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
@@ -80,10 +113,11 @@ async def thing_list_metadata(
     meta = crud.getThingMeta(db)
     return meta
 
+
 @app.get("/thing/", response_model=schemas.ThingPage)
 async def thing_list(
-    offset: int = fastapi.Query(0,ge=0),
-    limit: int = fastapi.Query(1000,lt=10000, gt=0),
+    offset: int = fastapi.Query(0, ge=0),
+    limit: int = fastapi.Query(1000, lt=10000, gt=0),
     status: int = 200,
     authority: str = fastapi.Query(None),
     db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
@@ -95,8 +129,18 @@ async def thing_list(
     total_records, npages, things = crud.getThings(
         db, offset=offset, limit=limit, status=status, authority_id=authority
     )
-    params = {"limit":limit, "offset":offset, "status":status, "authority":authority}
-    return {"params":params, "last_page": npages, "total_records": total_records, "data": things}
+    params = {
+        "limit": limit,
+        "offset": offset,
+        "status": status,
+        "authority": authority,
+    }
+    return {
+        "params": params,
+        "last_page": npages,
+        "total_records": total_records,
+        "data": things,
+    }
 
 
 @app.get("/thing/types", response_model=typing.List[schemas.ThingType])
@@ -130,12 +174,13 @@ async def get_thing(
     "/related",
     response_model=typing.List[schemas.RelationListMeta],
 )
-#async def relation_metadata(db: sqlalchemy.orm.Session = fastapi.Depends((getDb))):
+# async def relation_metadata(db: sqlalchemy.orm.Session = fastapi.Depends((getDb))):
 async def relation_metadata():
     """List of predicates with counts"""
-    #return crud.getPredicateCounts(db)
+    # return crud.getPredicateCounts(db)
     session = requests.session()
     return crud.getPredicateCountsSolr(session)
+
 
 '''
 @app.get(
@@ -184,6 +229,7 @@ async def get_related(
     return res
 '''
 
+
 @app.get(
     "/related/",
     response_model=typing.List[schemas.RelationListEntry],
@@ -229,6 +275,8 @@ async def get_related_solr(
         )
     return res
 
+
+
 @app.get("/", include_in_schema=False)
 async def root(request: fastapi.Request):
     return templates.TemplateResponse("index.html", {"request": request})
@@ -241,11 +289,15 @@ def main():
 
 if __name__ == "__main__":
     formatter = logging.Formatter(
-        "[%(asctime)s.%(msecs)03d] %(levelname)s [%(thread)d] - %(message)s", "%Y-%m-%d %H:%M:%S")
-    handler = logging.StreamHandler() #RotatingFileHandler('/log/abc.log', backupCount=0)
-    logging.getLogger().setLevel(logging.NOTSET)
+        "[%(asctime)s.%(msecs)03d] %(levelname)s [%(thread)d] - %(message)s",
+        "%Y-%m-%d %H:%M:%S",
+    )
+    handler = (
+        logging.StreamHandler()
+    )  # RotatingFileHandler('/log/abc.log', backupCount=0)
+    logging.getLogger().setLevel(logging.INFO) #(logging.NOTSET)
     fastapi_logger.addHandler(handler)
     handler.setFormatter(formatter)
 
-    fastapi_logger.info('****************** Starting Server *****************')
+    fastapi_logger.info("****************** Starting Server *****************")
     main()
