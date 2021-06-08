@@ -3,15 +3,21 @@ import uvicorn
 import datetime
 import typing
 import requests
+from fastapi.logger import logger as fastapi_logger
 import fastapi.staticfiles
 import fastapi.templating
 import fastapi.middleware.cors
 import sqlalchemy.orm
 import accept_types
+import pydantic
 from isb_web import database
 from isb_web import schemas
 from isb_web import crud
 from isb_web import config
+from isb_web import isb_format
+from isamples_metadata.SESARTransformer import SESARTransformer
+
+import logging
 
 THIS_PATH = os.path.dirname(os.path.abspath(__file__))
 WEB_ROOT = config.Settings().web_root
@@ -75,20 +81,23 @@ async def thing_list_metadata(
     meta = crud.getThingMeta(db)
     return meta
 
-
-@app.get("/thing/", response_model=typing.List[schemas.ThingListEntry])
+@app.get("/thing/", response_model=schemas.ThingPage)
 async def thing_list(
-    offset: int = 0,
-    limit: int = 1000,
+    offset: int = fastapi.Query(0,ge=0),
+    limit: int = fastapi.Query(1000,lt=10000, gt=0),
     status: int = 200,
-    authority: str = None,
+    authority: str = fastapi.Query(None),
     db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
 ):
     """List identifiers of all Things on this service"""
-    things = crud.getThings(
+    fastapi_logger.info("test")
+    if limit <= 0:
+        return "limit must be > 0"
+    total_records, npages, things = crud.getThings(
         db, offset=offset, limit=limit, status=status, authority_id=authority
     )
-    return things
+    params = {"limit":limit, "offset":offset, "status":status, "authority":authority}
+    return {"params":params, "last_page": npages, "total_records": total_records, "data": things}
 
 
 @app.get("/thing/types", response_model=typing.List[schemas.ThingType])
@@ -103,6 +112,7 @@ async def thing_list_types(
 async def get_thing(
     identifier: str,
     full: bool = False,
+    format: isb_format.ISBFormat = isb_format.ISBFormat.ORIGINAL,
     db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
 ):
     """Record for the specified identifier"""
@@ -111,10 +121,21 @@ async def get_thing(
         raise fastapi.HTTPException(
             status_code=404, detail=f"Thing not found: {identifier}"
         )
-    if full:
+    if full or format == isb_format.ISBFormat.FULL:
         return item
+    if format == isb_format.ISBFormat.CORE:
+        authority_id = item.authority_id
+        if authority_id == "SESAR":
+            content = SESARTransformer(item.resolved_content).transform()
+        else:
+            raise fastapi.HTTPException(
+                status_code=400,
+                detail=f"Core format not available for authority_id: {authority_id}",
+            )
+    else:
+        content = item.resolved_content
     return fastapi.responses.JSONResponse(
-        content=item.resolved_content, media_type=item.resolved_media_type
+        content=content, media_type=item.resolved_media_type
     )
 
 
@@ -122,12 +143,13 @@ async def get_thing(
     "/related",
     response_model=typing.List[schemas.RelationListMeta],
 )
-#async def relation_metadata(db: sqlalchemy.orm.Session = fastapi.Depends((getDb))):
+# async def relation_metadata(db: sqlalchemy.orm.Session = fastapi.Depends((getDb))):
 async def relation_metadata():
     """List of predicates with counts"""
-    #return crud.getPredicateCounts(db)
+    # return crud.getPredicateCounts(db)
     session = requests.session()
     return crud.getPredicateCountsSolr(session)
+
 
 '''
 @app.get(
@@ -176,6 +198,7 @@ async def get_related(
     return res
 '''
 
+
 @app.get(
     "/related/",
     response_model=typing.List[schemas.RelationListEntry],
@@ -221,14 +244,24 @@ async def get_related_solr(
         )
     return res
 
+
 @app.get("/", include_in_schema=False)
 async def root(request: fastapi.Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
 def main():
+    logging.basicConfig(level=logging.DEBUG)
     uvicorn.run("isb_web.main:app", host="0.0.0.0", port=8000, reload=True)
 
 
 if __name__ == "__main__":
+    formatter = logging.Formatter(
+        "[%(asctime)s.%(msecs)03d] %(levelname)s [%(thread)d] - %(message)s", "%Y-%m-%d %H:%M:%S")
+    handler = logging.StreamHandler() #RotatingFileHandler('/log/abc.log', backupCount=0)
+    logging.getLogger().setLevel(logging.NOTSET)
+    fastapi_logger.addHandler(handler)
+    handler.setFormatter(formatter)
+
+    fastapi_logger.info('****************** Starting Server *****************')
     main()

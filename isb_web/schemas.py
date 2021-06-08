@@ -1,16 +1,32 @@
 import typing
 import pydantic
 import datetime
+import fastapi
+
+@pydantic.dataclasses.dataclass
+class ThingListRequest:
+    offset: int=0
+    limit: int=1000
+    status:int=200
+    authority: str = fastapi.Query(None)
 
 
 class ThingListEntry(pydantic.BaseModel):
     id: str
+    authority_id: str
     tcreated: typing.Optional[datetime.datetime]
     resolved_status: int
+    resolved_url: str
+    resolve_elapsed: float
 
     class Config:
         orm_mode = True
 
+class ThingPage(pydantic.BaseModel):
+    total_records: int
+    last_page: int
+    params: dict
+    data: typing.List[ThingListEntry]
 
 class ThingType(pydantic.BaseModel):
     item_type: str
