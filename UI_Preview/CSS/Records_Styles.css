@@ -13,7 +13,7 @@ button {
 }
 
 button:hover {
-    box-shadow: 2px 4px #606060;
+    box-shadow: 0px 0px 3px 0px #606060;
 }
 
 pre {
@@ -44,14 +44,11 @@ td[scope="header"] {
     background-color: #A9A9A9;
 }
 
-.header {
-    position: relative;
-}
-
 .header-chlid.right {
     position: absolute;
     right: 5px;
     top: 5px;
+    background-color: #D3D3D3;
 }
 
 .bts_right {
@@ -60,10 +57,9 @@ td[scope="header"] {
 }
 
 .logo {
-    font-size: 40px;
-    font-family: system-ui;
-    text-shadow: 5px 5px #BEBEBE;
-    margin-right: 50px;
+    width: 100px;
+    height: 50px;
+    margin-top: 6px;
 }
 
 .content {
@@ -219,9 +215,10 @@ td[scope="header"] {
 }
 
 .retext {
+    position: absolute;
     height: 70%;
-    width: 98.5%;
-    margin: 5px;
+    width: 99%;
+    margin: 0px 5px;
     resize: none;
 }
 

@@ -20,9 +20,9 @@
         <label class="password"><b><u>Password</u></b></label>
         <input class="inputText2" type="password" placeholder="Enter password" size="30">
         <img class="locker" src="img/Locker.png">
-        <a class="SignUp" href="#">Sign Up</a>
+        <a class="SignUp" href="./SignUp.html">Sign Up</a>
         <a class="fgPass" href="#">Forgot Password?</a>
-        <button class="bt_enter">Enter</button>
+        <button id="enter" class="bt_enter">Enter</button>
         <div class="otherLogin">
             <a href="https://github.com/login/oauth/authorize?client_id=e1f28dcbaec464ecb538">
                 <img src="./img/GitHub-img.png"><br> Github
@@ -30,5 +30,11 @@
         </div>
     </div>
 </body>
+<script>
+    var enter = document.getElementById('enter');
+    enter.addEventListener("click", function() {
+        window.location.href = "./Records_View.html"
+    })
+</script>
 
 </html>

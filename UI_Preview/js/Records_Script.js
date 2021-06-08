@@ -13,7 +13,7 @@ var infoSplit = Split(["#InfoLeft", "#InfoRight"], {
 //log out
 var logout = document.getElementById("logout");
 logout.addEventListener('click', function() {
-    location.href = "http://localhost:2400/";
+    location.href = "./login.html";
 })
 
 //change the raw data and iSample data panels directions
@@ -210,7 +210,9 @@ bt_report.addEventListener("click", function() {
     repText.value = "";
     repText.placeholder = "Please enter bug";
 });
-repClose.addEventListener("click", function() { reportModel.style.display = "none"; })
+repClose.addEventListener("click", function() {
+    reportModel.style.display = "none";
+})
 
 var reportTitle = document.getElementById('currentID');
 var reportBody = document.getElementById('reportBody');
@@ -226,8 +228,6 @@ async function createIssue() {
 
         reportModel.style.display = "none";
     }
-
-
 }
 
 

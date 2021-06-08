@@ -21,7 +21,7 @@
     <!-- web header -->
     <div class="header">
         <div class="header-chlid left">
-            <span class="logo">Raw Records Preview</span>
+            <img class='logo' src='./img/logo-partial.png'>
             <span>id:</span>
             <input id="id_filter" size=40>
             <button id="bt_filter" onclick="doIdFilter('id_filter')">
@@ -32,9 +32,9 @@
         </div>
         <div class="header-chlid right">
             <button class="bts_right" id="bt_types">Types</button>
-            <button class="bts_right">Hide/Show</button>
-            <button class="bts_right">Filter</button>
-            <button id="logout" class="bts_right">Log Out</button>
+            <button class="bts_right"><img src="img/hide.png" width="30" height="30"></button>
+            <button class="bts_right"><img src="img/sorting.png" width="30" height="30"></button>
+            <button id="logout" class="bts_right"><img src="img/logout.png" width="30" height="30"></button>
         </div>
     </div>
     <!-- Web content -->
@@ -44,7 +44,7 @@
         <!-- records content-->
         <div id="info">
             <div class="ctheader">
-                <button class="bt_report"> Report a bug</button>
+                <button class="bt_report"> Report an issue</button>
                 <div class="changePanes">
                     <input type="radio" name="dir" onchange="changePanes('h')" checked>
                     <img class="radioImg" src="./img/row.png" alt="horizontal">

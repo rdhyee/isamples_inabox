@@ -193,3 +193,160 @@ For about html
 /*
     For sign up page
 */
+
+.spConBackground {
+    position: absolute;
+    top: 180px;
+    left: 0;
+    right: 0;
+    margin: auto;
+    height: 754px;
+    width: 633px;
+    opacity: 0.47;
+    border-radius: 15px;
+    background-color: #2B2626;
+    border: 1px solid white;
+}
+
+.signUpContainer {
+    position: absolute;
+    top: 180px;
+    left: 0;
+    right: 0;
+    margin: auto;
+    height: 754px;
+    width: 633px;
+    border-radius: 15px;
+    border: 1px solid white;
+}
+
+.signUpTitle {
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    margin: auto;
+    color: #FFF;
+    font-family: Avenir;
+    font-size: 40px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    line-height: 55px;
+    text-align: center;
+}
+
+.email {
+    position: absolute;
+    top: 209px;
+    left: 104px;
+    color: #FFF;
+    font-family: Avenir;
+    font-size: 25px;
+    font-weight: 500;
+    letter-spacing: 1.88px;
+    line-height: 34px;
+}
+
+.emailText {
+    position: absolute;
+    top: 200px;
+    left: 206px;
+    height: 44.39px;
+    width: 350px;
+    border-radius: 8px;
+    color: #FFF;
+    font-size: 20px;
+    background-color: rgba(0, 0, 0, 0.39)
+}
+
+.name {
+    position: absolute;
+    top: 314px;
+    left: 104px;
+    color: #FFF;
+    font-family: Avenir;
+    font-size: 25px;
+    font-weight: 500;
+    letter-spacing: 1.88px;
+    line-height: 34px;
+}
+
+.nameText {
+    position: absolute;
+    top: 305px;
+    left: 206px;
+    height: 44.39px;
+    width: 350px;
+    border-radius: 8px;
+    color: #FFF;
+    font-size: 20px;
+    background-color: rgba(0, 0, 0, 0.39)
+}
+
+.signUppw {
+    position: absolute;
+    top: 414px;
+    left: 60px;
+    color: #FFF;
+    font-family: Avenir;
+    font-size: 25px;
+    font-weight: 500;
+    letter-spacing: 1.88px;
+    line-height: 34px;
+}
+
+.pwText {
+    position: absolute;
+    top: 410px;
+    left: 206px;
+    height: 44.39px;
+    width: 350px;
+    border-radius: 8px;
+    color: #FFF;
+    font-size: 20px;
+    background-color: rgba(0, 0, 0, 0.39)
+}
+
+.signBt1 {
+    position: absolute;
+    top: 500px;
+    left: 206px;
+    box-sizing: border-box;
+    height: 50px;
+    width: 152px;
+    border-radius: 15px;
+    background-color: rgba(253, 249, 249, 0.82);
+    border: 3px solid #000;
+    color: #000;
+    font-family: Avenir;
+    font-size: 25px;
+    font-weight: 500;
+    letter-spacing: 1.88px;
+    line-height: 34px;
+}
+
+.signBt1:hover {
+    box-shadow: 4px 8px #606060;
+}
+
+.signBt2 {
+    position: absolute;
+    top: 500px;
+    left: 415px;
+    box-sizing: border-box;
+    height: 50px;
+    width: 152px;
+    border-radius: 15px;
+    background-color: rgba(253, 249, 249, 0.82);
+    border: 3px solid #000;
+    color: #000;
+    font-family: Avenir;
+    font-size: 25px;
+    font-weight: 500;
+    letter-spacing: 1.88px;
+    line-height: 34px;
+}
+
+.signBt2:hover {
+    box-shadow: 4px 8px #606060;
+}
