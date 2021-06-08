@@ -14,9 +14,10 @@ from isb_web import database
 from isb_web import schemas
 from isb_web import crud
 from isb_web import config
+from isb_web import isb_format
+from isamples_metadata.SESARTransformer import SESARTransformer
 
 import logging
-
 
 THIS_PATH = os.path.dirname(os.path.abspath(__file__))
 WEB_ROOT = config.Settings().web_root
@@ -111,6 +112,7 @@ async def thing_list_types(
 async def get_thing(
     identifier: str,
     full: bool = False,
+    format: isb_format.ISBFormat = isb_format.ISBFormat.ORIGINAL,
     db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
 ):
     """Record for the specified identifier"""
@@ -119,10 +121,21 @@ async def get_thing(
         raise fastapi.HTTPException(
             status_code=404, detail=f"Thing not found: {identifier}"
         )
-    if full:
+    if full or format == isb_format.ISBFormat.FULL:
         return item
+    if format == isb_format.ISBFormat.CORE:
+        authority_id = item.authority_id
+        if authority_id == "SESAR":
+            content = SESARTransformer(item.resolved_content).transform()
+        else:
+            raise fastapi.HTTPException(
+                status_code=400,
+                detail=f"Core format not available for authority_id: {authority_id}",
+            )
+    else:
+        content = item.resolved_content
     return fastapi.responses.JSONResponse(
-        content=item.resolved_content, media_type=item.resolved_media_type
+        content=content, media_type=item.resolved_media_type
     )
 
 
@@ -130,12 +143,13 @@ async def get_thing(
     "/related",
     response_model=typing.List[schemas.RelationListMeta],
 )
-#async def relation_metadata(db: sqlalchemy.orm.Session = fastapi.Depends((getDb))):
+# async def relation_metadata(db: sqlalchemy.orm.Session = fastapi.Depends((getDb))):
 async def relation_metadata():
     """List of predicates with counts"""
-    #return crud.getPredicateCounts(db)
+    # return crud.getPredicateCounts(db)
     session = requests.session()
     return crud.getPredicateCountsSolr(session)
+
 
 '''
 @app.get(
@@ -184,6 +198,7 @@ async def get_related(
     return res
 '''
 
+
 @app.get(
     "/related/",
     response_model=typing.List[schemas.RelationListEntry],
@@ -228,6 +243,7 @@ async def get_related_solr(
             "\n".join(rows), media_type=MEDIA_NQUADS
         )
     return res
+
 
 @app.get("/", include_in_schema=False)
 async def root(request: fastapi.Request):
