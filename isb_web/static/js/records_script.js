@@ -40,7 +40,7 @@ function changePanes(direction) {
 //table ---------------------------------------------------------------------
 //show specified identifier record
 async function showRawRecord(id) {
-    var url = `https://mars.cyverse.org/thing/${id}?full=false`;
+    var url = `/thing/${id}?format=original`;
     console.log(url);
     fetch(url)
         .then(response => response.json())
@@ -54,7 +54,7 @@ async function showRawRecord(id) {
 
 //load records types
 async function showTypes() {
-    const url = "https://mars.cyverse.org/thing/types";
+    const url = "/thing/types";
     fetch(url)
         .then(res => res.json())
         .then(types => {
@@ -128,7 +128,7 @@ function Dataloaded(url, params, response) {
 var table = new Tabulator("#records_table", {
     layout: "fitColumns",
     placeholder: "No data availble",
-    ajaxURL: "https://mars.cyverse.org/thing/",
+    ajaxURL: "/thing/",
     paginationDataSent: {
         "page": "offset",
         "size": "limit",
