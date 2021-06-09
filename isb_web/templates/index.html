@@ -1,10 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raw Record Preview</title>
+    <!-- link css file-->
+    <link rel=stylesheet type="text/css" href="{{url_for('static', path='/css/records_styles.css')}}" />
+    <!-- js library tabulator -->
+    <link href="https://unpkg.com/tabulator-tables@4.9.3/dist/css/tabulator.min.css" rel="stylesheet">
+    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.9.3/dist/js/tabulator.min.js"></script>
+    <!-- js library pretty print json -->
+    <link rel=stylesheet href=https://cdn.jsdelivr.net/npm/pretty-print-json@1.0/dist/pretty-print-json.css>
+    <script src=https://cdn.jsdelivr.net/npm/pretty-print-json@1.0/dist/pretty-print-json.min.js></script>
+    <!-- js library split.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/split.js/1.6.0/split.min.js"></script>
 </head>
+
 <body>
-<p><a href="/docs">API Documentation</a></p>
+    <!-- web header -->
+    <div class="header">
+        <div class="header-chlid left">
+            <span class="logo">Raw Records Preview</span>
+            <span>id:</span>
+            <input id="id_filter" size=40>
+            <button id="bt_filter" onclick="doIdFilter('id_filter')">
+                <img src="{{url_for('static', path='/img/search.png')}}" alt="submit" width="10" height="10"></button>
+            <span>
+                Records Load: <i><span id="records_loaded">0</span></i> Total Reocrds: <i><span id="total_records">0</span></i>
+            </span>
+        </div>
+        <div class="header-chlid right">
+            <button class="bts_right" id="bt_types">Types</button>
+            <button class="bts_right">Hide/Show</button>
+            <button class="bts_right">Filter</button>
+            <button id="logout" class="bts_right">Log Out</button>
+        </div>
+    </div>
+    <!-- Web content -->
+    <div class="content">
+        <!-- records table -->
+        <div id="records_table">table</div>
+        <!-- records content-->
+        <div id="info">
+            <div class="ctheader">
+                <button class="bt_report"> Report a bug</button>
+                <div class="changePanes">
+                    <input type="radio" name="dir" onchange="changePanes('h')" checked>
+                    <img class="radioImg" src="{{url_for('static', path='/img/row.png')}}" alt="horizontal">
+                    <input type="radio" name="dir" onchange="changePanes('v')">
+                    <img class="radioImg" src="{{url_for('static', path='/img/col.png')}}" alt="vertical">
+                </div>
+            </div>
+            <div class="infoContainer">
+                <div class="infoChild" id="InfoLeft">
+                    <span class="label">Raw record</span>
+                    <pre id="records_show"></pre>
+                </div>
+                <div class="infoChild" id="InfoRight">
+                    <span class="label">iSamples record</span>
+                    <pre>iSamples transformed record</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Popup Panels-->
+    <div class="types">
+        <div class="typesModel">
+            <div class="TypesHeader">
+                <span class="closeBt">&times;</span>
+            </div>
+            <div id="types_table"></div>
+        </div>
+    </div>
+
+    <!-- Popup Report-->
+    <div class="report">
+        <div class="reportModel">
+            <div class="reHeader">
+                <div class="reTitle">
+                    Id:<label id="currentID"></label> last_review: <label id="last_review">0</label>
+                    <button id="bt_issue">Submit</button>
+                </div>
+                <span class="closeBt" id="repClose">&times;</span>
+            </div>
+            <textarea id="reportBody" class="retext" placeholder="Please enter bug"></textarea>
+        </div>
+    </div>
+    <script type="text/javascript" src="{{url_for('static', path='/js/records_script.js')}}"></script>
 </body>
+
 </html>
