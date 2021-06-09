@@ -1,7 +1,7 @@
 html,
 body {
     background-color: #B8B8B8;
-    font-family: 'Courier New', Courier, monospace;
+    font-family: 'Lucida Console', Courier, monospace;
     margin: 0;
     height: 100%;
     padding: 0 5px;
@@ -123,7 +123,6 @@ td[scope="header"] {
     font-size: 20px;
     border-left: 1px solid;
     border-right: 1px solid;
-    text-shadow: 2px 2px #BEBEBE;
 }
 
 .gutter {
