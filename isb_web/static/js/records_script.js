@@ -40,16 +40,26 @@ function changePanes(direction) {
 //table ---------------------------------------------------------------------
 //show specified identifier record
 async function showRawRecord(id) {
-    var url = `/thing/${id}?format=original`;
-    console.log(url);
-    fetch(url)
-        .then(response => response.json())
-        .then(doc => {
-            var e = document.getElementById("records_show");
-            e.innerHTML = prettyPrintJson.toHtml(doc, FormatOptions = {
-                indent: 2
-            });
-        })
+    const raw_url = `/thing/${id}?format=original`;
+    const xform_url = `/thing/${id}?format=core`;
+    await Promise.all([
+        fetch(raw_url)
+            .then(response => response.json())
+            .then(doc => {
+                var e = document.getElementById("record_original");
+                e.innerHTML = prettyPrintJson.toHtml(doc, FormatOptions = {
+                    indent: 2
+                });
+            }),
+        fetch(xform_url)
+            .then(response => response.json())
+            .then(doc => {
+                var e = document.getElementById("record_xform");
+                e.innerHTML = prettyPrintJson.toHtml(doc, FormatOptions = {
+                    indent: 2
+                });
+            })
+    ])
 }
 
 //load records types
