@@ -27,14 +27,16 @@
             <button id="bt_filter" onclick="doIdFilter('id_filter')">
                 <img src="{{url_for('static', path='/img/search.png')}}" alt="submit" width="10" height="10"></button>
             <span>
-                Records Load: <i><span id="records_loaded">0</span></i> Total Reocrds: <i><span id="total_records">0</span></i>
+                Records Loaded: <i><span id="records_loaded">0</span></i> Total Records: <i><span id="total_records">0</span></i>
             </span>
         </div>
         <div class="header-chlid right">
             <button class="bts_right" id="bt_types">Types</button>
+            <!-- disable for now
             <button class="bts_right">Hide/Show</button>
             <button class="bts_right">Filter</button>
             <button id="logout" class="bts_right">Log Out</button>
+            -->
         </div>
     </div>
     <!-- Web content -->
@@ -44,7 +46,9 @@
         <!-- records content-->
         <div id="info">
             <div class="ctheader">
+                <!-- Disable for now
                 <button class="bt_report"> Report a bug</button>
+                -->
                 <div class="changePanes">
                     <input type="radio" name="dir" onchange="changePanes('h')" checked>
                     <img class="radioImg" src="{{url_for('static', path='/img/row.png')}}" alt="horizontal">
@@ -54,11 +58,11 @@
             </div>
             <div class="infoContainer">
                 <div class="infoChild" id="InfoLeft">
-                    <span class="label">Raw record</span>
+                    <span class="label">Original</span>
                     <pre id="record_original"></pre>
                 </div>
                 <div class="infoChild" id="InfoRight">
-                    <span class="label">iSamples record</span>
+                    <span class="label">Core</span>
                     <pre id="record_xform"></pre>
                 </div>
             </div>

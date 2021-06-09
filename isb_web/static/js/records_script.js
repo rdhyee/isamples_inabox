@@ -10,11 +10,13 @@ var infoSplit = Split(["#InfoLeft", "#InfoRight"], {
     minSize: [200, 200],
 })
 
+/* Disable this for now
 //log out
 var logout = document.getElementById("logout");
 logout.addEventListener('click', function() {
     location.href = "./login.html";
 })
+ */
 
 //change the raw data and iSample data panels directions
 function changePanes(direction) {
@@ -116,7 +118,7 @@ function rowClick(e, row) {
     showRawRecord(id);
 }
 
-//filter the records accordig users' input
+//filter the records according users' input
 function doIdFilter(eid) {
     var e = document.getElementById(eid).value;
     console.log("Filter ID: " + e);
@@ -143,7 +145,6 @@ var table = new Tabulator("#records_table", {
         "page": "offset",
         "size": "limit",
     },
-
     ajaxRequesting: function(url, params) {
         console.log(url);
         console.log(params);
@@ -152,7 +153,7 @@ var table = new Tabulator("#records_table", {
         delete params.keys;
     },
     ajaxProgressiveLoad: "scroll",
-    paginationSize: 1000,
+    paginationSize: 500,
     ajaxParams: {
         key1: "id",
         keys: "tcreated"
