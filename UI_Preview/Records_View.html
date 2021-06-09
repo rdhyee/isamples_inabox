@@ -20,22 +20,20 @@
 <body>
     <!-- web header -->
     <div class="header">
-        <div class="header-chlid left">
-            <img class='logo' src='./img/logo-partial.png'>
-            <span>id:</span>
-            <input id="id_filter" size=40>
-            <button id="bt_filter" onclick="doIdFilter('id_filter')">
+        <img class='logo' src='./img/logo-partial.png'>
+        <input id="id_filter" size=40 placeholder="Search for id only" style="margin-left:50px;">
+        <button id="bt_filter" onclick="doIdFilter('id_filter')" title="Search">
                 <img src="./img/search.png" alt="submit" width="10" height="10"></button>
-            <span>
-                Records Load: <i><span id="records_loaded">0</span></i> Total Reocrds: <i><span id="total_records">0</span></i>
-            </span>
+        <span class="record_amount">
+                Records Load: <i><span id="records_loaded" style="margin-right:50px;">0</span></i> Total Reocrds: <i><span id="total_records">0</span></i>
+        </span>
+        <div class="header_right">
+            <button class="bts_right" id="bt_types">Specimen Types</button>
+            <button class="bts_right" id="bt_field" title="Select fields"><img src="img/hide.png" width="30" height="30"></button>
+            <button class="bts_right" title="Filter"><img src="img/sorting.png" width="30" height="30"></button>
+            <button id="logout" class="bts_right" title="Logout"><img src="img/logout.png" width="30" height="30"></button>
         </div>
-        <div class="header-chlid right">
-            <button class="bts_right" id="bt_types">Types</button>
-            <button class="bts_right"><img src="img/hide.png" width="30" height="30"></button>
-            <button class="bts_right"><img src="img/sorting.png" width="30" height="30"></button>
-            <button id="logout" class="bts_right"><img src="img/logout.png" width="30" height="30"></button>
-        </div>
+
     </div>
     <!-- Web content -->
     <div class="content">
@@ -46,25 +44,25 @@
             <div class="ctheader">
                 <button class="bt_report"> Report an issue</button>
                 <div class="changePanes">
-                    <input type="radio" name="dir" onchange="changePanes('h')" checked>
-                    <img class="radioImg" src="./img/row.png" alt="horizontal">
-                    <input type="radio" name="dir" onchange="changePanes('v')">
-                    <img class="radioImg" src="./img/col.png" alt="vertical">
+                    <input type="radio" name="dir" onchange="changePanes('h')" title="horizontal" checked>
+                    <img class="radioImg" src="./img/row.png" alt="horizontal" title="horizontal">
+                    <input type="radio" name="dir" onchange="changePanes('v')" title="vertical">
+                    <img class="radioImg" src="./img/col.png" alt="vertical" title="vertical">
                 </div>
             </div>
             <div class="infoContainer">
                 <div class="infoChild" id="InfoLeft">
-                    <span class="label">Raw record</span>
+                    <span class="label">Original</span>
                     <pre id="records_show"></pre>
                 </div>
                 <div class="infoChild" id="InfoRight">
-                    <span class="label">iSamples record</span>
+                    <span class="label">Core</span>
                     <pre>iSamples transformed record</pre>
                 </div>
             </div>
         </div>
     </div>
-    <!-- Popup Panels-->
+    <!-- Popup Types Panels-->
     <div class="types">
         <div class="typesModel">
             <div class="TypesHeader">
@@ -73,7 +71,19 @@
             <div id="types_table"></div>
         </div>
     </div>
+    <!-- Popup field selection-->
+    <div id="fields">
+        <div class="fieldContainer">
+            <input type="checkbox" id='id' name='id' value="id" checked><label for="id">id</label>
+            <input type="checkbox" id='Authority Id' name='Authority Id' value="Authority Id" checked><label for="Authority Id">Authority Id</label>
+            <input type="checkbox" id='Time Created' name='Time Created' value="Time Created" checked><label for="Time Created">Time Created</label>
+            <input type="checkbox" id='status' name='status' value="status" checked><label for="status">status</label>
+            <input type="checkbox" id='url' name='url' value="url" checked><label for="url">url</label>
+            <input type="checkbox" id='elapsed' name='elapsed' value="elapsed" checked><label for="elapsed">elapsed</label>
+        </div>
 
+        <button id="apply_field">apply</button>
+    </div>
     <!-- Popup Report-->
     <div class="report">
         <div class="reportModel">

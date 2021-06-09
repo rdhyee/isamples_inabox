@@ -69,7 +69,7 @@ function typeTable(data) {
     var container = document.getElementById("types_table");
     var table = document.createElement("table");
     var caption = table.createCaption();
-    caption.innerHTML = "<h3>Types</h3>";
+    caption.innerHTML = "<h3>Specimen Types</h3>";
     table.id = "types_show";
     var i = 0;
     var rowName;
@@ -149,27 +149,23 @@ var table = new Tabulator("#records_table", {
     },
     columns: [{
         "title": "Id",
-        field: "id",
-        width: 500
+        field: "id"
     }, {
         "title": "Authority Id",
-        field: "authority_id",
-        width: 150
+        field: "authority_id"
     }, {
         "title": "Time Created",
-        field: "tcreated",
-        width: 300
+        field: "tcreated"
     }, {
         "title": "status",
-        field: "resolved_status",
-        width: 150
+        field: "resolved_status"
     }, {
         "title": "url",
-        field: "resolved_url"
+        field: "resolved_url",
+        width: 800
     }, {
         "title": "elapsed",
-        field: "resolve_elapsed",
-        width: 150
+        field: "resolve_elapsed"
     }],
     ajaxResponse: Dataloaded,
     rowClick: rowClick,
@@ -239,4 +235,71 @@ window.onclick = function(event) {
     if (event.target == reportModel) {
         reportModel.style.display = "none";
     }
+}
+
+//field selection
+var fieldContainer = document.getElementById("fields");
+var bt_field = document.getElementById("bt_field");
+
+bt_field.addEventListener("click", popupField)
+
+function popupField() {
+    if (bt_field.value == "") {
+        bt_field.value = "active"
+        fieldContainer.style.display = "block";
+        fieldContainer.style.top = (bt_field.offsetTop + bt_field.offsetHeight + 5) + "px";
+        fieldContainer.style.left = (bt_field.offsetLeft - fieldContainer.offsetWidth + bt_field.offsetWidth / 2) + "px";
+    } else {
+        bt_field.value = ""
+        fieldContainer.style.display = "none";
+    }
+}
+
+var bt_apply = document.getElementById("apply_field");
+
+bt_apply.addEventListener("click", setColumns);
+
+var newCol = [];
+
+function setColumns() {
+    console.log("true")
+    newCol = [];
+    if (document.getElementById('id').checked) {
+        newCol.push({
+            "title": "Id",
+            field: "id"
+        });
+    }
+    if (document.getElementById('Authority Id').checked) {
+        newCol.push({
+            "title": "Authority Id",
+            field: "authority_id"
+        });
+    }
+    if (document.getElementById('Time Created').checked) {
+        newCol.push({
+            "title": "Time Created",
+            field: "tcreated"
+        });
+    }
+    if (document.getElementById('status').checked) {
+        newCol.push({
+            "title": "status",
+            field: "resolved_status"
+        });
+    }
+    if (document.getElementById('url').checked) {
+        newCol.push({
+            "title": "url",
+            field: "resolved_url",
+            width: 800
+        });
+    }
+    if (document.getElementById('elapsed').checked) {
+        newCol.push({
+            "title": "elapsed",
+            field: "resolve_elapsed"
+        });
+    }
+    table.setColumns(newCol);
 }

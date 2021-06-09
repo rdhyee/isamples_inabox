@@ -44,16 +44,30 @@ td[scope="header"] {
     background-color: #A9A9A9;
 }
 
-.header-chlid.right {
-    position: absolute;
-    right: 5px;
-    top: 5px;
+.header {
+    width: 100%;
+    height: 65px;
+    overflow: hidden;
+}
+
+.record_amount {
+    font-size: 30px;
+}
+
+.header_right {
+    height: 65px;
+    width: 286px;
+    float: right;
     background-color: #D3D3D3;
+    display: flex;
+    justify-content: flex-end;
 }
 
 .bts_right {
     border: none;
-    padding: 5px 10px;
+    width: 70px;
+    height: 65px;
+    margin-right: 1px;
 }
 
 .logo {
@@ -63,9 +77,9 @@ td[scope="header"] {
 }
 
 .content {
-    height: calc(100%-65px);
-    height: -moz-calc(100% - 65px);
-    height: -webkit-calc(100% - 65px);
+    height: calc(100%-68px);
+    height: -moz-calc(100% - 68px);
+    height: -webkit-calc(100% - 68px);
     box-sizing: border-box;
 }
 
@@ -222,6 +236,13 @@ td[scope="header"] {
     resize: none;
 }
 
+.fieldContainer {
+    display: grid;
+    grid-template-columns: auto auto;
+    padding: 5px;
+    grid-gap: 5px;
+}
+
 #info {
     border: 1px solid;
     box-sizing: border-box;
@@ -248,4 +269,25 @@ td[scope="header"] {
 
 #currentID {
     border: 1px solid;
+}
+
+#fields {
+    display: none;
+    position: absolute;
+    box-sizing: border-box;
+    height: 200px;
+    width: 345px;
+    border-radius: 15px;
+    background-color: #C8C8C8;
+    border: 1px solid #000;
+}
+
+#apply_field {
+    height: 25px;
+    width: 80px;
+    border-radius: 15px;
+    background-color: #FFF;
+    position: absolute;
+    bottom: 13px;
+    right: 30px;
 }
