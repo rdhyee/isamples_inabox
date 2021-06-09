@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Raw Record Preview</title>
     <!-- link css file-->
-    <link rel=stylesheet type="text/css" href="{{url_for('static', path='/css/records_styles.css')}}" />
+    <!-- TODO: This is returning wrong protocol on mars: <link rel=stylesheet type="text/css" href="{{url_for('static', path='/css/records_styles.css')}}" />-->
+    <link rel=stylesheet type="text/css" href="/static/css/records_styles.css" />
     <!-- js library tabulator -->
     <link href="https://unpkg.com/tabulator-tables@4.9.3/dist/css/tabulator.min.css" rel="stylesheet">
     <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.9.3/dist/js/tabulator.min.js"></script>
@@ -91,7 +92,8 @@
             <textarea id="reportBody" class="retext" placeholder="Please enter bug"></textarea>
         </div>
     </div>
-    <script type="text/javascript" src="{{url_for('static', path='/js/records_script.js')}}"></script>
+    <!-- TODO: returning wrong protocol on mars <script type="text/javascript" src="{{url_for('static', path='/js/records_script.js')}}"></script> -->
+    <script type="text/javascript" src="/static/js/records_script.js"></script>
 </body>
 
 </html>
