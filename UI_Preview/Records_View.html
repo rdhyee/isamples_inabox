@@ -21,7 +21,7 @@
     <!-- web header -->
     <div class="header">
         <img class='logo' src='./img/logo-partial.png'>
-        <input id="id_filter" size=40 placeholder="Search for id only" style="margin-left:50px;">
+        <input id="id_filter" size=25vw placeholder="Search for id only" style="margin-left:50px;">
         <button id="bt_filter" onclick="doIdFilter('id_filter')" title="Search">
                 <img src="./img/search.png" alt="submit" width="10" height="10"></button>
         <span class="record_amount">
@@ -42,7 +42,7 @@
         <!-- records content-->
         <div id="info">
             <div class="ctheader">
-                <button class="bt_report"> Report an issue</button>
+                <button class="bt_report"> Report issues</button>
                 <div class="changePanes">
                     <input type="radio" name="dir" onchange="changePanes('h')" title="horizontal" checked>
                     <img class="radioImg" src="./img/row.png" alt="horizontal" title="horizontal">
@@ -66,6 +66,7 @@
     <div class="types">
         <div class="typesModel">
             <div class="TypesHeader">
+                <span class="typeTitle"><b><i>Specimen Types</i></b></span>
                 <span class="closeBt">&times;</span>
             </div>
             <div id="types_table"></div>

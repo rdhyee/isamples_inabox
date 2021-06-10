@@ -48,16 +48,19 @@ td[scope="header"] {
     width: 100%;
     height: 65px;
     overflow: hidden;
+    position: relative;
 }
 
 .record_amount {
-    font-size: 30px;
+    font-size: 1.5vw;
 }
 
 .header_right {
+    position: absolute;
+    top: 0;
+    right: 0;
     height: 65px;
     width: 286px;
-    float: right;
     background-color: #D3D3D3;
     display: flex;
     justify-content: flex-end;
@@ -204,6 +207,11 @@ td[scope="header"] {
 .reHeader {
     height: 40px;
     font-size: 20px;
+    text-align: center;
+}
+
+.typeTitle {
+    font-size: 30px;
 }
 
 .reTitle {

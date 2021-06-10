@@ -53,48 +53,20 @@ async function showRawRecord(id) {
 }
 
 //load records types
-async function showTypes() {
-    const url = "https://mars.cyverse.org/thing/types";
-    fetch(url)
-        .then(res => res.json())
-        .then(types => {
-            var e = document.getElementById("types_show");
-            if (e) e.remove();
-            typeTable(types);
-        });
-}
+var tableType = new Tabulator("#types_table", {
+    layout: "fitColumns",
+    placeholder: "No data availble",
+    ajaxURL: "https://mars.cyverse.org/thing/types",
+    height: "300px",
+    columns:[{
+        "title": "Item Types",
+        field: "item_type",
+    },{
+        "title":"Count",
+        field: "count",
+    }]
+})
 
-//create types table
-function typeTable(data) {
-    var container = document.getElementById("types_table");
-    var table = document.createElement("table");
-    var caption = table.createCaption();
-    caption.innerHTML = "<h3>Specimen Types</h3>";
-    table.id = "types_show";
-    var i = 0;
-    var rowName;
-    var name;
-    var rowCount;
-    var count;
-    while (i < data.length) {
-        if (i % (data.length / 4 | 0) == 0) {
-            rowName = table.insertRow();
-            name = rowName.insertCell();
-            rowCount = table.insertRow();
-            count = rowCount.insertCell();
-            name.innerHTML = "Name";
-            name.scope = "header";
-            count.innerHTML = "Count";
-            count.scope = "header";
-        }
-        var eName = rowName.insertCell();
-        eName.innerHTML = data[i].item_type;
-        var eCount = rowCount.insertCell();
-        eCount.innerHTML = data[i].count;
-        i++;
-    }
-    container.appendChild(table);
-}
 
 //select row and show record informaton
 function rowClick(e, row) {
@@ -120,7 +92,6 @@ function Dataloaded(url, params, response) {
     console.log(response);
     e1.innerHTML = parseInt(e1.innerHTML) + response.data.length;
     e2.innerHTML = response.total_records;
-    showTypes()
     return response;
 }
 
@@ -138,31 +109,29 @@ var table = new Tabulator("#records_table", {
         console.log(url);
         console.log(params);
         params.offset = "" + (parseInt(params.offset) - 1) * parseInt(params.limit);
-        delete params.key1;
-        delete params.keys;
     },
     ajaxProgressiveLoad: "scroll",
     paginationSize: 1000,
-    ajaxParams: {
-        key1: "id",
-        keys: "tcreated"
-    },
     columns: [{
         "title": "Id",
-        field: "id"
+        field: "id",
+        width: 150
     }, {
         "title": "Authority Id",
-        field: "authority_id"
+        field: "authority_id",
+        width: 150
     }, {
         "title": "Time Created",
-        field: "tcreated"
+        field: "tcreated",
+        width: 300
     }, {
         "title": "status",
-        field: "resolved_status"
+        field: "resolved_status",
+        width: 100
     }, {
         "title": "url",
         field: "resolved_url",
-        width: 800
+        width: 600
     }, {
         "title": "elapsed",
         field: "resolve_elapsed"
@@ -214,13 +183,13 @@ var reportTitle = document.getElementById('currentID');
 var reportBody = document.getElementById('reportBody');
 var bt_issue = document.getElementById('bt_issue');
 bt_issue.addEventListener('click', createIssue);
+
 async function createIssue() {
     if (reportTitle.value == undefined) {
         alert("Please choose a record!");
     } else {
-        const url = `http://localhost:2400/issues?title=${reportTitle.value}&report=${reportBody.value}`
-        fetch(url)
-            .then(res => { console.log("success") })
+        //const url = `http://localhost:2400/issues?title=${reportTitle.value}&report=${reportBody.value}`
+        //fetch(url)
 
         reportModel.style.display = "none";
     }
@@ -248,7 +217,7 @@ function popupField() {
         bt_field.value = "active"
         fieldContainer.style.display = "block";
         fieldContainer.style.top = (bt_field.offsetTop + bt_field.offsetHeight + 5) + "px";
-        fieldContainer.style.left = (bt_field.offsetLeft - fieldContainer.offsetWidth + bt_field.offsetWidth / 2) + "px";
+        fieldContainer.style.right = (bt_field.offsetLeft ) + "px";
     } else {
         bt_field.value = ""
         fieldContainer.style.display = "none";
@@ -267,7 +236,8 @@ function setColumns() {
     if (document.getElementById('id').checked) {
         newCol.push({
             "title": "Id",
-            field: "id"
+            field: "id",
+            width: 150
         });
     }
     if (document.getElementById('Authority Id').checked) {
@@ -279,7 +249,8 @@ function setColumns() {
     if (document.getElementById('Time Created').checked) {
         newCol.push({
             "title": "Time Created",
-            field: "tcreated"
+            field: "tcreated",
+            width: 300
         });
     }
     if (document.getElementById('status').checked) {
@@ -292,7 +263,7 @@ function setColumns() {
         newCol.push({
             "title": "url",
             field: "resolved_url",
-            width: 800
+            width: 600
         });
     }
     if (document.getElementById('elapsed').checked) {
