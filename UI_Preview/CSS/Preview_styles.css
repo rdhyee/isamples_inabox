@@ -1,0 +1,356 @@
+html,
+body {
+    background-color: #E0E0E0;
+    margin: 0;
+    height: 100%;
+    padding: 5px 10px;
+    box-sizing: border-box;
+    font-family: monospace;
+}
+
+button {
+    cursor: pointer;
+    background-color: #D3D3D3;
+}
+
+button:hover {
+    box-shadow: 0px 0px 3px 0px #606060;
+}
+
+
+/*
+CSS for header elements
+*/
+
+.header {
+    width: 100%;
+    height: 65px;
+    display: flex;
+    align-items: flex-start;
+}
+
+.headerChild {
+    margin: auto 10px;
+    font-size: 20px;
+}
+
+.logo {
+    width: 115px;
+    height: 57px;
+}
+
+#id_filter {
+    width: 180px;
+    height: 30px;
+    font-size: 15px;
+    box-sizing: border-box;
+}
+
+#bt_filter {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.header_right {
+    margin-left: auto;
+    margin-right: 0;
+    height: 55px;
+    background-color: #C8C8C8;
+    display: flex;
+    box-sizing: border-box;
+    border-radius: 10px;
+}
+
+.bts_right {
+    border: none;
+    width: 70px;
+    height: 55px;
+    margin: 0px 5px;
+    background-color: #C8C8C8;
+    border-radius: 10px;
+}
+
+.bts_right:first-child {
+    margin-left: 0;
+}
+
+.bts_right:last-child {
+    margin-right: 0;
+}
+
+
+/*
+CSS for content
+*/
+
+.content {
+    box-sizing: border-box;
+    height: calc(100%-65px);
+    height: -moz-calc(100% - 65px);
+    height: -webkit-calc(100% - 65px);
+}
+
+#info {
+    position: relative;
+}
+
+.infoContainer {
+    display: flex;
+    flex-direction: row;
+    height: calc(100%);
+    height: -moz-calc(100%);
+    height: -webkit-calc(100%);
+    box-sizing: border-box;
+}
+
+.infoChild {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    background-color: white;
+    border-radius: 10px;
+}
+
+.label {
+    padding: 0px 5px;
+    font-size: 20px;
+    text-shadow: 2px 2px #BEBEBE;
+}
+
+pre {
+    border: 1px solid;
+    box-sizing: border-box;
+    height: calc(100%-23px);
+    height: -moz-calc(100%-23px);
+    height: -webkit-calc(100% - 23px);
+    margin: 0;
+    padding: 5px;
+}
+
+#orginal_show {
+    border-radius: 0px 0px 10px 10px;
+}
+
+#core_show {
+    border-radius: 0px 0px 10px 10px;
+}
+
+pre::-webkit-scrollbar {
+    width: 8px;
+    height: 10px;
+}
+
+pre::-webkit-scrollbar-thumb {
+    border-radius: 8px;
+    background: #c2c9d2;
+}
+
+pre::-webkit-scrollbar-corner {
+    border-radius: 8px;
+}
+
+
+/*
+    For content header
+*/
+
+.ctheader {
+    text-align: right;
+    height: 30px;
+    box-sizing: border-box;
+    display: flex;
+    position: absolute;
+    right: 0;
+    top: -30px;
+}
+
+.radioImg {
+    width: 30px;
+    height: 30px;
+}
+
+.bt_report {
+    border-radius: 8px;
+}
+
+
+/*
+    For type model
+*/
+
+.closeBt {
+    color: #CCC;
+    font-size: 50px;
+    position: absolute;
+    top: -10px;
+    right: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.closeBt:hover,
+.closeBt:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.types {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.typesModel {
+    position: relative;
+    background-color: white;
+    margin: 10% auto;
+    width: 80%;
+    height: auto;
+    border-radius: 10px;
+    box-sizing: border-box;
+    box-shadow: 0 5px 8px 0 rgba(0, 0, 0, 0.2), 0 7px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+.TypesHeader,
+.reHeader {
+    height: 40px;
+    font-size: 30px;
+    text-align: center;
+}
+
+
+/*
+    For field selector
+*/
+
+#fields {
+    display: none;
+    position: absolute;
+    box-sizing: border-box;
+    height: 200px;
+    width: 345px;
+    border-radius: 15px;
+    background-color: #C8C8C8;
+}
+
+.apply {
+    height: 25px;
+    width: 80px;
+    border-radius: 15px;
+    background-color: #FFF;
+    position: absolute;
+    bottom: 13px;
+    right: 30px;
+}
+
+.fieldContainer {
+    display: grid;
+    grid-template-columns: auto auto;
+    padding: 15px 10px 10px 10px;
+    grid-gap: 5px;
+    font-size: 20px;
+    column-gap: 10px;
+    row-gap: 20px;
+    box-sizing: border-box;
+}
+
+
+/*
+    For report
+*/
+
+.report {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    height: 35%;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.reportModel {
+    resize: both;
+    position: relative;
+    background-color: white;
+    margin-top: 3%;
+    margin-left: 20%;
+    width: 60%;
+    height: 80%;
+    border-radius: 10px;
+    box-sizing: border-box;
+    box-shadow: 0 5px 8px 0 rgba(0, 0, 0, 0.2), 0 7px 20px 0 rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 10px
+}
+
+.textIssues {
+    width: 100%;
+    height: 40%;
+}
+
+.textIssues>.retext {
+    resize: none;
+    height: 100%;
+    width: inherit;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+.relabel {
+    font-size: 20px;
+}
+
+#currentID {
+    border: 1px solid;
+}
+
+.feedback {
+    display: none;
+    background-color: white;
+    margin-top: 3%;
+    margin-left: 20%;
+    width: 60%;
+    height: 60%;
+    border-radius: 10px;
+    font-size: 30px;
+    padding: 60px;
+    box-sizing: border-box;
+    position: relative;
+}
+
+
+/*
+    For filter 
+*/
+
+#filter {
+    display: none;
+    position: absolute;
+    box-sizing: border-box;
+    height: 200px;
+    width: 200px;
+    border-radius: 15px;
+    background-color: #C8C8C8;
+}
+
+.filterContainer {
+    padding: 5px;
+    font-size: 20px;
+}
+
+hr {
+    border: 1px solid black;
+}

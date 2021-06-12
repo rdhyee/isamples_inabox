@@ -10,10 +10,35 @@ var infoSplit = Split(["#InfoLeft", "#InfoRight"], {
     minSize: [200, 200],
 })
 
-//log out
-var logout = document.getElementById("logout");
-logout.addEventListener('click', function() {
-    location.href = "./login.html";
+//filter the records accordig users' input
+function doIdFilter(eid) {
+    var e = document.getElementById(eid).value;
+    console.log("Filter ID: " + e);
+    table.setFilter("id", "like", e);
+}
+
+//enable input submit when users press enter
+var inputText = document.getElementById("id_filter");
+inputText.addEventListener("keyup", function(event) {
+    if (event.keyCode === 13) {
+        event.preventDefault();
+        document.getElementById("bt_filter").click();
+    }
+})
+
+//load records types
+var tableType = new Tabulator("#types_table", {
+    layout: "fitColumns",
+    placeholder: "No data availble",
+    ajaxURL: "https://mars.cyverse.org/thing/types",
+    height: "300px",
+    columns: [{
+        "title": "Item Types",
+        field: "item_type",
+    }, {
+        "title": "Count",
+        field: "count",
+    }]
 })
 
 //change the raw data and iSample data panels directions
@@ -37,6 +62,7 @@ function changePanes(direction) {
     }
 }
 
+
 //table ---------------------------------------------------------------------
 //show specified identifier record
 async function showRawRecord(id) {
@@ -45,7 +71,7 @@ async function showRawRecord(id) {
     fetch(url)
         .then(response => response.json())
         .then(doc => {
-            var e = document.getElementById("records_show");
+            var e = document.getElementById("orginal_show");
             e.innerHTML = prettyPrintJson.toHtml(doc, FormatOptions = {
                 indent: 2
             });
@@ -58,14 +84,15 @@ var tableType = new Tabulator("#types_table", {
     placeholder: "No data availble",
     ajaxURL: "https://mars.cyverse.org/thing/types",
     height: "300px",
-    columns:[{
+    columns: [{
         "title": "Item Types",
         field: "item_type",
-    },{
-        "title":"Count",
+    }, {
+        "title": "Count",
         field: "count",
     }]
 })
+
 
 
 //select row and show record informaton
@@ -75,14 +102,11 @@ function rowClick(e, row) {
     var reportId = document.getElementById('currentID');
     reportId.value = id;
     reportId.innerHTML = id;
+    var pres = document.getElementsByTagName("pre");
+    for (var i = 0; i < pres.length; i++) {
+        pres[i].style.overflow = "auto";
+    }
     showRawRecord(id);
-}
-
-//filter the records accordig users' input
-function doIdFilter(eid) {
-    var e = document.getElementById(eid).value;
-    console.log("Filter ID: " + e);
-    table.setFilter("id", "like", e);
 }
 
 //update load data
@@ -106,8 +130,6 @@ var table = new Tabulator("#records_table", {
     },
 
     ajaxRequesting: function(url, params) {
-        console.log(url);
-        console.log(params);
         params.offset = "" + (parseInt(params.offset) - 1) * parseInt(params.limit);
     },
     ajaxProgressiveLoad: "scroll",
@@ -141,19 +163,6 @@ var table = new Tabulator("#records_table", {
     selectable: 1
 });
 
-//enable input submit when users press enter
-var inputText = document.getElementById("id_filter");
-inputText.addEventListener("keyup", function(event) {
-        if (event.keyCode === 13) {
-            event.preventDefault();
-            document.getElementById("bt_filter").click();
-        }
-    })
-    //table ---------------------------------------------------------------------
-
-//type popup-----------------------------------------------------------------
-
-
 //add types in a popup box
 var modal = document.getElementsByClassName("types")[0];
 var bt_types = document.getElementById("bt_types");
@@ -161,6 +170,7 @@ var closeBt = document.getElementsByClassName("closeBt")[0];
 
 bt_types.addEventListener('click', function() { modal.style.display = "block"; });
 closeBt.addEventListener('click', function() { modal.style.display = "none"; });
+
 
 
 
@@ -217,7 +227,7 @@ function popupField() {
         bt_field.value = "active"
         fieldContainer.style.display = "block";
         fieldContainer.style.top = (bt_field.offsetTop + bt_field.offsetHeight + 5) + "px";
-        fieldContainer.style.right = (bt_field.offsetLeft ) + "px";
+        fieldContainer.style.left = (bt_field.offsetLeft - fieldContainer.offsetWidth + bt_field.offsetWidth / 2) + "px";
     } else {
         bt_field.value = ""
         fieldContainer.style.display = "none";
@@ -273,4 +283,62 @@ function setColumns() {
         });
     }
     table.setColumns(newCol);
+}
+
+//report popup-----------------------------------------------------------------
+var reportModel = document.getElementsByClassName("report")[0];
+var bt_report = document.getElementsByClassName("bt_report")[0];
+var repClose = document.getElementById("repClose");
+var repText = document.getElementsByClassName("retext")[0];
+
+bt_report.addEventListener("click", function() {
+    reportModel.style.display = "block";
+    document.getElementsByClassName("reportModel")[0].style.display = "block";
+    repText.value = "";
+    repText.placeholder = "Please enter bug";
+});
+repClose.addEventListener("click", function() {
+    reportModel.style.display = "none";
+})
+
+var reportTitle = document.getElementById('currentID');
+var reportBody = document.getElementById('reportBody');
+var bt_issue = document.getElementById('bt_issue');
+bt_issue.addEventListener('click', createIssue);
+async function createIssue() {
+    if (reportTitle.value == undefined) {
+        alert("Please choose a record!");
+    } else {
+        document.getElementsByClassName("reportModel")[0].style.display = "none";
+        document.getElementsByClassName("feedback")[0].style.display = "block";
+    }
+}
+document.getElementById("bt_feedback").addEventListener("click", function() {
+    document.getElementsByClassName("feedback")[0].style.display = "none";
+    reportModel.style.display = "none";
+})
+
+
+//log out
+var logout = document.getElementById("bt_logout");
+logout.addEventListener('click', function() {
+    location.href = "./login.html";
+})
+
+//filter pop box
+var filterContainer = document.getElementById("filter");
+var bt_filter = document.getElementById("bt_sorter");
+
+bt_filter.addEventListener("click", popupfilter)
+
+function popupfilter() {
+    if (bt_filter.value == "") {
+        bt_filter.value = "active"
+        filterContainer.style.display = "block";
+        filterContainer.style.top = (bt_filter.offsetTop + bt_filter.offsetHeight + 5) + "px";
+        filterContainer.style.left = (bt_filter.offsetLeft - filterContainer.offsetWidth + bt_filter.offsetWidth / 2) + "px";
+    } else {
+        bt_filter.value = ""
+        filterContainer.style.display = "none";
+    }
 }
