@@ -156,7 +156,10 @@ For main login html
     position: absolute;
     top: 760px;
     left: 380px;
-    font-size: 30px;
+}
+
+.otherLogin:hover {
+    box-shadow: 2px 2px #606060;
 }
 
 

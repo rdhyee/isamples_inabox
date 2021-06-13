@@ -98,16 +98,27 @@ var tableType = new Tabulator("#types_table", {
 //select row and show record informaton
 function rowClick(e, row) {
     console.log(row._row);
-    var id = row._row.data.id;
-    var reportId = document.getElementById('currentID');
-    reportId.value = id;
-    reportId.innerHTML = id;
-    var pres = document.getElementsByTagName("pre");
-    for (var i = 0; i < pres.length; i++) {
-        pres[i].style.overflow = "auto";
+    if (row._row.element.value == undefined) {
+        var id = row._row.data.id;
+        var reportId = document.getElementById('currentID');
+        reportId.value = id;
+        reportId.innerHTML = id;
+        var pres = document.getElementsByTagName("pre");
+        for (var i = 0; i < pres.length; i++) {
+            pres[i].style.overflow = "auto";
+        }
+        showRawRecord(id);
+    } else {
+        document.getElementsByClassName("hasBug")[0].style.display = "block";
+        document.getElementById("orginal_show").innerHTML = "";
+        document.getElementById("core_show").innerHTML = "";
     }
-    showRawRecord(id);
+
 }
+
+document.getElementById("apply_bug").addEventListener("click", function() {
+    document.getElementsByClassName("hasBug")[0].style.display = "none";
+})
 
 //update load data
 function Dataloaded(url, params, response) {
@@ -135,11 +146,11 @@ var table = new Tabulator("#records_table", {
     ajaxProgressiveLoad: "scroll",
     paginationSize: 1000,
     columns: [{
-        "title": "Id",
+        "title": "ID",
         field: "id",
         width: 150
     }, {
-        "title": "Authority Id",
+        "title": "Authority ID",
         field: "authority_id",
         width: 150
     }, {
@@ -147,15 +158,15 @@ var table = new Tabulator("#records_table", {
         field: "tcreated",
         width: 300
     }, {
-        "title": "status",
+        "title": "Status",
         field: "resolved_status",
         width: 100
     }, {
-        "title": "url",
+        "title": "URL",
         field: "resolved_url",
         width: 600
     }, {
-        "title": "elapsed",
+        "title": "Elapsed",
         field: "resolve_elapsed"
     }],
     ajaxResponse: Dataloaded,
@@ -295,7 +306,7 @@ bt_report.addEventListener("click", function() {
     reportModel.style.display = "block";
     document.getElementsByClassName("reportModel")[0].style.display = "block";
     repText.value = "";
-    repText.placeholder = "Please enter bug";
+    repText.placeholder = "Please enter issues";
 });
 repClose.addEventListener("click", function() {
     reportModel.style.display = "none";
@@ -314,6 +325,8 @@ async function createIssue() {
     }
 }
 document.getElementById("bt_feedback").addEventListener("click", function() {
+    table.getSelectedRows()[0]._row.element.style.backgroundColor = "yellow";
+    table.getSelectedRows()[0]._row.element.value = "HasBug";
     document.getElementsByClassName("feedback")[0].style.display = "none";
     reportModel.style.display = "none";
 })

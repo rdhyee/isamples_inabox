@@ -5,7 +5,7 @@ body {
     height: 100%;
     padding: 5px 10px;
     box-sizing: border-box;
-    font-family: monospace;
+    font-family: "Apple LiGothic";
 }
 
 button {
@@ -281,7 +281,7 @@ pre::-webkit-scrollbar-corner {
 .reportModel {
     resize: both;
     position: relative;
-    background-color: white;
+    background-color: #C8C8C8;
     margin-top: 3%;
     margin-left: 20%;
     width: 60%;
@@ -319,7 +319,7 @@ pre::-webkit-scrollbar-corner {
 
 .feedback {
     display: none;
-    background-color: white;
+    background-color: #C8C8C8;
     margin-top: 3%;
     margin-left: 20%;
     width: 60%;
@@ -353,4 +353,28 @@ pre::-webkit-scrollbar-corner {
 
 hr {
     border: 1px solid black;
+}
+
+
+/*
+    For accessible row
+*/
+
+.hasBug {
+    display: none;
+    position: absolute;
+    box-sizing: border-box;
+    margin: auto;
+    left: 0;
+    right: 0;
+    top: 100px;
+    height: 200px;
+    width: 450px;
+    border-radius: 15px;
+    background-color: #C8C8C8;
+}
+
+.BugContainer {
+    padding: 40px;
+    font-size: 25px;
 }
