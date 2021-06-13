@@ -48,10 +48,10 @@
             <div class="ctheader">
                 <button class="bt_report"> Report Issues</button>
                 <div class="changePanes">
-                    <input type="radio" name="dir" onchange="changePanes('h')" title="horizontal" checked>
-                    <img class="radioImg" src="./img/row.png" alt="horizontal" title="horizontal">
-                    <input type="radio" name="dir" onchange="changePanes('v')" title="vertical">
-                    <img class="radioImg" src="./img/col.png" alt="vertical" title="vertical">
+                    <input id="horiPanels" type="radio" name="dir" onchange="changePanes('h')" title="horizontal" checked>
+                    <label for="horiPanels"><img class="radioImg" src="./img/row.png" alt="horizontal" title="horizontal"></label> 
+                    <input id="veriPanels" type="radio" name="dir" onchange="changePanes('v')" title="vertical">
+                    <label for="veriPanels"><img class="radioImg" src="./img/col.png" alt="vertical" title="vertical"></label>
                 </div>
             </div>
             <div class="infoContainer">
