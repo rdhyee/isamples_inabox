@@ -12,9 +12,10 @@ import isamples_metadata.Transformer
 import igsn_lib.time
 from isamples_metadata.Transformer import Transformer
 import dateparser
+import re
 
 SOLR_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-
+ELEVATION_PATTERN = re.compile(r"\s*(-?\d+\.?\d*)\s*m?", re.IGNORECASE)
 
 def getLogger():
     logger = logging.getLogger("isb_lib.core")
@@ -86,26 +87,44 @@ def coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
     if _shouldAddMetadataValueToSolrDoc(coreMetadata, "samplingPurpose"):
         doc["samplingPurpose"] = coreMetadata["samplingPurpose"]
 
-    # The solr index flattens subdictionaries, so check the keys explicitly in the subdictionary to see if they should be added to the index
-    producedBy = coreMetadata["producedBy"]
-    if _shouldAddMetadataValueToSolrDoc(producedBy, "label"):
-        doc["producedBy_label"] = producedBy["label"]
-    if _shouldAddMetadataValueToSolrDoc(producedBy, "description"):
-        doc["producedBy_description"] = producedBy["description"]
-    if _shouldAddMetadataValueToSolrDoc(producedBy, "responsibility"):
-        doc["producedBy_responsibility"] = producedBy["responsibility"]
-    if _shouldAddMetadataValueToSolrDoc(producedBy, "hasFeatureOfInterest"):
-        doc["producedBy_hasFeatureOfInterest"] = producedBy["hasFeatureOfInterest"]
-    if _shouldAddMetadataValueToSolrDoc(producedBy, "resultTime"):
-        raw_date_str = producedBy["resultTime"]
-        # TODO: https://github.com/isamplesorg/isamples_inabox/issues/24
-        date_time = dateparser.parse(raw_date_str)
-        if date_time is not None:
-            doc["producedBy_resultTime"] = datetimeToSolrStr(date_time)
+    if "producedBy" in coreMetadata:
+        # The solr index flattens subdictionaries, so check the keys explicitly in the subdictionary to see if they should be added to the index
+        producedBy = coreMetadata["producedBy"]
+        if _shouldAddMetadataValueToSolrDoc(producedBy, "label"):
+            doc["producedBy_label"] = producedBy["label"]
+        if _shouldAddMetadataValueToSolrDoc(producedBy, "description"):
+            doc["producedBy_description"] = producedBy["description"]
+        if _shouldAddMetadataValueToSolrDoc(producedBy, "responsibility"):
+            doc["producedBy_responsibility"] = producedBy["responsibility"]
+        if _shouldAddMetadataValueToSolrDoc(producedBy, "hasFeatureOfInterest"):
+            doc["producedBy_hasFeatureOfInterest"] = producedBy["hasFeatureOfInterest"]
+        if _shouldAddMetadataValueToSolrDoc(producedBy, "resultTime"):
+            raw_date_str = producedBy["resultTime"]
+            # TODO: https://github.com/isamplesorg/isamples_inabox/issues/24
+            date_time = dateparser.parse(raw_date_str)
+            if date_time is not None:
+                doc["producedBy_resultTime"] = datetimeToSolrStr(date_time)
 
-    samplingSite = producedBy["samplingSite"]
-    if _shouldAddMetadataValueToSolrDoc(samplingSite, "description"):
-        doc["producedBy_samplingSite_description"] = samplingSite["description"]
+        if "samplingSite" in producedBy:
+            samplingSite = producedBy["samplingSite"]
+            if _shouldAddMetadataValueToSolrDoc(samplingSite, "description"):
+                doc["producedBy_samplingSite_description"] = samplingSite["description"]
+            if _shouldAddMetadataValueToSolrDoc(samplingSite, "label"):
+                doc["producedBy_samplingSite_label"] = samplingSite["label"]
+            if _shouldAddMetadataValueToSolrDoc(samplingSite, "placeName"):
+                doc["producedBy_samplingSite_placeName"] = samplingSite["placeName"]
+
+            if "location" in samplingSite:
+                location = samplingSite["location"]
+                if _shouldAddMetadataValueToSolrDoc(location, "elevation"):
+                    location_str = location["elevation"]
+                    match = ELEVATION_PATTERN.match(location_str)
+                    if match is not None:
+                        doc["producedBy_samplingSite_location_elevation"] = float(match.group(1))
+                if _shouldAddMetadataValueToSolrDoc(location, "latitude"):
+                    doc["producedBy_samplingSite_location_latitude"] = location["latitude"]
+                if _shouldAddMetadataValueToSolrDoc(location, "longitude"):
+                    doc["producedBy_samplingSite_location_longitude"] = location["longitude"]
 
     return doc
 
