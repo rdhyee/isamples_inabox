@@ -376,7 +376,6 @@ def reloadRecords(ctx, status_code):
 def populateIsbCoreSolr(ctx):
     # Note that this is identical to the one in #reparseRelations
     def _yieldRecordsByPage(session, authority_id="SESAR", status=200, page_size=5000, offset=0):
-        offset = 0
         while True:
             n = 0
             sql = "SELECT * FROM thing WHERE resolved_status=:status"
@@ -393,22 +392,24 @@ def populateIsbCoreSolr(ctx):
             for rec in qry:
                 n += 1
                 yield rec
+            if n == 0:
+                break
             offset += page_size
 
     L = getLogger()
     rsession = requests.session()
-    batch_size = 5
-    L.info("reparseRecords with batch size: %s", batch_size)
+    db_batch_size = 1000
+    solr_batch_size = 20
+    L.info("reparseRecords with batch size: %s", db_batch_size)
     session = getDBSession(ctx.obj["db_url"])
     allkeys = set()
     try:
-        i = 0
-        offset = 10000
+        offset = 0
         core_records = []
         for thing in _yieldRecordsByPage(
             session,
             authority_id=isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID,
-            page_size=batch_size,
+            page_size=db_batch_size,
             offset=offset
         ):
             core_record = isb_lib.sesar_adapter.reparseAsCoreRecord(thing)
@@ -416,11 +417,10 @@ def populateIsbCoreSolr(ctx):
             core_records.append(core_record)
             for r in core_records:
                 allkeys.add(r["id"])
-            _rel_len = len(core_records)
-            if _rel_len > batch_size:
+            batch_size = len(core_records)
+            if batch_size > solr_batch_size:
                 isb_lib.core.solrAddRecords(rsession, core_records, url="http://localhost:8983/api/collections/isb_core_records/")
                 core_records = []
-            i += 1
         if len(core_records) > 0:
             isb_lib.core.solrAddRecords(rsession, core_records, url="http://localhost:8983/api/collections/isb_core_records/")
         isb_lib.core.solrCommit(rsession, url="http://localhost:8983/api/collections/isb_core_records/")
