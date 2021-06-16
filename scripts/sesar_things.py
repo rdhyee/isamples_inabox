@@ -370,6 +370,78 @@ def reloadRecords(ctx, status_code):
     finally:
         session.close()
 
+@main.command("populate_isb_core_solr")
+@click.pass_context
+def populateIsbCoreSolr(ctx):
+    # Note that this is identical to the one in #reparseRelations
+    def _yieldRecordsByPage(session, authority_id="SESAR", status=200, page_size=5000):
+        offset = 0
+        while True:
+            n = 0
+            sql = "SELECT * FROM thing WHERE resolved_status=:status"
+            params = {
+                "status": status,
+            }
+            if authority_id is not None:
+                sql = sql + " AND authority_id=:authority_id"
+                params["authority_id"] = authority_id
+            sql = sql + " ORDER BY _id OFFSET :offset FETCH NEXT :limit ROWS ONLY"
+            params["offset"] = offset
+            params["limit"] = 1
+            qry = session.execute(sql, params)
+            for rec in qry:
+                n += 1
+                yield rec
+            break
+            if n == 0:
+                break
+            offset += page_size
+
+    L = getLogger()
+    rsession = requests.session()
+    batch_size = 1
+    L.info("reparseRecords with batch size: %s", batch_size)
+    session = getDBSession(ctx.obj["db_url"])
+    allkeys = set()
+    try:
+        i = 0
+        n = 0
+        core_records = []
+        for thing in _yieldRecordsByPage(
+            session,
+            authority_id=isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID,
+            page_size=batch_size,
+        ):
+            core_record = isb_lib.sesar_adapter.reparseAsCoreRecord(thing)
+            core_records.append(core_record)
+            for r in core_records:
+                allkeys.add(r["id"])
+            _rel_len = len(core_records)
+            n += len(core_record)
+            if i % 25 == 0:
+                L.info(
+                    "%s: relations id:%s num_rel:%s, total:%s", i, thing.id, _rel_len, n
+                )
+            if _rel_len > batch_size:
+                isb_lib.core.solrAddRecords(rsession, core_records)
+                core_records = []
+            i += 1
+        isb_lib.core.solrAddRecords(rsession, core_records, url="http://localhost:8983/api/collections/isb_core_records/")
+        isb_lib.core.solrCommit(rsession, url="http://localhost:8983/api/collections/isb_core_records/")
+        print(f"Total keys= {len(allkeys)}")
+        # verify records
+        # for verifying that all records were added to solr
+        # found = 0
+        # for _id in allkeys:
+        #    res = rsession.get(f"http://localhost:8983/solr/isb_rel/get?id={_id}").json()
+        #    if res.get("doc",{}).get("id") == _id:
+        #        found = found +1
+        #    else:
+        #        print(f"Missed: {_id}")
+        # print(f"Found = {found}")
+    finally:
+        session.close()
+
 
 if __name__ == "__main__":
     main()

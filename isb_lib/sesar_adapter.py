@@ -17,6 +17,7 @@ import igsn_lib.models.relation
 import isb_lib.core
 import isb_lib.sitemaps
 import uuid
+import isamples_metadata.SESARTransformer
 
 HTTP_TIMEOUT = 10.0  # seconds
 DEFAULT_IGSN_OAI = "https://doidb.wdc-terra.org/igsnoaip/oai"
@@ -180,11 +181,14 @@ class SESARItem(object):
         return _thing
 
 
-def reparseRelations(thing: igsn_lib.models.thing.Thing, as_solr: bool = False):
+def _validateResolvedContent(thing: igsn_lib.models.thing.Thing):
     if not isinstance(thing.resolved_content, dict):
         raise ValueError("Thing.resolved_content is not an object")
     if not thing.authority_id == SESARItem.AUTHORITY_ID:
         raise ValueError("Thing is not a SESAR item")
+
+def reparseRelations(thing: igsn_lib.models.thing.Thing, as_solr: bool = False):
+    _validateResolvedContent(thing)
     item = SESARItem(thing.id, thing.resolved_content)
     if as_solr:
         return item.solrRelations()
@@ -193,15 +197,16 @@ def reparseRelations(thing: igsn_lib.models.thing.Thing, as_solr: bool = False):
 
 def reparseThing(thing: igsn_lib.models.thing.Thing) -> igsn_lib.models.thing.Thing:
     """Reparse the resolved_content"""
-    if not isinstance(thing.resolved_content, dict):
-        raise ValueError("Thing.resolved_content is not an object")
-    if not thing.authority_id == SESARItem.AUTHORITY_ID:
-        raise ValueError("Thing is not a SESAR item")
+    _validateResolvedContent(thing)
     item = SESARItem(thing.resolved_content)
     thing.item_type = item.getItemType()
     thing.tstamp = igsn_lib.time.dtnow()
     return thing
 
+def reparseAsCoreRecord(thing: igsn_lib.models.thing.Thing) -> typing.Dict:
+    _validateResolvedContent(thing)
+    transformer = isamples_metadata.SESARTransformer.SESARTransformer(thing.resolved_content)
+    return isb_lib.core.coreRecordAsSolrDoc(transformer.transform())
 
 def loadThing(
     identifier: str, t_created: datetime.datetime

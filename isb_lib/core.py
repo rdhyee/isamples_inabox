@@ -6,6 +6,8 @@ import logging
 import datetime
 import hashlib
 import json
+import typing
+
 import igsn_lib.time
 
 SOLR_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -39,6 +41,17 @@ def relationAsSolrDoc(
     doc["id"] = hashlib.md5(json.dumps(doc).encode("utf-8")).hexdigest()
     doc["tstamp"] = datetimeToSolrStr(ts)
     return doc
+
+def coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
+    """
+    Args:
+        coreMetadata: the iSamples Core metadata dictionary
+
+    Returns: The coreMetadata in solr document format
+    """
+    return {
+        "id": coreMetadata["sampleidentifier"]
+    }
 
 
 def solrAddRecords(rsession, records, url="http://localhost:8983/solr/isb_rel/"):
