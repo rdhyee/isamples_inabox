@@ -150,6 +150,7 @@ def solrAddRecords(rsession, records, url):
     data = json.dumps(records).encode("utf-8")
     params = {"overwrite": "true"}
     _url = f"{url}update"
+    L.debug("Going to post data %s to url %s", str(data), str(_url))
     res = rsession.post(_url, headers=headers, data=data, params=params)
     L.debug("post status: %s", res.status_code)
     L.debug("Solr update: %s", res.text)

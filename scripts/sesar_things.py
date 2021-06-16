@@ -375,7 +375,7 @@ def reloadRecords(ctx, status_code):
 @click.pass_context
 def populateIsbCoreSolr(ctx):
     # Note that this is identical to the one in #reparseRelations
-    def _yieldRecordsByPage(session, authority_id="SESAR", status=200, page_size=5000):
+    def _yieldRecordsByPage(session, authority_id="SESAR", status=200, page_size=5000, offset=0):
         offset = 0
         while True:
             n = 0
@@ -388,29 +388,28 @@ def populateIsbCoreSolr(ctx):
                 params["authority_id"] = authority_id
             sql = sql + " ORDER BY _id OFFSET :offset FETCH NEXT :limit ROWS ONLY"
             params["offset"] = offset
-            params["limit"] = 4
+            params["limit"] = page_size
             qry = session.execute(sql, params)
             for rec in qry:
                 n += 1
                 yield rec
-            if n == 4:
-                break
             offset += page_size
 
     L = getLogger()
     rsession = requests.session()
-    batch_size = 25
+    batch_size = 5
     L.info("reparseRecords with batch size: %s", batch_size)
     session = getDBSession(ctx.obj["db_url"])
     allkeys = set()
     try:
         i = 0
-        n = 0
+        offset = 10000
         core_records = []
         for thing in _yieldRecordsByPage(
             session,
             authority_id=isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID,
             page_size=batch_size,
+            offset=offset
         ):
             core_record = isb_lib.sesar_adapter.reparseAsCoreRecord(thing)
             core_record["source"] = "SESAR"
@@ -418,11 +417,6 @@ def populateIsbCoreSolr(ctx):
             for r in core_records:
                 allkeys.add(r["id"])
             _rel_len = len(core_records)
-            n += len(core_record)
-            if i % 25 == 0:
-                L.info(
-                    "%s: relations id:%s num_rel:%s, total:%s", i, thing.id, _rel_len, n
-                )
             if _rel_len > batch_size:
                 isb_lib.core.solrAddRecords(rsession, core_records, url="http://localhost:8983/api/collections/isb_core_records/")
                 core_records = []
