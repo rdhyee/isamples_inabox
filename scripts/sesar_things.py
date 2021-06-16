@@ -280,6 +280,7 @@ def reparseRelations(ctx):
             for rec in qry:
                 n += 1
                 yield rec
+            break
             if n == 0:
                 break
             offset += page_size
@@ -305,7 +306,7 @@ def reparseRelations(ctx):
 
     L = getLogger()
     rsession = requests.session()
-    batch_size = 5000
+    batch_size = 1
     L.info("reparseRecords with batch size: %s", batch_size)
     session = getDBSession(ctx.obj["db_url"])
     allkeys = set()
@@ -329,11 +330,11 @@ def reparseRelations(ctx):
                     "%s: relations id:%s num_rel:%s, total:%s", i, thing.id, _rel_len, n
                 )
             if _rel_len > batch_size:
-                isb_lib.core.solrAddRecords(rsession, relations)
+                isb_lib.core.solrAddRecords(rsession, relations, "http://localhost:8983/solr/isb_rel/")
                 relations = []
             i += 1
-        isb_lib.core.solrAddRecords(rsession, relations)
-        isb_lib.core.solrCommit(rsession)
+        isb_lib.core.solrAddRecords(rsession, relations, "http://localhost:8983/solr/isb_rel/")
+        isb_lib.core.solrCommit(rsession, "http://localhost:8983/solr/isb_rel/")
         print(f"Total keys= {len(allkeys)}")
         # verify records
         # for verifying that all records were added to solr
@@ -387,19 +388,18 @@ def populateIsbCoreSolr(ctx):
                 params["authority_id"] = authority_id
             sql = sql + " ORDER BY _id OFFSET :offset FETCH NEXT :limit ROWS ONLY"
             params["offset"] = offset
-            params["limit"] = 1
+            params["limit"] = 4
             qry = session.execute(sql, params)
             for rec in qry:
                 n += 1
                 yield rec
-            break
-            if n == 0:
+            if n == 4:
                 break
             offset += page_size
 
     L = getLogger()
     rsession = requests.session()
-    batch_size = 1
+    batch_size = 25
     L.info("reparseRecords with batch size: %s", batch_size)
     session = getDBSession(ctx.obj["db_url"])
     allkeys = set()
@@ -413,6 +413,7 @@ def populateIsbCoreSolr(ctx):
             page_size=batch_size,
         ):
             core_record = isb_lib.sesar_adapter.reparseAsCoreRecord(thing)
+            core_record["source"] = "SESAR"
             core_records.append(core_record)
             for r in core_records:
                 allkeys.add(r["id"])
@@ -423,10 +424,11 @@ def populateIsbCoreSolr(ctx):
                     "%s: relations id:%s num_rel:%s, total:%s", i, thing.id, _rel_len, n
                 )
             if _rel_len > batch_size:
-                isb_lib.core.solrAddRecords(rsession, core_records)
+                isb_lib.core.solrAddRecords(rsession, core_records, url="http://localhost:8983/api/collections/isb_core_records/")
                 core_records = []
             i += 1
-        isb_lib.core.solrAddRecords(rsession, core_records, url="http://localhost:8983/api/collections/isb_core_records/")
+        if len(core_records) > 0:
+            isb_lib.core.solrAddRecords(rsession, core_records, url="http://localhost:8983/api/collections/isb_core_records/")
         isb_lib.core.solrCommit(rsession, url="http://localhost:8983/api/collections/isb_core_records/")
         print(f"Total keys= {len(allkeys)}")
         # verify records

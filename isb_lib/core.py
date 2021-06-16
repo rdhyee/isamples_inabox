@@ -7,14 +7,19 @@ import datetime
 import hashlib
 import json
 import typing
+import isamples_metadata.Transformer
 
 import igsn_lib.time
+from isamples_metadata.Transformer import Transformer
+import dateparser
 
 SOLR_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 def getLogger():
-    return logging.getLogger("isb_lib.core")
+    logger = logging.getLogger("isb_lib.core")
+    logger.level = logging.DEBUG
+    return logger
 
 
 def datetimeToSolrStr(dt):
@@ -42,19 +47,70 @@ def relationAsSolrDoc(
     doc["tstamp"] = datetimeToSolrStr(ts)
     return doc
 
+def _shouldAddMetadataValueToSolrDoc(metadata: typing.Dict, key: typing.AnyStr) -> bool:
+    shouldAdd = False
+    if key in metadata:
+        value = metadata[key]
+        if type(value) is list:
+            shouldAdd = len(value) > 0
+        elif type(value) is str:
+            shouldAdd = len(value) > 0 and value != Transformer.NOT_PROVIDED
+    return shouldAdd
+
 def coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
     """
     Args:
         coreMetadata: the iSamples Core metadata dictionary
 
-    Returns: The coreMetadata in solr document format
+    Returns: The coreMetadata in solr document format, suitable for posting to the solr JSON api
+    (https://solr.apache.org/guide/8_1/json-request-api.html)
     """
-    return {
-        "id": coreMetadata["sampleidentifier"]
+    doc = {
+        "id": coreMetadata["sampleidentifier"],
+        "isb_core_id": coreMetadata["@id"],
     }
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "label"):
+        doc["label"] = coreMetadata["label"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "description"):
+        doc["description"] = coreMetadata["description"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "hasContextCategory"):
+        doc["hasContextCategory"] = coreMetadata["hasContextCategory"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "hasMaterialCategory"):
+        doc["hasMaterialCategory"] = coreMetadata["hasMaterialCategory"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "hasSpecimenCategory"):
+        doc["hasSpecimenCategory"] = coreMetadata["hasSpecimenCategory"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "keywords"):
+        doc["keywords"] = coreMetadata["keywords"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "registrant"):
+        doc["registrant"] = coreMetadata["registrant"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "samplingPurpose"):
+        doc["samplingPurpose"] = coreMetadata["samplingPurpose"]
+
+    # The solr index flattens subdictionaries, so check the keys explicitly in the subdictionary to see if they should be added to the index
+    producedBy = coreMetadata["producedBy"]
+    if _shouldAddMetadataValueToSolrDoc(producedBy, "label"):
+        doc["producedBy_label"] = producedBy["label"]
+    if _shouldAddMetadataValueToSolrDoc(producedBy, "description"):
+        doc["producedBy_description"] = producedBy["description"]
+    if _shouldAddMetadataValueToSolrDoc(producedBy, "responsibility"):
+        doc["producedBy_responsibility"] = producedBy["responsibility"]
+    if _shouldAddMetadataValueToSolrDoc(producedBy, "hasFeatureOfInterest"):
+        doc["producedBy_hasFeatureOfInterest"] = producedBy["hasFeatureOfInterest"]
+    if _shouldAddMetadataValueToSolrDoc(producedBy, "resultTime"):
+        raw_date_str = producedBy["resultTime"]
+        # TODO: https://github.com/isamplesorg/isamples_inabox/issues/24
+        date_time = dateparser.parse(raw_date_str)
+        if date_time is not None:
+            doc["producedBy_resultTime"] = datetimeToSolrStr(date_time)
+
+    samplingSite = producedBy["samplingSite"]
+    if _shouldAddMetadataValueToSolrDoc(samplingSite, "description"):
+        doc["producedBy_samplingSite_description"] = samplingSite["description"]
+
+    return doc
 
 
-def solrAddRecords(rsession, records, url="http://localhost:8983/solr/isb_rel/"):
+def solrAddRecords(rsession, records, url):
     """
     Push records to Solr.
 
@@ -77,12 +133,15 @@ def solrAddRecords(rsession, records, url="http://localhost:8983/solr/isb_rel/")
     _url = f"{url}update"
     res = rsession.post(_url, headers=headers, data=data, params=params)
     L.debug("post status: %s", res.status_code)
+    L.debug("Solr update: %s", res.text)
     if res.status_code != 200:
         L.error(res.text)
         #TODO: something more elegant for error handling
         raise ValueError()
+    else:
+        L.debug("Successfully posted data %s to url %s", str(data), str(_url))
 
-def solrCommit(rsession, url="http://localhost:8983/solr/isb_rel/"):
+def solrCommit(rsession, url):
     L = getLogger()
     headers = {"Content-Type":"application/json"}
     params = {"commit":"true"}
