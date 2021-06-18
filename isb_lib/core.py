@@ -56,6 +56,8 @@ def _shouldAddMetadataValueToSolrDoc(metadata: typing.Dict, key: typing.AnyStr) 
             shouldAdd = len(value) > 0
         elif type(value) is str:
             shouldAdd = len(value) > 0 and value != Transformer.NOT_PROVIDED
+        else:
+            shouldAdd = True
     return shouldAdd
 
 def coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
@@ -121,10 +123,9 @@ def coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
                     match = ELEVATION_PATTERN.match(location_str)
                     if match is not None:
                         doc["producedBy_samplingSite_location_elevation"] = float(match.group(1))
-                if _shouldAddMetadataValueToSolrDoc(location, "latitude"):
-                    doc["producedBy_samplingSite_location_latitude"] = location["latitude"]
-                if _shouldAddMetadataValueToSolrDoc(location, "longitude"):
-                    doc["producedBy_samplingSite_location_longitude"] = location["longitude"]
+                if _shouldAddMetadataValueToSolrDoc(location, "latitude") and _shouldAddMetadataValueToSolrDoc(location, "longitude"):
+                    doc["producedBy_samplingSite_location_latlon"] = f"{location['latitude']},{location['longitude']}"
+
 
     return doc
 
