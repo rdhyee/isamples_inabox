@@ -14,6 +14,19 @@ from isamples_metadata.Transformer import Transformer
 import dateparser
 import re
 
+RECOGNIZED_DATE_FORMATS = [
+    "%Y",  # e.g. 1985
+    "%Y-%m-%d",  # e.g. 1947-08-06
+    "%Y-%m",  # e.g. 2020-07
+    "%Y-%m-%d %H:M:%S",  # e.g 2019-12-08 15:54:00
+]
+DATEPARSER_SETTINGS = {
+    'DATE_ORDER': 'YMD',
+    'PREFER_DAY_OF_MONTH': 'first',
+    'TIMEZONE': 'UTC',
+    'RETURN_AS_TIMEZONE_AWARE': True
+}
+
 SOLR_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 ELEVATION_PATTERN = re.compile(r"\s*(-?\d+\.?\d*)\s*m?", re.IGNORECASE)
 
@@ -102,8 +115,7 @@ def coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
             doc["producedBy_hasFeatureOfInterest"] = producedBy["hasFeatureOfInterest"]
         if _shouldAddMetadataValueToSolrDoc(producedBy, "resultTime"):
             raw_date_str = producedBy["resultTime"]
-            # TODO: https://github.com/isamplesorg/isamples_inabox/issues/24
-            date_time = dateparser.parse(raw_date_str)
+            date_time = parsed_date(raw_date_str)
             if date_time is not None:
                 doc["producedBy_resultTime"] = datetimeToSolrStr(date_time)
 
@@ -122,12 +134,18 @@ def coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
                     location_str = location["elevation"]
                     match = ELEVATION_PATTERN.match(location_str)
                     if match is not None:
-                        doc["producedBy_samplingSite_location_elevation"] = float(match.group(1))
+                        doc["producedBy_samplingSite_location_elevationInMeters"] = float(match.group(1))
                 if _shouldAddMetadataValueToSolrDoc(location, "latitude") and _shouldAddMetadataValueToSolrDoc(location, "longitude"):
                     doc["producedBy_samplingSite_location_latlon"] = f"{location['latitude']},{location['longitude']}"
 
 
     return doc
+
+
+def parsed_date(raw_date_str):
+    # TODO: https://github.com/isamplesorg/isamples_inabox/issues/24
+    date_time = dateparser.parse(raw_date_str, date_formats=RECOGNIZED_DATE_FORMATS, settings=DATEPARSER_SETTINGS)
+    return date_time
 
 
 def solrAddRecords(rsession, records, url):

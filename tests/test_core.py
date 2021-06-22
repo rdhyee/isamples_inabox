@@ -57,3 +57,44 @@ def test_coreRecordAsSolrDoc():
     solr_dict = isb_lib.core.coreRecordAsSolrDoc(core_doc)
     assert "producedBy_samplingSite_location_latlon" in solr_dict
     isb_lib.core.solrAddRecords(requests.session(), [solr_dict], url="http://localhost:8983/api/collections/isb_core_records/")
+
+
+def test_date_year_only():
+    date_str = "1985"
+    datetime = isb_lib.core.parsed_date(date_str)
+    assert datetime is not None
+    assert datetime.day == 1
+    assert datetime.month == 1
+    assert datetime.year == 1985
+
+
+def test_date_year_month_day():
+    date_str = "1947-08-06"
+    datetime = isb_lib.core.parsed_date(date_str)
+    assert datetime is not None
+    assert datetime.day == 6
+    assert datetime.month == 8
+    assert datetime.year == 1947
+
+
+def test_date_year_month():
+    date_str = "2020-07"
+    datetime = isb_lib.core.parsed_date(date_str)
+    assert datetime is not None
+    assert datetime.month == 7
+    assert datetime.year == 2020
+    # default to the first of the month since it wasn't in the original
+    assert datetime.day == 1
+
+
+def test_date_with_time():
+    date_str = "2019-12-08 15:54:00"
+    datetime = isb_lib.core.parsed_date(date_str)
+    assert datetime is not None
+    assert datetime.year == 2019
+    assert datetime.month == 12
+    assert datetime.day == 8
+    assert datetime.hour == 15
+    assert datetime.minute == 54
+    assert datetime.second == 0
+    assert datetime.tzinfo.zone == 'UTC'
