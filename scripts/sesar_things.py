@@ -306,7 +306,7 @@ def reparseRelations(ctx):
 
     L = getLogger()
     rsession = requests.session()
-    batch_size = 1
+    batch_size = 5000
     L.info("reparseRecords with batch size: %s", batch_size)
     session = getDBSession(ctx.obj["db_url"])
     allkeys = set()

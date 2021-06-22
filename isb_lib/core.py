@@ -31,9 +31,7 @@ SOLR_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 ELEVATION_PATTERN = re.compile(r"\s*(-?\d+\.?\d*)\s*m?", re.IGNORECASE)
 
 def getLogger():
-    logger = logging.getLogger("isb_lib.core")
-    logger.level = logging.DEBUG
-    return logger
+    return logging.getLogger("isb_lib.core")
 
 
 def datetimeToSolrStr(dt):
@@ -65,7 +63,15 @@ def _shouldAddMetadataValueToSolrDoc(metadata: typing.Dict, key: typing.AnyStr) 
     shouldAdd = False
     if key in metadata:
         value = metadata[key]
-        if type(value) is list:
+        if key =='latitude':
+            shouldAdd = -90.0 <= value <= 90.0
+            if not shouldAdd:
+                getLogger().error("Invalid latitude %f", value)
+        elif key == 'longitude':
+            shouldAdd = -180.0 <= value <= 180
+            if not shouldAdd:
+                getLogger().error("Invalid longitude %f", value)
+        elif type(value) is list:
             shouldAdd = len(value) > 0
         elif type(value) is str:
             shouldAdd = len(value) > 0 and value != Transformer.NOT_PROVIDED
@@ -81,6 +87,12 @@ def coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
     Returns: The coreMetadata in solr document format, suitable for posting to the solr JSON api
     (https://solr.apache.org/guide/8_1/json-request-api.html)
     """
+
+    # Before preparing the document in solr format, strip out any whitespace in string values
+    for k, v in coreMetadata.items():
+        if type(v) is str:
+            coreMetadata[k] = v.strip()
+
     doc = {
         "id": coreMetadata["sampleidentifier"],
         "isb_core_id": coreMetadata["@id"],
