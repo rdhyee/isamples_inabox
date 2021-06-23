@@ -311,14 +311,14 @@ def reparseRelations(ctx):
                     "%s: relations id:%s num_rel:%s, total:%s", i, thing.id, _rel_len, n
                 )
             if _rel_len > batch_size:
-                isb_lib.core.solrAddRecords(rsession, relations)
+                isb_lib.core.solrAddRecords(rsession, relations, "http://localhost:8983/solr/isb_rel/")
                 relations = []
             i += 1
         # don't forget to add the remainder!
-        isb_lib.core.solrAddRecords(rsession, relations)
+        isb_lib.core.solrAddRecords(rsession, relations, "http://localhost:8983/solr/isb_rel/")
         L.info("%s: relations num_rel:%s, total:%s", i, len(relations), n)
         print(f"Total keys= {len(allkeys)}")
-        isb_lib.core.solrCommit(rsession)
+        isb_lib.core.solrCommit(rsession, "http://localhost:8983/solr/isb_rel/")
     finally:
         session.close()
 

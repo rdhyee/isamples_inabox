@@ -6,10 +6,29 @@ import logging
 import datetime
 import hashlib
 import json
+import typing
+import isamples_metadata.Transformer
+
 import igsn_lib.time
+from isamples_metadata.Transformer import Transformer
+import dateparser
+import re
+
+RECOGNIZED_DATE_FORMATS = [
+    "%Y",  # e.g. 1985
+    "%Y-%m-%d",  # e.g. 1947-08-06
+    "%Y-%m",  # e.g. 2020-07
+    "%Y-%m-%d %H:M:%S",  # e.g 2019-12-08 15:54:00
+]
+DATEPARSER_SETTINGS = {
+    'DATE_ORDER': 'YMD',
+    'PREFER_DAY_OF_MONTH': 'first',
+    'TIMEZONE': 'UTC',
+    'RETURN_AS_TIMEZONE_AWARE': True
+}
 
 SOLR_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-
+ELEVATION_PATTERN = re.compile(r"\s*(-?\d+\.?\d*)\s*m?", re.IGNORECASE)
 
 def getLogger():
     return logging.getLogger("isb_lib.core")
@@ -40,8 +59,108 @@ def relationAsSolrDoc(
     doc["tstamp"] = datetimeToSolrStr(ts)
     return doc
 
+def _shouldAddMetadataValueToSolrDoc(metadata: typing.Dict, key: typing.AnyStr) -> bool:
+    shouldAdd = False
+    if key in metadata:
+        value = metadata[key]
+        if key =='latitude':
+            shouldAdd = -90.0 <= value <= 90.0
+            if not shouldAdd:
+                getLogger().error("Invalid latitude %f", value)
+        elif key == 'longitude':
+            shouldAdd = -180.0 <= value <= 180
+            if not shouldAdd:
+                getLogger().error("Invalid longitude %f", value)
+        elif type(value) is list:
+            shouldAdd = len(value) > 0
+        elif type(value) is str:
+            shouldAdd = len(value) > 0 and value != Transformer.NOT_PROVIDED
+        else:
+            shouldAdd = True
+    return shouldAdd
 
-def solrAddRecords(rsession, records, url="http://localhost:8983/solr/isb_rel/"):
+def coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
+    """
+    Args:
+        coreMetadata: the iSamples Core metadata dictionary
+
+    Returns: The coreMetadata in solr document format, suitable for posting to the solr JSON api
+    (https://solr.apache.org/guide/8_1/json-request-api.html)
+    """
+
+    # Before preparing the document in solr format, strip out any whitespace in string values
+    for k, v in coreMetadata.items():
+        if type(v) is str:
+            coreMetadata[k] = v.strip()
+
+    doc = {
+        "id": coreMetadata["sampleidentifier"],
+        "isb_core_id": coreMetadata["@id"],
+    }
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "label"):
+        doc["label"] = coreMetadata["label"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "description"):
+        doc["description"] = coreMetadata["description"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "hasContextCategory"):
+        doc["hasContextCategory"] = coreMetadata["hasContextCategory"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "hasMaterialCategory"):
+        doc["hasMaterialCategory"] = coreMetadata["hasMaterialCategory"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "hasSpecimenCategory"):
+        doc["hasSpecimenCategory"] = coreMetadata["hasSpecimenCategory"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "keywords"):
+        doc["keywords"] = coreMetadata["keywords"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "registrant"):
+        doc["registrant"] = coreMetadata["registrant"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "samplingPurpose"):
+        doc["samplingPurpose"] = coreMetadata["samplingPurpose"]
+
+    if "producedBy" in coreMetadata:
+        # The solr index flattens subdictionaries, so check the keys explicitly in the subdictionary to see if they should be added to the index
+        producedBy = coreMetadata["producedBy"]
+        if _shouldAddMetadataValueToSolrDoc(producedBy, "label"):
+            doc["producedBy_label"] = producedBy["label"]
+        if _shouldAddMetadataValueToSolrDoc(producedBy, "description"):
+            doc["producedBy_description"] = producedBy["description"]
+        if _shouldAddMetadataValueToSolrDoc(producedBy, "responsibility"):
+            doc["producedBy_responsibility"] = producedBy["responsibility"]
+        if _shouldAddMetadataValueToSolrDoc(producedBy, "hasFeatureOfInterest"):
+            doc["producedBy_hasFeatureOfInterest"] = producedBy["hasFeatureOfInterest"]
+        if _shouldAddMetadataValueToSolrDoc(producedBy, "resultTime"):
+            raw_date_str = producedBy["resultTime"]
+            date_time = parsed_date(raw_date_str)
+            if date_time is not None:
+                doc["producedBy_resultTime"] = datetimeToSolrStr(date_time)
+
+        if "samplingSite" in producedBy:
+            samplingSite = producedBy["samplingSite"]
+            if _shouldAddMetadataValueToSolrDoc(samplingSite, "description"):
+                doc["producedBy_samplingSite_description"] = samplingSite["description"]
+            if _shouldAddMetadataValueToSolrDoc(samplingSite, "label"):
+                doc["producedBy_samplingSite_label"] = samplingSite["label"]
+            if _shouldAddMetadataValueToSolrDoc(samplingSite, "placeName"):
+                doc["producedBy_samplingSite_placeName"] = samplingSite["placeName"]
+
+            if "location" in samplingSite:
+                location = samplingSite["location"]
+                if _shouldAddMetadataValueToSolrDoc(location, "elevation"):
+                    location_str = location["elevation"]
+                    match = ELEVATION_PATTERN.match(location_str)
+                    if match is not None:
+                        doc["producedBy_samplingSite_location_elevationInMeters"] = float(match.group(1))
+                if _shouldAddMetadataValueToSolrDoc(location, "latitude") and _shouldAddMetadataValueToSolrDoc(location, "longitude"):
+                    doc["producedBy_samplingSite_location_latlon"] = f"{location['latitude']},{location['longitude']}"
+
+
+    return doc
+
+
+def parsed_date(raw_date_str):
+    # TODO: https://github.com/isamplesorg/isamples_inabox/issues/24
+    date_time = dateparser.parse(raw_date_str, date_formats=RECOGNIZED_DATE_FORMATS, settings=DATEPARSER_SETTINGS)
+    return date_time
+
+
+def solrAddRecords(rsession, records, url):
     """
     Push records to Solr.
 
@@ -62,14 +181,18 @@ def solrAddRecords(rsession, records, url="http://localhost:8983/solr/isb_rel/")
     data = json.dumps(records).encode("utf-8")
     params = {"overwrite": "true"}
     _url = f"{url}update"
+    L.debug("Going to post data %s to url %s", str(data), str(_url))
     res = rsession.post(_url, headers=headers, data=data, params=params)
     L.debug("post status: %s", res.status_code)
+    L.debug("Solr update: %s", res.text)
     if res.status_code != 200:
         L.error(res.text)
         #TODO: something more elegant for error handling
         raise ValueError()
+    else:
+        L.debug("Successfully posted data %s to url %s", str(data), str(_url))
 
-def solrCommit(rsession, url="http://localhost:8983/solr/isb_rel/"):
+def solrCommit(rsession, url):
     L = getLogger()
     headers = {"Content-Type":"application/json"}
     params = {"commit":"true"}
