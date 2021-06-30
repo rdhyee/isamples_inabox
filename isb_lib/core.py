@@ -109,49 +109,69 @@ def coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
         doc["hasSpecimenCategory"] = coreMetadata["hasSpecimenCategory"]
     if _shouldAddMetadataValueToSolrDoc(coreMetadata, "keywords"):
         doc["keywords"] = coreMetadata["keywords"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "informalClassification"):
+        doc["informalClassification"] = coreMetadata["informalClassification"]
     if _shouldAddMetadataValueToSolrDoc(coreMetadata, "registrant"):
         doc["registrant"] = coreMetadata["registrant"]
     if _shouldAddMetadataValueToSolrDoc(coreMetadata, "samplingPurpose"):
         doc["samplingPurpose"] = coreMetadata["samplingPurpose"]
-
     if "producedBy" in coreMetadata:
-        # The solr index flattens subdictionaries, so check the keys explicitly in the subdictionary to see if they should be added to the index
-        producedBy = coreMetadata["producedBy"]
-        if _shouldAddMetadataValueToSolrDoc(producedBy, "label"):
-            doc["producedBy_label"] = producedBy["label"]
-        if _shouldAddMetadataValueToSolrDoc(producedBy, "description"):
-            doc["producedBy_description"] = producedBy["description"]
-        if _shouldAddMetadataValueToSolrDoc(producedBy, "responsibility"):
-            doc["producedBy_responsibility"] = producedBy["responsibility"]
-        if _shouldAddMetadataValueToSolrDoc(producedBy, "hasFeatureOfInterest"):
-            doc["producedBy_hasFeatureOfInterest"] = producedBy["hasFeatureOfInterest"]
-        if _shouldAddMetadataValueToSolrDoc(producedBy, "resultTime"):
-            raw_date_str = producedBy["resultTime"]
-            date_time = parsed_date(raw_date_str)
-            if date_time is not None:
-                doc["producedBy_resultTime"] = datetimeToSolrStr(date_time)
-
-        if "samplingSite" in producedBy:
-            samplingSite = producedBy["samplingSite"]
-            if _shouldAddMetadataValueToSolrDoc(samplingSite, "description"):
-                doc["producedBy_samplingSite_description"] = samplingSite["description"]
-            if _shouldAddMetadataValueToSolrDoc(samplingSite, "label"):
-                doc["producedBy_samplingSite_label"] = samplingSite["label"]
-            if _shouldAddMetadataValueToSolrDoc(samplingSite, "placeName"):
-                doc["producedBy_samplingSite_placeName"] = samplingSite["placeName"]
-
-            if "location" in samplingSite:
-                location = samplingSite["location"]
-                if _shouldAddMetadataValueToSolrDoc(location, "elevation"):
-                    location_str = location["elevation"]
-                    match = ELEVATION_PATTERN.match(location_str)
-                    if match is not None:
-                        doc["producedBy_samplingSite_location_elevationInMeters"] = float(match.group(1))
-                if _shouldAddMetadataValueToSolrDoc(location, "latitude") and _shouldAddMetadataValueToSolrDoc(location, "longitude"):
-                    doc["producedBy_samplingSite_location_latlon"] = f"{location['latitude']},{location['longitude']}"
-
+        handle_produced_by_fields(coreMetadata, doc)
+    if "curation" in coreMetadata:
+        handle_curation_fields(coreMetadata, doc)
 
     return doc
+
+def handle_curation_fields(coreMetadata, doc):
+    curation = coreMetadata["curation"]
+    if _shouldAddMetadataValueToSolrDoc(curation, "label"):
+        doc["curation_label"] = curation["label"]
+    if _shouldAddMetadataValueToSolrDoc(curation, "description"):
+        doc["curation_description"] = curation["description"]
+    if _shouldAddMetadataValueToSolrDoc(curation, "accessConstraints"):
+        doc["curation_accessConstraints"] = curation["accessConstraints"]
+    if _shouldAddMetadataValueToSolrDoc(curation, "location"):
+        doc["curation_location"] = curation["location"]
+    if _shouldAddMetadataValueToSolrDoc(curation, "responsibility"):
+        doc["curation_responsibility"] = curation["responsibility"]
+
+def handle_produced_by_fields(coreMetadata, doc):
+    # The solr index flattens subdictionaries, so check the keys explicitly in the subdictionary to see if they should be added to the index
+    producedBy = coreMetadata["producedBy"]
+    if _shouldAddMetadataValueToSolrDoc(producedBy, "label"):
+        doc["producedBy_label"] = producedBy["label"]
+    if _shouldAddMetadataValueToSolrDoc(producedBy, "description"):
+        doc["producedBy_description"] = producedBy["description"]
+    if _shouldAddMetadataValueToSolrDoc(producedBy, "responsibility"):
+        doc["producedBy_responsibility"] = producedBy["responsibility"]
+    if _shouldAddMetadataValueToSolrDoc(producedBy, "hasFeatureOfInterest"):
+        doc["producedBy_hasFeatureOfInterest"] = producedBy["hasFeatureOfInterest"]
+    if _shouldAddMetadataValueToSolrDoc(producedBy, "resultTime"):
+        raw_date_str = producedBy["resultTime"]
+        date_time = parsed_date(raw_date_str)
+        if date_time is not None:
+            doc["producedBy_resultTime"] = datetimeToSolrStr(date_time)
+    if _shouldAddMetadataValueToSolrDoc(producedBy, "@id"):
+        doc["producedBy_isb_core_id"] = producedBy["@id"]
+    if "samplingSite" in producedBy:
+        samplingSite = producedBy["samplingSite"]
+        if _shouldAddMetadataValueToSolrDoc(samplingSite, "description"):
+            doc["producedBy_samplingSite_description"] = samplingSite["description"]
+        if _shouldAddMetadataValueToSolrDoc(samplingSite, "label"):
+            doc["producedBy_samplingSite_label"] = samplingSite["label"]
+        if _shouldAddMetadataValueToSolrDoc(samplingSite, "placeName"):
+            doc["producedBy_samplingSite_placeName"] = samplingSite["placeName"]
+
+        if "location" in samplingSite:
+            location = samplingSite["location"]
+            if _shouldAddMetadataValueToSolrDoc(location, "elevation"):
+                location_str = location["elevation"]
+                match = ELEVATION_PATTERN.match(location_str)
+                if match is not None:
+                    doc["producedBy_samplingSite_location_elevationInMeters"] = float(match.group(1))
+            if _shouldAddMetadataValueToSolrDoc(location, "latitude") and _shouldAddMetadataValueToSolrDoc(location,
+                                                                                                           "longitude"):
+                doc["producedBy_samplingSite_location_latlon"] = f"{location['latitude']},{location['longitude']}"
 
 
 def parsed_date(raw_date_str):

@@ -9,7 +9,7 @@ import typing
 import urllib.parse
 import json
 
-import isamples_metadata
+import isamples_metadata.GEOMETransformer
 import requests
 import sickle.oaiexceptions
 import sickle.utils
@@ -362,5 +362,5 @@ def reloadThing(thing):
 
 def reparseAsCoreRecord(thing: igsn_lib.models.thing.Thing) -> typing.Dict:
     _validateResolvedContent(thing)
-    transformer = isamples_metadata.GEOME.SESARTransformer(thing.resolved_content)
-    return transformer.transform()
+    transformer = isamples_metadata.GEOMETransformer.GEOMETransformer(thing.resolved_content)
+    return isb_lib.core.coreRecordAsSolrDoc(transformer.transform())

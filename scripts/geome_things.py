@@ -386,17 +386,18 @@ def populateIsbCoreSolr(ctx):
             offset=offset
         ):
             core_record = isb_lib.geome_adapter.reparseAsCoreRecord(thing)
+            print("Just added core_record: %s", str(core_record))
             core_record["source"] = "GEOME"
             core_records.append(core_record)
             for r in core_records:
                 allkeys.add(r["id"])
             batch_size = len(core_records)
-            # if batch_size > solr_batch_size:
-            #     isb_lib.core.solrAddRecords(rsession, core_records, url="http://localhost:8983/api/collections/isb_core_records/")
-            #     core_records = []
-        # if len(core_records) > 0:
-        #     isb_lib.core.solrAddRecords(rsession, core_records, url="http://localhost:8983/api/collections/isb_core_records/")
-        # isb_lib.core.solrCommit(rsession, url="http://localhost:8983/api/collections/isb_core_records/")
+            if batch_size > solr_batch_size:
+                isb_lib.core.solrAddRecords(rsession, core_records, url="http://localhost:8983/api/collections/isb_core_records/")
+                core_records = []
+        if len(core_records) > 0:
+            isb_lib.core.solrAddRecords(rsession, core_records, url="http://localhost:8983/api/collections/isb_core_records/")
+        isb_lib.core.solrCommit(rsession, url="http://localhost:8983/api/collections/isb_core_records/")
         print(f"Total keys= {len(allkeys)}")
         # verify records
         # for verifying that all records were added to solr
