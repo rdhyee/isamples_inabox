@@ -16,6 +16,7 @@ from isb_web import crud
 from isb_web import config
 from isb_web import isb_format
 from isamples_metadata.SESARTransformer import SESARTransformer
+from isamples_metadata.GEOMETransformer import GEOMETransformer
 
 import logging
 
@@ -127,6 +128,8 @@ async def get_thing(
         authority_id = item.authority_id
         if authority_id == "SESAR":
             content = SESARTransformer(item.resolved_content).transform()
+        elif authority_id == "GEOME":
+            content = GEOMETransformer(item.resolved_content).transform()
         else:
             raise fastapi.HTTPException(
                 status_code=400,
