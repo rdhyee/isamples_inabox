@@ -119,10 +119,12 @@ def coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
         handle_produced_by_fields(coreMetadata, doc)
     if "curation" in coreMetadata:
         handle_curation_fields(coreMetadata, doc)
+    if "relatedResource" in coreMetadata:
+        handle_related_resources(coreMetadata, doc)
 
     return doc
 
-def handle_curation_fields(coreMetadata, doc):
+def handle_curation_fields(coreMetadata: typing.Dict, doc: typing.Dict):
     curation = coreMetadata["curation"]
     if _shouldAddMetadataValueToSolrDoc(curation, "label"):
         doc["curation_label"] = curation["label"]
@@ -135,7 +137,7 @@ def handle_curation_fields(coreMetadata, doc):
     if _shouldAddMetadataValueToSolrDoc(curation, "responsibility"):
         doc["curation_responsibility"] = curation["responsibility"]
 
-def handle_produced_by_fields(coreMetadata, doc):
+def handle_produced_by_fields(coreMetadata: typing.Dict, doc:typing.Dict):
     # The solr index flattens subdictionaries, so check the keys explicitly in the subdictionary to see if they should be added to the index
     producedBy = coreMetadata["producedBy"]
     if _shouldAddMetadataValueToSolrDoc(producedBy, "label"):
@@ -173,6 +175,12 @@ def handle_produced_by_fields(coreMetadata, doc):
                                                                                                            "longitude"):
                 doc["producedBy_samplingSite_location_latlon"] = f"{location['latitude']},{location['longitude']}"
 
+def handle_related_resources(coreMetadata: typing.Dict, doc: typing.Dict):
+    related_resources = coreMetadata["relatedResource"]
+    related_resource_ids = []
+    for related_resource in related_resources:
+        related_resource_ids.append(related_resource["target"])
+    doc["relatedResource_isb_core_id"] = related_resource_ids
 
 def parsed_date(raw_date_str):
     # TODO: https://github.com/isamplesorg/isamples_inabox/issues/24
