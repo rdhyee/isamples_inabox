@@ -5,8 +5,11 @@ import time
 import logging
 import functools
 import datetime
+import typing
 import urllib.parse
 import json
+
+import isamples_metadata
 import requests
 import sickle.oaiexceptions
 import sickle.utils
@@ -307,12 +310,14 @@ class GEOMEItem(object):
         _thing.resolved_content = self.item
         return _thing
 
-
-def reparseRelations(thing):
+def _validateResolvedContent(thing: igsn_lib.models.thing.Thing):
     if not isinstance(thing.resolved_content, dict):
         raise ValueError("Thing.resolved_content is not an object")
     if not thing.authority_id == GEOMEItem.AUTHORITY_ID:
         raise ValueError("Thing is not a GEOME item")
+
+def reparseRelations(thing):
+    _validateResolvedContent(thing)
     item = GEOMEItem(thing.id, thing.resolved_content)
     return item.solrRelations()
     #return item.asRelations()
@@ -320,10 +325,7 @@ def reparseRelations(thing):
 
 def reparseThing(thing):
     """Reparse the resolved_content"""
-    if not isinstance(thing.resolved_content, dict):
-        raise ValueError("Thing.resolved_content is not an object")
-    if not thing.authority_id == GEOMEItem.AUTHORITY_ID:
-        raise ValueError("Thing is not a GEOME item")
+    _validateResolvedContent(thing)
     item = GEOMEItem(thing.id, thing.resolved_content)
     thing.item_type = item.getItemType()
     thing.tstamp = igsn_lib.time.dtnow()
@@ -357,3 +359,8 @@ def reloadThing(thing):
     L.debug("reloadThing id=%s", thing.id)
     identifier = igsn_lib.normalize(thing.id)
     return loadThing(identifier, thing.tcreated)
+
+def reparseAsCoreRecord(thing: igsn_lib.models.thing.Thing) -> typing.Dict:
+    _validateResolvedContent(thing)
+    transformer = isamples_metadata.GEOME.SESARTransformer(thing.resolved_content)
+    return transformer.transform()
