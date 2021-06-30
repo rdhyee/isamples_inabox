@@ -61,8 +61,8 @@ def relationAsSolrDoc(
 
 def _shouldAddMetadataValueToSolrDoc(metadata: typing.Dict, key: typing.AnyStr) -> bool:
     shouldAdd = False
-    if key in metadata:
-        value = metadata[key]
+    value = metadata.get(key)
+    if value is not None:
         if key =='latitude':
             shouldAdd = -90.0 <= value <= 90.0
             if not shouldAdd:
