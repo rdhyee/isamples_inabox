@@ -360,7 +360,18 @@ def reloadThing(thing):
     identifier = igsn_lib.normalize(thing.id)
     return loadThing(identifier, thing.tcreated)
 
-def reparseAsCoreRecord(thing: igsn_lib.models.thing.Thing) -> typing.Dict:
+def _set_source_on_core_record(core_record: typing.Dict):
+    core_record["source"] = "GEOME"
+
+def reparseAsCoreRecord(thing: igsn_lib.models.thing.Thing) -> typing.List[typing.Dict]:
     _validateResolvedContent(thing)
+    core_records = []
     transformer = isamples_metadata.GEOMETransformer.GEOMETransformer(thing.resolved_content)
-    return isb_lib.core.coreRecordAsSolrDoc(transformer.transform())
+    parent_core_record = isb_lib.core.coreRecordAsSolrDoc(transformer.transform())
+    _set_source_on_core_record(parent_core_record)
+    core_records.append(parent_core_record)
+    for child_transfomer in transformer.child_transformers:
+        child_core_record = isb_lib.core.coreRecordAsSolrDoc(child_transfomer.transform())
+        _set_source_on_core_record(child_core_record)
+        core_records.append(child_core_record)
+    return core_records

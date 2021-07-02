@@ -378,25 +378,24 @@ def populateIsbCoreSolr(ctx):
     allkeys = set()
     try:
         offset = 0
-        core_records = []
+        all_core_records = []
         for thing in _yieldRecordsByPage(
             session,
             authority_id=isb_lib.geome_adapter.GEOMEItem.AUTHORITY_ID,
             page_size=db_batch_size,
             offset=offset
         ):
-            core_record = isb_lib.geome_adapter.reparseAsCoreRecord(thing)
-            print("Just added core_record: %s", str(core_record))
-            core_record["source"] = "GEOME"
-            core_records.append(core_record)
-            for r in core_records:
+            core_records = isb_lib.geome_adapter.reparseAsCoreRecord(thing)
+            print("Just added core_records: %s", str(core_records))
+            all_core_records.append(core_records)
+            for r in all_core_records:
                 allkeys.add(r["id"])
-            batch_size = len(core_records)
+            batch_size = len(all_core_records)
             if batch_size > solr_batch_size:
-                isb_lib.core.solrAddRecords(rsession, core_records, url="http://localhost:8983/api/collections/isb_core_records/")
-                core_records = []
-        if len(core_records) > 0:
-            isb_lib.core.solrAddRecords(rsession, core_records, url="http://localhost:8983/api/collections/isb_core_records/")
+                isb_lib.core.solrAddRecords(rsession, all_core_records, url="http://localhost:8983/api/collections/isb_core_records/")
+                all_core_records = []
+        if len(all_core_records) > 0:
+            isb_lib.core.solrAddRecords(rsession, all_core_records, url="http://localhost:8983/api/collections/isb_core_records/")
         isb_lib.core.solrCommit(rsession, url="http://localhost:8983/api/collections/isb_core_records/")
         print(f"Total keys= {len(allkeys)}")
         # verify records
