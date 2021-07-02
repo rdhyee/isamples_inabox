@@ -387,7 +387,7 @@ def populateIsbCoreSolr(ctx):
         ):
             core_records = isb_lib.geome_adapter.reparseAsCoreRecord(thing)
             print("Just added core_records: %s", str(core_records))
-            all_core_records.append(core_records)
+            all_core_records.extend(core_records)
             for r in all_core_records:
                 allkeys.add(r["id"])
             batch_size = len(all_core_records)
