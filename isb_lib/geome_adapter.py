@@ -5,8 +5,11 @@ import time
 import logging
 import functools
 import datetime
+import typing
 import urllib.parse
 import json
+
+import isamples_metadata.GEOMETransformer
 import requests
 import sickle.oaiexceptions
 import sickle.utils
@@ -307,12 +310,14 @@ class GEOMEItem(object):
         _thing.resolved_content = self.item
         return _thing
 
-
-def reparseRelations(thing):
+def _validateResolvedContent(thing: igsn_lib.models.thing.Thing):
     if not isinstance(thing.resolved_content, dict):
         raise ValueError("Thing.resolved_content is not an object")
     if not thing.authority_id == GEOMEItem.AUTHORITY_ID:
         raise ValueError("Thing is not a GEOME item")
+
+def reparseRelations(thing):
+    _validateResolvedContent(thing)
     item = GEOMEItem(thing.id, thing.resolved_content)
     return item.solrRelations()
     #return item.asRelations()
@@ -320,10 +325,7 @@ def reparseRelations(thing):
 
 def reparseThing(thing):
     """Reparse the resolved_content"""
-    if not isinstance(thing.resolved_content, dict):
-        raise ValueError("Thing.resolved_content is not an object")
-    if not thing.authority_id == GEOMEItem.AUTHORITY_ID:
-        raise ValueError("Thing is not a GEOME item")
+    _validateResolvedContent(thing)
     item = GEOMEItem(thing.id, thing.resolved_content)
     thing.item_type = item.getItemType()
     thing.tstamp = igsn_lib.time.dtnow()
@@ -357,3 +359,19 @@ def reloadThing(thing):
     L.debug("reloadThing id=%s", thing.id)
     identifier = igsn_lib.normalize(thing.id)
     return loadThing(identifier, thing.tcreated)
+
+def _set_source_on_core_record(core_record: typing.Dict):
+    core_record["source"] = "GEOME"
+
+def reparseAsCoreRecord(thing: igsn_lib.models.thing.Thing) -> typing.List[typing.Dict]:
+    _validateResolvedContent(thing)
+    core_records = []
+    transformer = isamples_metadata.GEOMETransformer.GEOMETransformer(thing.resolved_content)
+    parent_core_record = isb_lib.core.coreRecordAsSolrDoc(transformer.transform())
+    _set_source_on_core_record(parent_core_record)
+    core_records.append(parent_core_record)
+    for child_transfomer in transformer.child_transformers:
+        child_core_record = isb_lib.core.coreRecordAsSolrDoc(child_transfomer.transform())
+        _set_source_on_core_record(child_core_record)
+        core_records.append(child_core_record)
+    return core_records
