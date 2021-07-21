@@ -88,7 +88,7 @@ class OpenContextRecordIterator(isb_lib.core.IdentifierIterator):
         }
         more_work = True
         num_records = 0
-        while more_work:
+        while more_work and self.url is not None:
             L.info("trying to hit %s", self.url)
             response = requests.get(
                 self.url, params=params, headers=headers, timeout=HTTP_TIMEOUT
