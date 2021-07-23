@@ -20,7 +20,11 @@ import uuid
 import isamples_metadata.SESARTransformer
 
 HTTP_TIMEOUT = 10.0  # seconds
+##############
+# Per Lulin, we shouldn't be using this as they are wanting to deprecate it
 DEFAULT_IGSN_OAI = "https://doidb.wdc-terra.org/igsnoaip/oai"
+##############
+
 DEFAULT_SESAR_SITEMAP = "https://app.geosamples.org/sitemaps/sitemap-index.xml"
 MEDIA_JSON_LD = "application/ld+json"
 

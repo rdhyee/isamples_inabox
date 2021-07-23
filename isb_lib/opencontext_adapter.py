@@ -7,6 +7,7 @@ import requests
 import igsn_lib.models.thing
 import typing
 import dateparser
+import isamples_metadata.OpenContextTransformer
 
 HTTP_TIMEOUT = 10.0  # seconds
 OPENCONTEXT_API = "https://opencontext.org/subjects-search/.json?add-attribute-uris=1&attributes=obo-foodon-00001303%2Coc-zoo-has-anat-id%2Ccidoc-crm-p2-has-type%2Ccidoc-crm-p45-consists-of%2Ccidoc-crm-p49i-is-former-or-current-keeper-of%2Ccidoc-crm-p55-has-current-location%2Cdc-terms-temporal%2Cdc-terms-creator%2Cdc-terms-contributor&prop=oc-gen-cat-sample-col%7C%7Coc-gen-cat-bio-subj-ecofact%7C%7Coc-gen-cat-object&response=metadata%2Curi-meta&sort=updated--desc"
@@ -147,6 +148,21 @@ class OpenContextRecordIterator(isb_lib.core.IdentifierIterator):
 
     def last_url_str(self) -> typing.AnyStr:
         return self.url
+
+def _validate_resolved_content(thing: igsn_lib.models.thing.Thing):
+    if not isinstance(thing.resolved_content, dict):
+        raise ValueError("Thing.resolved_content is not an object")
+    if not thing.authority_id == OpenContextItem.AUTHORITY_ID:
+        raise ValueError("Thing is not an OpenContext item")
+
+def reparse_as_core_record(thing: igsn_lib.models.thing.Thing) -> typing.Dict:
+    _validate_resolved_content(thing)
+    try:
+        transformer = isamples_metadata.OpenContextTransformer.OpenContextTransformer(thing.resolved_content)
+        return isb_lib.core.coreRecordAsSolrDoc(transformer.transform())
+    except Exception as e:
+        get_logger().fatal("Failed trying to run transformer on %s", str(thing.resolved_content))
+        raise
 
 
 def load_thing(

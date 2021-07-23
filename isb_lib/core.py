@@ -10,9 +10,11 @@ import typing
 import isamples_metadata.Transformer
 
 import igsn_lib.time
+import igsn_lib.models
 from isamples_metadata.Transformer import Transformer
 import dateparser
 import re
+import requests
 
 RECOGNIZED_DATE_FORMATS = [
     "%Y",  # e.g. 1985
@@ -21,14 +23,15 @@ RECOGNIZED_DATE_FORMATS = [
     "%Y-%m-%d %H:M:%S",  # e.g 2019-12-08 15:54:00
 ]
 DATEPARSER_SETTINGS = {
-    'DATE_ORDER': 'YMD',
-    'PREFER_DAY_OF_MONTH': 'first',
-    'TIMEZONE': 'UTC',
-    'RETURN_AS_TIMEZONE_AWARE': True
+    "DATE_ORDER": "YMD",
+    "PREFER_DAY_OF_MONTH": "first",
+    "TIMEZONE": "UTC",
+    "RETURN_AS_TIMEZONE_AWARE": True,
 }
 
 SOLR_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 ELEVATION_PATTERN = re.compile(r"\s*(-?\d+\.?\d*)\s*m?", re.IGNORECASE)
+
 
 def getLogger():
     return logging.getLogger("isb_lib.core")
@@ -59,16 +62,18 @@ def relationAsSolrDoc(
     doc["tstamp"] = datetimeToSolrStr(ts)
     return doc
 
+
 def _shouldAddMetadataValueToSolrDoc(metadata: typing.Dict, key: typing.AnyStr) -> bool:
     shouldAdd = False
     value = metadata.get(key)
     if value is not None:
-        if key =='latitude':
-            shouldAdd = -90.0 <= value <= 90.0
+        if key == "latitude":
+            # Explicitly disallow bools as they'll pass the logical test otherwise and solr will choke downstream
+            shouldAdd = type(value) is not bool and -90.0 <= value <= 90.0
             if not shouldAdd:
                 getLogger().error("Invalid latitude %f", value)
-        elif key == 'longitude':
-            shouldAdd = -180.0 <= value <= 180
+        elif key == "longitude":
+            shouldAdd = type(value) is not bool and -180.0 <= value <= 180
             if not shouldAdd:
                 getLogger().error("Invalid longitude %f", value)
         elif type(value) is list:
@@ -78,6 +83,7 @@ def _shouldAddMetadataValueToSolrDoc(metadata: typing.Dict, key: typing.AnyStr) 
         else:
             shouldAdd = True
     return shouldAdd
+
 
 def coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
     """
@@ -124,6 +130,7 @@ def coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
 
     return doc
 
+
 def handle_curation_fields(coreMetadata: typing.Dict, doc: typing.Dict):
     curation = coreMetadata["curation"]
     if _shouldAddMetadataValueToSolrDoc(curation, "label"):
@@ -137,7 +144,8 @@ def handle_curation_fields(coreMetadata: typing.Dict, doc: typing.Dict):
     if _shouldAddMetadataValueToSolrDoc(curation, "responsibility"):
         doc["curation_responsibility"] = curation["responsibility"]
 
-def handle_produced_by_fields(coreMetadata: typing.Dict, doc:typing.Dict):
+
+def handle_produced_by_fields(coreMetadata: typing.Dict, doc: typing.Dict):
     # The solr index flattens subdictionaries, so check the keys explicitly in the subdictionary to see if they should be added to the index
     producedBy = coreMetadata["producedBy"]
     if _shouldAddMetadataValueToSolrDoc(producedBy, "label"):
@@ -170,10 +178,16 @@ def handle_produced_by_fields(coreMetadata: typing.Dict, doc:typing.Dict):
                 location_str = location["elevation"]
                 match = ELEVATION_PATTERN.match(location_str)
                 if match is not None:
-                    doc["producedBy_samplingSite_location_elevationInMeters"] = float(match.group(1))
-            if _shouldAddMetadataValueToSolrDoc(location, "latitude") and _shouldAddMetadataValueToSolrDoc(location,
-                                                                                                           "longitude"):
-                doc["producedBy_samplingSite_location_latlon"] = f"{location['latitude']},{location['longitude']}"
+                    doc["producedBy_samplingSite_location_elevationInMeters"] = float(
+                        match.group(1)
+                    )
+            if _shouldAddMetadataValueToSolrDoc(
+                location, "latitude"
+            ) and _shouldAddMetadataValueToSolrDoc(location, "longitude"):
+                doc[
+                    "producedBy_samplingSite_location_latlon"
+                ] = f"{location['latitude']},{location['longitude']}"
+
 
 def handle_related_resources(coreMetadata: typing.Dict, doc: typing.Dict):
     related_resources = coreMetadata["relatedResource"]
@@ -182,9 +196,12 @@ def handle_related_resources(coreMetadata: typing.Dict, doc: typing.Dict):
         related_resource_ids.append(related_resource["target"])
     doc["relatedResource_isb_core_id"] = related_resource_ids
 
+
 def parsed_date(raw_date_str):
     # TODO: https://github.com/isamplesorg/isamples_inabox/issues/24
-    date_time = dateparser.parse(raw_date_str, date_formats=RECOGNIZED_DATE_FORMATS, settings=DATEPARSER_SETTINGS)
+    date_time = dateparser.parse(
+        raw_date_str, date_formats=RECOGNIZED_DATE_FORMATS, settings=DATEPARSER_SETTINGS
+    )
     return date_time
 
 
@@ -205,7 +222,7 @@ def solrAddRecords(rsession, records, url):
 
     """
     L = getLogger()
-    headers = {"Content-Type":"application/json"}
+    headers = {"Content-Type": "application/json"}
     data = json.dumps(records).encode("utf-8")
     params = {"overwrite": "true"}
     _url = f"{url}update"
@@ -215,15 +232,16 @@ def solrAddRecords(rsession, records, url):
     L.debug("Solr update: %s", res.text)
     if res.status_code != 200:
         L.error(res.text)
-        #TODO: something more elegant for error handling
+        # TODO: something more elegant for error handling
         raise ValueError()
     else:
         L.debug("Successfully posted data %s to url %s", str(data), str(_url))
 
+
 def solrCommit(rsession, url):
     L = getLogger()
-    headers = {"Content-Type":"application/json"}
-    params = {"commit":"true"}
+    headers = {"Content-Type": "application/json"}
+    params = {"commit": "true"}
     _url = f"{url}update"
     res = rsession.get(_url, headers=headers, params=params)
     L.debug("Solr commit: %s", res.text)
@@ -339,3 +357,114 @@ class CollectionAdaptor:
 
     def listProfiles(self, format=None):
         return []
+
+
+class ThingRecordIterator:
+    def __init__(
+        self,
+        session,
+        authority_id: typing.AnyStr,
+        status: int = 200,
+        page_size: int = 5000,
+        offset: int = 0,
+    ):
+        self._session = session
+        sql = "SELECT * FROM thing WHERE resolved_status=:status"
+        params = {
+            "status": status,
+        }
+        if authority_id is not None:
+            sql = sql + " AND authority_id=:authority_id"
+            params["authority_id"] = authority_id
+        self._sql = sql + " ORDER BY _id OFFSET :offset FETCH NEXT :limit ROWS ONLY"
+        params["offset"] = offset
+        params["limit"] = page_size
+        self._params = params
+
+    def yieldRecordsByPage(self):
+        while True:
+            n = 0
+            qry = self._session.execute(self._sql, self._params)
+            for rec in qry:
+                n += 1
+                yield rec
+            if n == 0:
+                break
+            # Set up to fetch the next 'limit' records
+            self._params["offset"] = self._params["offset"] + self._params["limit"]
+
+
+class CoreSolrImporter:
+    def __init__(
+        self,
+        db_url: typing.AnyStr,
+        authority_id: typing.AnyStr,
+        db_batch_size: int,
+        solr_batch_size: int,
+        solr_url: typing.AnyStr,
+        offset: int = 0
+    ):
+        engine = igsn_lib.models.getEngine(db_url)
+        igsn_lib.models.createAll(engine)
+        self._db_session = igsn_lib.models.getSession(engine)
+        self._authority_id = authority_id
+        self._thing_iterator = ThingRecordIterator(
+            self._db_session,
+            authority_id=self._authority_id,
+            page_size=db_batch_size,
+            offset=offset
+        )
+        self._db_batch_size = db_batch_size
+        self._solr_batch_size = solr_batch_size
+        self._solr_url = solr_url
+
+    def run_solr_import(
+        self, core_record_function: typing.Callable
+    ) -> typing.Set[typing.AnyStr]:
+        getLogger().info(
+            "importing solr records with db batch size: %s, solr batch size: %s",
+            self._db_batch_size,
+            self._solr_batch_size,
+        )
+        allkeys = set()
+        rsession = requests.session()
+        try:
+            core_records = []
+            for thing in self._thing_iterator.yieldRecordsByPage():
+                core_record = core_record_function(thing)
+                core_record["source"] = self._authority_id
+                core_records.append(core_record)
+                for r in core_records:
+                    allkeys.add(r["id"])
+                batch_size = len(core_records)
+                if batch_size > self._solr_batch_size:
+                    solrAddRecords(
+                        rsession,
+                        core_records,
+                        url=self._solr_url,
+                    )
+                    getLogger().info(
+                        "Just added solr records, length of all keys is %d",
+                        len(allkeys),
+                    )
+                    core_records = []
+            if len(core_records) > 0:
+                solrAddRecords(
+                    rsession,
+                    core_records,
+                    url=self._solr_url,
+                )
+            solrCommit(rsession, url=self._solr_url)
+            # verify records
+            # for verifying that all records were added to solr
+            # found = 0
+            # for _id in allkeys:
+            #    res = rsession.get(f"http://localhost:8983/solr/isb_rel/get?id={_id}").json()
+            #    if res.get("doc",{}).get("id") == _id:
+            #        found = found +1
+            #    else:
+            #        print(f"Missed: {_id}")
+            # print(f"Found = {found}")
+        finally:
+            self._db_session.close()
+        return allkeys

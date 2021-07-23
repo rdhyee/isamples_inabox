@@ -347,28 +347,6 @@ def reloadRecords(ctx, status_code):
 @main.command("populate_isb_core_solr")
 @click.pass_context
 def populateIsbCoreSolr(ctx):
-    # Note that this is identical to the one in #reparseRelations
-    def _yieldRecordsByPage(session, authority_id="GEOME", status=200, page_size=5000, offset=0):
-        while True:
-            n = 0
-            sql = "SELECT * FROM thing WHERE resolved_status=:status"
-            params = {
-                "status": status,
-            }
-            if authority_id is not None:
-                sql = sql + " AND authority_id=:authority_id"
-                params["authority_id"] = authority_id
-            sql = sql + " ORDER BY _id OFFSET :offset FETCH NEXT :limit ROWS ONLY"
-            params["offset"] = offset
-            params["limit"] = page_size
-            qry = session.execute(sql, params)
-            for rec in qry:
-                n += 1
-                yield rec
-            if n == 0:
-                break
-            offset += page_size
-
     L = getLogger()
     rsession = requests.session()
     db_batch_size = 1000
@@ -379,12 +357,13 @@ def populateIsbCoreSolr(ctx):
     try:
         offset = 0
         all_core_records = []
-        for thing in _yieldRecordsByPage(
+        thing_iterator = isb_lib.core.ThingRecordIterator(
             session,
             authority_id=isb_lib.geome_adapter.GEOMEItem.AUTHORITY_ID,
             page_size=db_batch_size,
-            offset=offset
-        ):
+            offset=offset,
+        )
+        for thing in thing_iterator.yieldRecordsByPage():
             core_records = isb_lib.geome_adapter.reparseAsCoreRecord(thing)
             print("Just added core_records: %s", str(core_records))
             all_core_records.extend(core_records)

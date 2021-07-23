@@ -95,7 +95,7 @@ def load_open_context_entries(session, max_count, start_from=None):
     loop.run_until_complete(future)
 
 
-def getDBSession(db_url):
+def get_db_session(db_url):
     engine = igsn_lib.models.getEngine(db_url)
     igsn_lib.models.createAll(engine)
     session = igsn_lib.models.getSession(engine)
@@ -147,11 +147,26 @@ def main(ctx, db_url, verbosity, heart_rate):
 @click.pass_context
 def load_records(ctx, max_records):
     L = get_logger()
-    session = getDBSession(ctx.obj["db_url"])
+    session = get_db_session(ctx.obj["db_url"])
     L.info("loadRecords: %s", str(session))
     # ctx.obj["db_url"] = db_url
     load_open_context_entries(session, max_records, None)
 
+
+@main.command("populate_isb_core_solr")
+@click.pass_context
+def populate_isb_core_solr(ctx):
+    L = get_logger()
+    db_url = ctx.obj["db_url"]
+    solr_importer = isb_lib.core.CoreSolrImporter(
+        db_url=db_url,
+        authority_id=isb_lib.opencontext_adapter.OpenContextItem.AUTHORITY_ID,
+        db_batch_size=1000,
+        solr_batch_size=1000,
+        solr_url="http://localhost:8983/api/collections/isb_core_records/",
+    )
+    allkeys = solr_importer.run_solr_import(isb_lib.opencontext_adapter.reparse_as_core_record)
+    L.info(f"Total keys= {len(allkeys)}")
 
 if __name__ == "__main__":
     main()

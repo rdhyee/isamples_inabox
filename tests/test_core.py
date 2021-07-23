@@ -20,6 +20,12 @@ def test_IdentifierIterator(max_entries, expected_outcome):
         cnt += 1
     assert cnt == expected_outcome
 
+def _try_to_add_solr_doc(core_doc_str):
+    core_doc = json.loads(core_doc_str)
+    solr_dict = isb_lib.core.coreRecordAsSolrDoc(core_doc)
+    isb_lib.core.solrAddRecords(requests.session(), [solr_dict], url="http://localhost:8983/api/collections/isb_core_records/")
+    return solr_dict
+
 def test_coreRecordAsSolrDoc():
     core_doc_str = """
 {
@@ -53,11 +59,65 @@ def test_coreRecordAsSolrDoc():
     "samplingPurpose": ""
 }    
     """
-    core_doc = json.loads(core_doc_str)
-    solr_dict = isb_lib.core.coreRecordAsSolrDoc(core_doc)
+    solr_dict = _try_to_add_solr_doc(core_doc_str)
     assert "producedBy_samplingSite_location_latlon" in solr_dict
-    isb_lib.core.solrAddRecords(requests.session(), [solr_dict], url="http://localhost:8983/api/collections/isb_core_records/")
 
+def test_coreRecordAsSolrDoc2():
+    core_doc_str = """
+{
+  "$schema": "../../iSamplesSchemaBasic0.2.json",
+  "@id": "metadata/28722/k2ks6xw6t",
+  "curation": {
+    "accessConstraints": "Not Provided",
+    "curationLocation": "Not Provided",
+    "description": "Not Provided",
+    "label": "Not Provided",
+    "responsibility": "Not Provided"
+  },
+  "description": "early bce/ce: False | late bce/ce: False | updated: 2021-01-27T03:57:23Z | Has type: color patches (military patches)",
+  "hasContextCategory": [
+    "Site of past human activities"
+  ],
+  "hasMaterialCategory": [
+    "Anthropogenic material"
+  ],
+  "hasSpecimenCategory": [
+    "Artifact"
+  ],
+  "informalClassification": [],
+  "keywords": [
+    "International Space Station",
+    "Zvezda Service Module"
+  ],
+  "label": "Object 68",
+  "producedBy": {
+    "@id": "Not Provided",
+    "description": "http://opencontext.org/projects/e682f907-6e4a-44cc-8a5f-3e2c73001673",
+    "hasFeatureOfInterest": "Not Provided",
+    "label": "Archaeology of the International Space Station",
+    "responsibility": [
+      "creator: Justin Walsh",
+      "creator: Alice Gorman",
+      "creator: Wendy Salmond"
+    ],
+    "resultTime": "2021-01-27T02:47:12Z",
+    "samplingSite": {
+      "location": {
+        "latitude": false,
+        "longitude": false
+      },
+      "placeName": [
+        "International Space Station",
+        "Zvezda Service Module"
+      ]
+    }
+  },
+  "relatedResource": [],
+  "sampleidentifier": "ark:/28722/k2ks6xw6t"
+}  
+    """
+    solr_dict = _try_to_add_solr_doc(core_doc_str)
+    assert "producedBy_samplingSite_location_latlon" not in solr_dict
 
 def test_date_year_only():
     date_str = "1985"
