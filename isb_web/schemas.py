@@ -17,7 +17,7 @@ class ThingListEntry(pydantic.BaseModel):
     tcreated: typing.Optional[datetime.datetime]
     resolved_status: int
     resolved_url: str
-    resolve_elapsed: float
+    resolve_elapsed: float = None
 
     class Config:
         orm_mode = True
