@@ -10,6 +10,7 @@ import fastapi.middleware.cors
 import sqlalchemy.orm
 import accept_types
 import pydantic
+
 from isb_web import database
 from isb_web import schemas
 from isb_web import crud
@@ -17,6 +18,7 @@ from isb_web import config
 from isb_web import isb_format
 from isamples_metadata.SESARTransformer import SESARTransformer
 from isamples_metadata.GEOMETransformer import GEOMETransformer
+from isamples_metadata.OpenContextTransformer import OpenContextTransformer
 
 import logging
 
@@ -130,6 +132,8 @@ async def get_thing(
             content = SESARTransformer(item.resolved_content).transform()
         elif authority_id == "GEOME":
             content = GEOMETransformer(item.resolved_content).transform()
+        elif authority_id == "OPENCONTEXT":
+            content = OpenContextTransformer(item.resolved_content).transform()
         else:
             raise fastapi.HTTPException(
                 status_code=400,
