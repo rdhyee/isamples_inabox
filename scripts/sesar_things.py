@@ -21,18 +21,6 @@ import heartrate
 CONCURRENT_DOWNLOADS = 10
 BACKLOG_SIZE = 40
 
-LOG_LEVELS = {
-    "DEBUG": logging.DEBUG,
-    "INFO": logging.INFO,
-    "WARNING": logging.WARNING,
-    "WARN": logging.WARNING,
-    "ERROR": logging.ERROR,
-    "FATAL": logging.CRITICAL,
-    "CRITICAL": logging.CRITICAL,
-}
-LOG_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
-LOG_FORMAT = "%(asctime)s %(name)s:%(levelname)s: %(message)s"
-
 
 def getLogger():
     return logging.getLogger("main")
@@ -152,13 +140,6 @@ def loadSesarEntries(session, max_count, start_from=None):
     loop.run_until_complete(future)
 
 
-def getDBSession(db_url):
-    engine = igsn_lib.models.getEngine(db_url)
-    igsn_lib.models.createAll(engine)
-    session = igsn_lib.models.getSession(engine)
-    return session
-
-
 @click.group()
 @click.option(
     "-d", "--db_url", default=None, help="SQLAlchemy database URL for storage"
@@ -172,21 +153,7 @@ def getDBSession(db_url):
 @click_config_file.configuration_option(config_file_name="sesar.cfg")
 @click.pass_context
 def main(ctx, db_url, verbosity, heart_rate):
-    ctx.ensure_object(dict)
-    verbosity = verbosity.upper()
-    logging.basicConfig(
-        level=LOG_LEVELS.get(verbosity, logging.INFO),
-        format=LOG_FORMAT,
-        datefmt=LOG_DATE_FORMAT,
-    )
-    L = getLogger()
-    if verbosity not in LOG_LEVELS.keys():
-        L.warning("%s is not a log level, set to INFO", verbosity)
-
-    L.info("Using database at: %s", db_url)
-    ctx.obj["db_url"] = db_url
-    if heart_rate:
-        heartrate.trace(browser=True)
+    isb_lib.core.things_main(ctx, db_url, verbosity, heart_rate)
 
 
 @main.command("load")
@@ -203,7 +170,7 @@ def loadRecords(ctx, max_records):
     L.info("loadRecords, max = %s", max_records)
     if max_records == -1:
         max_records = 999999999
-    session = getDBSession(ctx.obj["db_url"])
+    session = isb_lib.core.get_db_session(ctx.obj["db_url"])
     try:
         oldest_record = None
         res = (
@@ -241,7 +208,7 @@ def reparseRecords(ctx):
     L = getLogger()
     batch_size = 50
     L.info("reparseRecords with batch size: %s", batch_size)
-    session = getDBSession(ctx.obj["db_url"])
+    session = isb_lib.core.get_db_session(ctx.obj["db_url"])
     try:
         i = 0
         qry = session.query(igsn_lib.models.thing.Thing)
@@ -285,7 +252,7 @@ def reparseRelations(ctx):
     rsession = requests.session()
     batch_size = 5000
     L.info("reparseRecords with batch size: %s", batch_size)
-    session = getDBSession(ctx.obj["db_url"])
+    session = isb_lib.core.get_db_session(ctx.obj["db_url"])
     allkeys = set()
     try:
         i = 0
@@ -347,7 +314,7 @@ def reloadRecords(ctx, status_code):
     L = getLogger()
     L.info("reloadRecords, status_code = %s", status_code)
     raise NotImplementedError("reloadRecords")
-    session = getDBSession(ctx.obj["db_url"])
+    session = isb_lib.core.get_db_session(ctx.obj["db_url"])
     try:
         pass
 

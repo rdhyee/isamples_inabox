@@ -150,10 +150,7 @@ class OpenContextRecordIterator(isb_lib.core.IdentifierIterator):
         return self.url
 
 def _validate_resolved_content(thing: igsn_lib.models.thing.Thing):
-    if not isinstance(thing.resolved_content, dict):
-        raise ValueError("Thing.resolved_content is not an object")
-    if not thing.authority_id == OpenContextItem.AUTHORITY_ID:
-        raise ValueError("Thing is not an OpenContext item")
+    isb_lib.core.validate_resolved_content(OpenContextItem.AUTHORITY_ID, thing)
 
 def reparse_as_core_record(thing: igsn_lib.models.thing.Thing) -> typing.Dict:
     _validate_resolved_content(thing)

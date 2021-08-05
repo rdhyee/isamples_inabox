@@ -10,6 +10,7 @@ import fastapi.middleware.cors
 import sqlalchemy.orm
 import accept_types
 import pydantic
+from isamples_metadata.SmithsonianTransformer import SmithsonianTransformer
 
 from isb_web import database
 from isb_web import schemas
@@ -134,6 +135,8 @@ async def get_thing(
             content = GEOMETransformer(item.resolved_content).transform()
         elif authority_id == "OPENCONTEXT":
             content = OpenContextTransformer(item.resolved_content).transform()
+        elif authority_id == "SMITHSONIAN":
+            content = SmithsonianTransformer(item.resolved_content).transform()
         else:
             raise fastapi.HTTPException(
                 status_code=400,

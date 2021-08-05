@@ -12,17 +12,6 @@ import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.exc
 
-LOG_LEVELS = {
-    "DEBUG": logging.DEBUG,
-    "INFO": logging.INFO,
-    "WARNING": logging.WARNING,
-    "WARN": logging.WARNING,
-    "ERROR": logging.ERROR,
-    "FATAL": logging.CRITICAL,
-    "CRITICAL": logging.CRITICAL,
-}
-LOG_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
-LOG_FORMAT = "%(asctime)s %(name)s:%(levelname)s: %(message)s"
 BACKLOG_SIZE = 40
 
 
@@ -95,13 +84,6 @@ def load_open_context_entries(session, max_count, start_from=None):
     loop.run_until_complete(future)
 
 
-def get_db_session(db_url):
-    engine = igsn_lib.models.getEngine(db_url)
-    igsn_lib.models.createAll(engine)
-    session = igsn_lib.models.getSession(engine)
-    return session
-
-
 @click.group()
 @click.option(
     "-d", "--db_url", default=None, help="SQLAlchemy database URL for storage"
@@ -119,21 +101,7 @@ def get_db_session(db_url):
 @click_config_file.configuration_option(config_file_name="opencontext.cfg")
 @click.pass_context
 def main(ctx, db_url, verbosity, heart_rate):
-    ctx.ensure_object(dict)
-    verbosity = verbosity.upper()
-    logging.basicConfig(
-        level=LOG_LEVELS.get(verbosity, logging.DEBUG),
-        format=LOG_FORMAT,
-        datefmt=LOG_DATE_FORMAT,
-    )
-    L = get_logger()
-    if verbosity not in LOG_LEVELS.keys():
-        L.warning("%s is not a log level, set to INFO", verbosity)
-
-    L.info("Using database at: %s", db_url)
-    ctx.obj["db_url"] = db_url
-    if heart_rate:
-        heartrate.trace(browser=True)
+    isb_lib.core.things_main(ctx, db_url, verbosity, heart_rate)
 
 
 @main.command("load")
@@ -147,7 +115,7 @@ def main(ctx, db_url, verbosity, heart_rate):
 @click.pass_context
 def load_records(ctx, max_records):
     L = get_logger()
-    session = get_db_session(ctx.obj["db_url"])
+    session = isb_lib.core.get_db_session(ctx.obj["db_url"])
     L.info("loadRecords: %s", str(session))
     # ctx.obj["db_url"] = db_url
     load_open_context_entries(session, max_records, None)

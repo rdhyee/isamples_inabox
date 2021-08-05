@@ -311,10 +311,7 @@ class GEOMEItem(object):
         return _thing
 
 def _validateResolvedContent(thing: igsn_lib.models.thing.Thing):
-    if not isinstance(thing.resolved_content, dict):
-        raise ValueError("Thing.resolved_content is not an object")
-    if not thing.authority_id == GEOMEItem.AUTHORITY_ID:
-        raise ValueError("Thing is not a GEOME item")
+    isb_lib.core.validate_resolved_content(GEOMEItem.AUTHORITY_ID, thing.resolved_content)
 
 def reparseRelations(thing):
     _validateResolvedContent(thing)

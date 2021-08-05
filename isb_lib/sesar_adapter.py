@@ -186,10 +186,7 @@ class SESARItem(object):
 
 
 def _validateResolvedContent(thing: igsn_lib.models.thing.Thing):
-    if not isinstance(thing.resolved_content, dict):
-        raise ValueError("Thing.resolved_content is not an object")
-    if not thing.authority_id == SESARItem.AUTHORITY_ID:
-        raise ValueError("Thing is not a SESAR item")
+    isb_lib.core.validate_resolved_content(SESARItem.AUTHORITY_ID, thing)
 
 def reparseRelations(thing: igsn_lib.models.thing.Thing, as_solr: bool = False):
     _validateResolvedContent(thing)
