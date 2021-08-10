@@ -1,8 +1,10 @@
 import requests
 import geojson
 
+import isb_web.config
+
 DEFAULT_COLLECTION = "isb_core_records"
-BASE_URL = f"http://localhost:8984/solr/{DEFAULT_COLLECTION}"
+BASE_URL = isb_web.config.Settings().solr_url
 RPT_FIELD = "producedBy_samplingSite_location_rpt"
 
 # Identify the bounding boxes for solr and leaflet for diagnostic purposes
@@ -21,7 +23,7 @@ MAX_LON = "max_lon"
 # that has a count value over 0.
 # Returns the generated features as a GeoJSON FeatureCollection
 #
-def solr_grid_heatmap(q, bb, field=RPT_FIELD, grid_level=None, show_bounds=False, show_solr_bounds=False):
+def solr_grid_heatmap(q, bb, grid_level=None, show_bounds=False, show_solr_bounds=False):
     # TODO: dealing with the antimeridian ("dateline") in the Solr request.
     # Should probably do this by computing two requests when the request BB
     # straddles the antimeridian.
@@ -43,7 +45,7 @@ def solr_grid_heatmap(q, bb, field=RPT_FIELD, grid_level=None, show_bounds=False
         "rows": 0,
         "wt": "json",
         "facet": "true",
-        "facet.heatmap": field,
+        "facet.heatmap": RPT_FIELD,
         "facet.heatmap.distErrPct": 0.2,
         # "facet.heatmap.gridLevel": grid_level,
         "facet.heatmap.geom": f"[{bb[MIN_LAT]} {bb[MIN_LON]} TO {bb[MAX_LAT]} {bb[MAX_LON]}]"
@@ -58,7 +60,7 @@ def solr_grid_heatmap(q, bb, field=RPT_FIELD, grid_level=None, show_bounds=False
 
     # logging.debug("Got: %s", response.url)
     res = response.json()
-    hm = res.get("facet_counts", {}).get("facet_heatmaps", {}).get(field, {})
+    hm = res.get("facet_counts", {}).get("facet_heatmaps", {}).get(RPT_FIELD, {})
     # print(hm)
     gl = hm.get('gridLevel', -1)
     # logging.warning(hm)

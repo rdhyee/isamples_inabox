@@ -28,6 +28,7 @@ THIS_PATH = os.path.dirname(os.path.abspath(__file__))
 WEB_ROOT = config.Settings().web_root
 MEDIA_JSON = "application/json"
 MEDIA_NQUADS = "application/n-quads"
+MEDIA_GEO_JSON = "application/geo+json"
 
 app = fastapi.FastAPI(root_path=WEB_ROOT)
 
@@ -172,9 +173,9 @@ async def get_things_heatmap(
         isb_solr_query.MIN_LON: min_lon,
         isb_solr_query.MAX_LON: max_lon
     }
-    results = isb_solr_query.solr_grid_heatmap(query, bounds, isb_solr_query.RPT_FIELD, None, False, False)
+    results = isb_solr_query.solr_grid_heatmap(query, bounds, None, False, False)
     return fastapi.responses.JSONResponse(
-        content=results, media_type="application/geo+json"
+        content=results, media_type=MEDIA_GEO_JSON
     )
 
 @app.get(
