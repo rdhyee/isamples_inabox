@@ -157,6 +157,15 @@ async def get_things_heatmap(
     min_lon: float = -90.0,
     max_lon: float = 90.0
 ):
+    """
+    Note, the map callback is likely going to be in this form:
+    bb = {
+        MIN_LAT: bounds[0][1],
+        MAX_LAT: bounds[1][1],
+        MIN_LON: bounds[0][0],
+        MAX_LON: bounds[1][0]
+    }
+    """
     bounds = {
         isb_solr_query.MIN_LAT: min_lat,
         isb_solr_query.MAX_LAT: max_lat,

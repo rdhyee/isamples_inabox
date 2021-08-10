@@ -25,22 +25,13 @@ def solr_grid_heatmap(q, bb, field=RPT_FIELD, grid_level=None, show_bounds=False
     # TODO: dealing with the antimeridian ("dateline") in the Solr request.
     # Should probably do this by computing two requests when the request BB
     # straddles the antimeridian.
-    if len(bb) < 2:
+    if bb is None or len(bb) < 2:
         bb = {
             MIN_LAT: -180.0,
             MAX_LAT: 180.0,
             MIN_LON: -90.0,
             MAX_LON: 90.0
         }
-    """
-    Note, this is the format that the map callback appeared to be generating
-    bb = {
-        MIN_LAT: bounds[0][1],
-        MAX_LAT: bounds[1][1],
-        MIN_LON: bounds[0][0],
-        MAX_LON: bounds[1][0]
-    }
-    """
     if bb[MIN_LAT] < -180.0:
         bb[MIN_LAT] = -180.0
     if bb[MAX_LAT] > 180.0:
@@ -130,4 +121,6 @@ def solr_grid_heatmap(q, bb, field=RPT_FIELD, grid_level=None, show_bounds=False
                     feature = geojson.Feature(geometry=pts, properties={'count': v})
                     grid.append(feature)
     # returns GeoJSON, maximum count value, and grid level used by solr
-    return geojson.FeatureCollection(grid), _max_value, gl
+    grid.append(geojson.Feature(properties={'max_value':  _max_value}))
+    grid.append(geojson.Feature(properties={'grid_level': gl}))
+    return geojson.FeatureCollection(grid)
