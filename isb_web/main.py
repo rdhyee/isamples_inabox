@@ -10,16 +10,17 @@ import fastapi.middleware.cors
 import sqlalchemy.orm
 import accept_types
 import pydantic
-from isamples_metadata.SmithsonianTransformer import SmithsonianTransformer
 
 from isb_web import database
 from isb_web import schemas
 from isb_web import crud
 from isb_web import config
 from isb_web import isb_format
+from isb_web import isb_solr_query
 from isamples_metadata.SESARTransformer import SESARTransformer
 from isamples_metadata.GEOMETransformer import GEOMETransformer
 from isamples_metadata.OpenContextTransformer import OpenContextTransformer
+from isamples_metadata.SmithsonianTransformer import SmithsonianTransformer
 
 import logging
 
@@ -148,6 +149,24 @@ async def get_thing(
         content=content, media_type=item.resolved_media_type
     )
 
+@app.get("/things_heatmap", response_model=typing.Any)
+async def get_things_heatmap(
+    query: str = "*:*",
+    min_lat: float = -180.0,
+    max_lat: float = 180.0,
+    min_lon: float = -90.0,
+    max_lon: float = 90.0
+):
+    bounds = {
+        isb_solr_query.MIN_LAT: min_lat,
+        isb_solr_query.MAX_LAT: max_lat,
+        isb_solr_query.MIN_LON: min_lon,
+        isb_solr_query.MAX_LON: max_lon
+    }
+    results = isb_solr_query.solr_grid_heatmap(query, bounds, isb_solr_query.RPT_FIELD, None, False, False)
+    return fastapi.responses.JSONResponse(
+        content=results, media_type="application/geo+json"
+    )
 
 @app.get(
     "/related",
