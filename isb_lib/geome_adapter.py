@@ -311,7 +311,7 @@ class GEOMEItem(object):
         return _thing
 
 def _validateResolvedContent(thing: igsn_lib.models.thing.Thing):
-    isb_lib.core.validate_resolved_content(GEOMEItem.AUTHORITY_ID, thing.resolved_content)
+    isb_lib.core.validate_resolved_content(GEOMEItem.AUTHORITY_ID, thing)
 
 def reparseRelations(thing):
     _validateResolvedContent(thing)

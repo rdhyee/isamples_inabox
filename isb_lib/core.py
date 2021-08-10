@@ -486,7 +486,12 @@ class CoreSolrImporter:
         try:
             core_records = []
             for thing in self._thing_iterator.yieldRecordsByPage():
-                core_record = core_record_function(thing)
+                try:
+                    core_record = core_record_function(thing)
+                except Exception as e:
+                    getLogger().error("Failed trying to run transformer, skipping record %s", str(thing.resolved_content))
+                    continue
+
                 core_record["source"] = self._authority_id
                 core_records.append(core_record)
                 for r in core_records:
