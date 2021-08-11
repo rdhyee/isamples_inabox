@@ -19,7 +19,7 @@ MIN_LON = "min_lon"
 MAX_LON = "max_lon"
 
 # 0.2 seems ok for the grid cells.
-_GEO_JSON_ERR_PCT = 0.2
+_GEOJSON_ERR_PCT = 0.2
 # 0.1 for the leaflet heatmap tends to generate more cells for the heatmap “blob” generation
 _LEAFLET_ERR_PCT = 0.1
 
@@ -71,7 +71,7 @@ def _get_heatmap(q: typing.AnyStr, bb: typing.Dict, dist_err_pct: float, grid_le
 # Returns the generated features as a GeoJSON FeatureCollection
 #
 def solr_geojson_heatmap(q, bb, grid_level=None, show_bounds=False, show_solr_bounds=False):
-    hm = _get_heatmap(q, bb, _GEO_JSON_ERR_PCT, grid_level)
+    hm = _get_heatmap(q, bb, _GEOJSON_ERR_PCT, grid_level)
     # print(hm)
     gl = hm.get('gridLevel', -1)
     # logging.warning(hm)
