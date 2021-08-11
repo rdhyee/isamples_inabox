@@ -187,7 +187,6 @@ def solr_geojson_heatmap(
                     )
                     feature = geojson.Feature(geometry=pts, properties={"count": v})
                     grid.append(feature)
-    # returns GeoJSON, maximum count value, and grid level used by solr
     grid.append(geojson.Feature(properties={"max_value": _max_value}))
     grid.append(geojson.Feature(properties={"grid_level": gl}))
     return geojson.FeatureCollection(grid)
