@@ -30,7 +30,13 @@ MEDIA_JSON = "application/json"
 MEDIA_NQUADS = "application/n-quads"
 MEDIA_GEO_JSON = "application/geo+json"
 
-app = fastapi.FastAPI(root_path=WEB_ROOT)
+tags_metadata = [
+    {
+        "name": "heatmaps",
+        "description": "Heatmap representations of Things, suitable for consumption by mapping APIs",
+    }
+]
+app = fastapi.FastAPI(root_path=WEB_ROOT, openapi_tags=tags_metadata)
 
 app.add_middleware(
     fastapi.middleware.cors.CORSMiddleware,
@@ -87,10 +93,11 @@ async def thing_list_metadata(
     meta = crud.getThingMeta(db)
     return meta
 
+
 @app.get("/thing/", response_model=schemas.ThingPage)
 async def thing_list(
-    offset: int = fastapi.Query(0,ge=0),
-    limit: int = fastapi.Query(1000,lt=10000, gt=0),
+    offset: int = fastapi.Query(0, ge=0),
+    limit: int = fastapi.Query(1000, lt=10000, gt=0),
     status: int = 200,
     authority: str = fastapi.Query(None),
     db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
@@ -102,8 +109,18 @@ async def thing_list(
     total_records, npages, things = crud.getThings(
         db, offset=offset, limit=limit, status=status, authority_id=authority
     )
-    params = {"limit":limit, "offset":offset, "status":status, "authority":authority}
-    return {"params":params, "last_page": npages, "total_records": total_records, "data": things}
+    params = {
+        "limit": limit,
+        "offset": offset,
+        "status": status,
+        "authority": authority,
+    }
+    return {
+        "params": params,
+        "last_page": npages,
+        "total_records": total_records,
+        "data": things,
+    }
 
 
 @app.get("/thing/types", response_model=typing.List[schemas.ThingType])
@@ -150,61 +167,62 @@ async def get_thing(
         content=content, media_type=item.resolved_media_type
     )
 
-@app.get("/things_geojson_heatmap", response_model=typing.Any)
+
+@app.get(
+    "/things_geojson_heatmap",
+    response_model=typing.Any,
+    summary="Gets a GeoJSON heatmap of Things",
+    tags=["heatmaps"],
+)
 async def get_things_geojson_heatmap(
     query: str = "*:*",
     min_lat: float = -180.0,
     max_lat: float = 180.0,
     min_lon: float = -90.0,
-    max_lon: float = 90.0
+    max_lon: float = 90.0,
 ):
     """
-    Note, the map callback is likely going to be in this form:
-    bb = {
-        MIN_LAT: bounds[0][1],
-        MAX_LAT: bounds[1][1],
-        MIN_LON: bounds[0][0],
-        MAX_LON: bounds[1][0]
-    }
+    Returns a GeoJSON heatmap of all Things matching the specified Solr query in the bounding box described by the
+    latitude and longitude parameters.  The format of the response is a GeoJSON Feature Collection:
+    https://datatracker.ietf.org/doc/html/rfc7946#section-3.3
     """
     bounds = {
         isb_solr_query.MIN_LAT: min_lat,
         isb_solr_query.MAX_LAT: max_lat,
         isb_solr_query.MIN_LON: min_lon,
-        isb_solr_query.MAX_LON: max_lon
+        isb_solr_query.MAX_LON: max_lon,
     }
     results = isb_solr_query.solr_geojson_heatmap(query, bounds, None, False, False)
-    return fastapi.responses.JSONResponse(
-        content=results, media_type=MEDIA_GEO_JSON
-    )
+    return fastapi.responses.JSONResponse(content=results, media_type=MEDIA_GEO_JSON)
 
-@app.get("/things_leaflet_heatmap", response_model=typing.Any)
+
+@app.get(
+    "/things_leaflet_heatmap",
+    response_model=typing.Any,
+    summary="Gets a Leaflet heatmap of Things",
+    tags=["heatmaps"],
+)
 async def get_things_leaflet_heatmap(
     query: str = "*:*",
     min_lat: float = -180.0,
     max_lat: float = 180.0,
     min_lon: float = -90.0,
-    max_lon: float = 90.0
+    max_lon: float = 90.0,
 ):
     """
-    Note, the map callback is likely going to be in this form:
-    bb = {
-        MIN_LAT: bounds[0][1],
-        MAX_LAT: bounds[1][1],
-        MIN_LON: bounds[0][0],
-        MAX_LON: bounds[1][0]
-    }
+    Returns a Leaflet heatmap of all Things matching the specified Solr query in the bounding box described by the
+    latitude and longitude parameters.  The format of the response is suitable for consumption by the Leaflet JavaScript
+    library https://leafletjs.com
     """
     bounds = {
         isb_solr_query.MIN_LAT: min_lat,
         isb_solr_query.MAX_LAT: max_lat,
         isb_solr_query.MIN_LON: min_lon,
-        isb_solr_query.MAX_LON: max_lon
+        isb_solr_query.MAX_LON: max_lon,
     }
     results = isb_solr_query.solr_leaflet_heatmap(query, bounds, None)
-    return fastapi.responses.JSONResponse(
-        content=results, media_type=MEDIA_JSON
-    )
+    return fastapi.responses.JSONResponse(content=results, media_type=MEDIA_JSON)
+
 
 @app.get(
     "/related",

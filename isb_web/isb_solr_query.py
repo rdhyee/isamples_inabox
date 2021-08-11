@@ -65,8 +65,8 @@ def _get_heatmap(
 # Create a GeoJSON rendering of the Solr Heatmap response.
 # Generates a GeoJSON polygon (rectangle) feature for each Solr heatmap cell
 # that has a count value over 0.
-# Returns the generated features as a GeoJSON FeatureCollection
-#
+# Returns the generated features as a GeoJSON FeatureCollection,
+# https://datatracker.ietf.org/doc/html/rfc7946#section-3.3
 def solr_geojson_heatmap(
     q, bb, grid_level=None, show_bounds=False, show_solr_bounds=False
 ):
@@ -196,6 +196,7 @@ def solr_geojson_heatmap(
 # a solr heatmap. Latitude and longitude represent the
 # centers of the solr heatmap grid cells. The value is the count
 # for the grid cell.
+# Suitable for consumption by leaflet: https://leafletjs.com
 def solr_leaflet_heatmap(q, bb, grid_level=None):
     hm = _get_heatmap(q, bb, _LEAFLET_ERR_PCT, grid_level)
     # logging.warning(hm)
