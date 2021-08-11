@@ -22,6 +22,13 @@ _GEOJSON_ERR_PCT = 0.2
 # 0.1 for the leaflet heatmap tends to generate more cells for the heatmap “blob” generation
 _LEAFLET_ERR_PCT = 0.1
 
+def clip_float(v, min_v, max_v):
+    if v < min_v:
+        return min_v
+    if v > max_v:
+        return max_v
+    return v
+
 
 def _get_heatmap(
     q: typing.AnyStr, bb: typing.Dict, dist_err_pct: float, grid_level=None
@@ -30,11 +37,11 @@ def _get_heatmap(
     # Should probably do this by computing two requests when the request BB
     # straddles the antimeridian.
     if bb is None or len(bb) < 2:
-        bb = {MIN_LAT: -180.0, MAX_LAT: 180.0, MIN_LON: -90.0, MAX_LON: 90.0}
-    if bb[MIN_LAT] < -180.0:
-        bb[MIN_LAT] = -180.0
-    if bb[MAX_LAT] > 180.0:
-        bb[MAX_LAT] = 180.0
+        bb = {MIN_LAT: -90.0, MAX_LAT: 90.0, MIN_LON: -180.0, MAX_LON: 180.0}
+    bb[MIN_LAT] = clip_float(bb[MIN_LAT], -90.0, 90.0)
+    bb[MAX_LAT] = clip_float(bb[MAX_LAT], -90.0, 90.0)
+    bb[MIN_LON] = clip_float(bb[MIN_LON], -180.0, 180.0)
+    bb[MAX_LON] = clip_float(bb[MAX_LON], -180.0, 180.0)
     # logging.warning(bb)
     headers = {"Accept": "application/json"}
     params = {
@@ -45,7 +52,7 @@ def _get_heatmap(
         "facet.heatmap": _RPT_FIELD,
         "facet.heatmap.distErrPct": dist_err_pct,
         # "facet.heatmap.gridLevel": grid_level,
-        "facet.heatmap.geom": f"[{bb[MIN_LAT]} {bb[MIN_LON]} TO {bb[MAX_LAT]} {bb[MAX_LON]}]",
+        "facet.heatmap.geom": f"[{bb[MIN_LON]} {bb[MIN_LAT]} TO {bb[MAX_LON]} {bb[MAX_LAT]}]",
     }
     # if grid level is None, then Solr calculates an "appropriate" grid scale
     # based on the bounding box and distErrPct. Seems a bit off...
