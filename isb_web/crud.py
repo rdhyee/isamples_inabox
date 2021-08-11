@@ -82,7 +82,7 @@ def getThings(
         nrec_qry = nrec_qry.filter(igsn_lib.models.thing.Thing.authority_id == authority_id)
     nrecs = nrec_qry.count()
     npages = nrecs/limit
-    sql = "SELECT * FROM thing WHERE resolved_status=:status"
+    sql = "SELECT _id, id, authority_id, tcreated, resolved_status, resolved_url, resolve_elapsed FROM thing WHERE resolved_status=:status"
     params = {"status":status,}
     if authority_id is not None:
         sql = sql + " AND authority_id=:authority_id"
