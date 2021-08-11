@@ -1,3 +1,5 @@
+import typing
+
 import requests
 import geojson
 
@@ -16,14 +18,12 @@ MAX_LAT = "max_lat"
 MIN_LON = "min_lon"
 MAX_LON = "max_lon"
 
+# 0.2 seems ok for the grid cells.
+_GEO_JSON_ERR_PCT = 0.2
+# 0.1 for the leaflet heatmap tends to generate more cells for the heatmap “blob” generation
+_LEAFLET_ERR_PCT = 0.1
 
-##
-# Create a GeoJSON rendering of the Solr Heatmap response.
-# Generates a GeoJSON polygon (rectangle) feature for each Solr heatmap cell
-# that has a count value over 0.
-# Returns the generated features as a GeoJSON FeatureCollection
-#
-def solr_grid_heatmap(q, bb, grid_level=None, show_bounds=False, show_solr_bounds=False):
+def _get_heatmap(q: typing.AnyStr, bb: typing.Dict, dist_err_pct: float, grid_level=None) -> typing.Dict:
     # TODO: dealing with the antimeridian ("dateline") in the Solr request.
     # Should probably do this by computing two requests when the request BB
     # straddles the antimeridian.
@@ -46,7 +46,7 @@ def solr_grid_heatmap(q, bb, grid_level=None, show_bounds=False, show_solr_bound
         "wt": "json",
         "facet": "true",
         "facet.heatmap": RPT_FIELD,
-        "facet.heatmap.distErrPct": 0.2,
+        "facet.heatmap.distErrPct": dist_err_pct,
         # "facet.heatmap.gridLevel": grid_level,
         "facet.heatmap.geom": f"[{bb[MIN_LAT]} {bb[MIN_LON]} TO {bb[MAX_LAT]} {bb[MAX_LON]}]"
     }
@@ -61,6 +61,17 @@ def solr_grid_heatmap(q, bb, grid_level=None, show_bounds=False, show_solr_bound
     # logging.debug("Got: %s", response.url)
     res = response.json()
     hm = res.get("facet_counts", {}).get("facet_heatmaps", {}).get(RPT_FIELD, {})
+    return hm
+
+
+##
+# Create a GeoJSON rendering of the Solr Heatmap response.
+# Generates a GeoJSON polygon (rectangle) feature for each Solr heatmap cell
+# that has a count value over 0.
+# Returns the generated features as a GeoJSON FeatureCollection
+#
+def solr_geojson_heatmap(q, bb, grid_level=None, show_bounds=False, show_solr_bounds=False):
+    hm = _get_heatmap(q, bb, _GEO_JSON_ERR_PCT, grid_level)
     # print(hm)
     gl = hm.get('gridLevel', -1)
     # logging.warning(hm)
@@ -126,3 +137,32 @@ def solr_grid_heatmap(q, bb, grid_level=None, show_bounds=False, show_solr_bound
     grid.append(geojson.Feature(properties={'max_value':  _max_value}))
     grid.append(geojson.Feature(properties={'grid_level': gl}))
     return geojson.FeatureCollection(grid)
+
+
+# Generate a list of [latitude, longitude, value] from
+# a solr heatmap. Latitude and longitude represent the
+# centers of the solr heatmap grid cells. The value is the count
+# for the grid cell.
+def solr_leaflet_heatmap(q, bb, grid_level=None):
+    hm = _get_heatmap(q, bb, _LEAFLET_ERR_PCT, grid_level)
+    # logging.warning(hm)
+    d_lat = hm['maxY'] - hm['minY']
+    dd_lat = d_lat / (hm['rows'])
+    d_lon = hm['maxX'] - hm['minX']
+    dd_lon = d_lon / (hm['columns'])
+    lat_0 = hm['maxY'] - dd_lat / 2.0
+    lon_0 = hm['minX'] + dd_lon / 2.0
+    data = []
+    max_value = 0
+    for i_row in range(0, hm['rows']):
+        for i_col in range(0, hm['columns']):
+            if hm['counts_ints2D'][i_row] is not None:
+                v = hm['counts_ints2D'][i_row][i_col]
+                if v > 0:
+                    lt = lat_0 - dd_lat * i_row
+                    lg = lon_0 + dd_lon * i_col
+                    data.append([lt, lg, v])
+                    if v > max_value:
+                        max_value = v
+    # return list of [lat, lon, count] and maximum count value
+    return { "data": data, "max_value": max_value }

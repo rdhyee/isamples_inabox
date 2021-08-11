@@ -150,8 +150,8 @@ async def get_thing(
         content=content, media_type=item.resolved_media_type
     )
 
-@app.get("/things_heatmap", response_model=typing.Any)
-async def get_things_heatmap(
+@app.get("/things_geojson_heatmap", response_model=typing.Any)
+async def get_things_geojson_heatmap(
     query: str = "*:*",
     min_lat: float = -180.0,
     max_lat: float = 180.0,
@@ -173,9 +173,37 @@ async def get_things_heatmap(
         isb_solr_query.MIN_LON: min_lon,
         isb_solr_query.MAX_LON: max_lon
     }
-    results = isb_solr_query.solr_grid_heatmap(query, bounds, None, False, False)
+    results = isb_solr_query.solr_geojson_heatmap(query, bounds, None, False, False)
     return fastapi.responses.JSONResponse(
         content=results, media_type=MEDIA_GEO_JSON
+    )
+
+@app.get("/things_leaflet_heatmap", response_model=typing.Any)
+async def get_things_leaflet_heatmap(
+    query: str = "*:*",
+    min_lat: float = -180.0,
+    max_lat: float = 180.0,
+    min_lon: float = -90.0,
+    max_lon: float = 90.0
+):
+    """
+    Note, the map callback is likely going to be in this form:
+    bb = {
+        MIN_LAT: bounds[0][1],
+        MAX_LAT: bounds[1][1],
+        MIN_LON: bounds[0][0],
+        MAX_LON: bounds[1][0]
+    }
+    """
+    bounds = {
+        isb_solr_query.MIN_LAT: min_lat,
+        isb_solr_query.MAX_LAT: max_lat,
+        isb_solr_query.MIN_LON: min_lon,
+        isb_solr_query.MAX_LON: max_lon
+    }
+    results = isb_solr_query.solr_leaflet_heatmap(query, bounds, None)
+    return fastapi.responses.JSONResponse(
+        content=results, media_type=MEDIA_JSON
     )
 
 @app.get(
