@@ -153,10 +153,10 @@ async def get_thing(
 @app.get("/things_geojson_heatmap", response_model=typing.Any)
 async def get_things_geojson_heatmap(
     query: str = "*:*",
-    min_lat: float = -180.0,
-    max_lat: float = 180.0,
-    min_lon: float = -90.0,
-    max_lon: float = 90.0
+    min_lat: float = -90.0,
+    max_lat: float = 90.0,
+    min_lon: float = -180.0,
+    max_lon: float = 180.0,
 ):
     """
     Note, the map callback is likely going to be in this form:
@@ -181,10 +181,10 @@ async def get_things_geojson_heatmap(
 @app.get("/things_leaflet_heatmap", response_model=typing.Any)
 async def get_things_leaflet_heatmap(
     query: str = "*:*",
-    min_lat: float = -180.0,
-    max_lat: float = 180.0,
-    min_lon: float = -90.0,
-    max_lon: float = 90.0
+    min_lat: float = -90.0,
+    max_lat: float = 90.0,
+    min_lon: float = -180.0,
+    max_lon: float = 180.0
 ):
     """
     Note, the map callback is likely going to be in this form:
@@ -310,6 +310,10 @@ async def get_related_solr(
             "\n".join(rows), media_type=MEDIA_NQUADS
         )
     return res
+
+@app.get("/map", include_in_schema=False)
+async def root(request: fastapi.Request):
+    return templates.TemplateResponse("spatial.html", {"request": request})
 
 
 @app.get("/", include_in_schema=False)
