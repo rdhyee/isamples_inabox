@@ -3,6 +3,7 @@ import uvicorn
 import datetime
 import typing
 import requests
+import json
 from fastapi.logger import logger as fastapi_logger
 import fastapi.staticfiles
 import fastapi.templating
@@ -85,10 +86,11 @@ async def thing_list_metadata(
     meta = crud.getThingMeta(db)
     return meta
 
+
 @app.get("/thing/", response_model=schemas.ThingPage)
 async def thing_list(
-    offset: int = fastapi.Query(0,ge=0),
-    limit: int = fastapi.Query(1000,lt=10000, gt=0),
+    offset: int = fastapi.Query(0, ge=0),
+    limit: int = fastapi.Query(1000, lt=10000, gt=0),
     status: int = 200,
     authority: str = fastapi.Query(None),
     db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
@@ -100,8 +102,18 @@ async def thing_list(
     total_records, npages, things = crud.getThings(
         db, offset=offset, limit=limit, status=status, authority_id=authority
     )
-    params = {"limit":limit, "offset":offset, "status":status, "authority":authority}
-    return {"params":params, "last_page": npages, "total_records": total_records, "data": things}
+    params = {
+        "limit": limit,
+        "offset": offset,
+        "status": status,
+        "authority": authority,
+    }
+    return {
+        "params": params,
+        "last_page": npages,
+        "total_records": total_records,
+        "data": things,
+    }
 
 
 @app.get("/thing/types", response_model=typing.List[schemas.ThingType])
@@ -110,6 +122,45 @@ async def thing_list_types(
 ):
     """List of types of things with counts"""
     return crud.getSampleTypes(db)
+
+
+#TODO: Config input params
+#TODO: Config solr url
+#TODO: Don't blindly accept user input!
+@app.get("/thing/select", response_model=typing.Any)
+async def get_solr_select(
+    q: str = "*:*",
+    fq: typing.Optional[str] = None,
+    rows: int = fastapi.Query(10, gt=-1),
+    start: int = fastapi.Query(0, gt=-1),
+    fl: typing.Optional[str] = "id,source,hasContextCategory,hasMaterialCategory,hasSpecimenCategory,producedBy_resultTime,producedBy_samplingSite_location_ll",
+    _sort: str = fastapi.Query(None),
+    p: str = fastapi.Query(None),
+):
+    extra_params = {}
+    params = {
+        "wt": "json",
+        "q": q,
+        "fl": fl,
+        "rows": rows,
+        "start": start,
+    }
+    if fq is not None:
+        params["fq"] = fq
+    if not _sort is None:
+        params["sort"] = _sort
+    if not p is None:
+        try:
+            extra_params = json.loads(p)
+        except json.JSONDecodeError as e:
+            pass
+    params.update(extra_params)
+    url = "http://localhost:8984/solr/isb_core_records/select"
+    headers = {"Accept": "application/json"}
+    response = requests.get(url, headers=headers, params=params, stream=True)
+    return fastapi.responses.StreamingResponse(
+        response.iter_content(), media_type="application/json"
+    )
 
 
 @app.get("/thing/{identifier:path}", response_model=typing.Any)
@@ -267,11 +318,15 @@ def main():
 
 if __name__ == "__main__":
     formatter = logging.Formatter(
-        "[%(asctime)s.%(msecs)03d] %(levelname)s [%(thread)d] - %(message)s", "%Y-%m-%d %H:%M:%S")
-    handler = logging.StreamHandler() #RotatingFileHandler('/log/abc.log', backupCount=0)
+        "[%(asctime)s.%(msecs)03d] %(levelname)s [%(thread)d] - %(message)s",
+        "%Y-%m-%d %H:%M:%S",
+    )
+    handler = (
+        logging.StreamHandler()
+    )  # RotatingFileHandler('/log/abc.log', backupCount=0)
     logging.getLogger().setLevel(logging.NOTSET)
     fastapi_logger.addHandler(handler)
     handler.setFormatter(formatter)
 
-    fastapi_logger.info('****************** Starting Server *****************')
+    fastapi_logger.info("****************** Starting Server *****************")
     main()
