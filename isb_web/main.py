@@ -176,11 +176,26 @@ async def get_thing(
     tags=["heatmaps"],
 )
 async def get_things_geojson_heatmap(
-    query: str = Query(default="*:*", description="Solr query to use for selecting Things. Details at https://solr.apache.org/guide/6_6/the-standard-query-parser.html#the-standard-query-parser"),
-    min_lat: float = Query(default=-180.0, description="The minimum latitude for the bounding box in the Solr query. Valid values are -180.0 <= 0 <= 180."),
-    max_lat: float = Query(default=180.0, description="The maximum latitude for the bounding box in the Solr query. Valid values are -180.0 <= 0 <= 180."),
-    min_lon: float = Query(default=-90.0, description="The minimum longitude for the bounding box in the Solr query. Valid values are -90.0 <= 0 <= 90."),
-    max_lon: float = Query(default=90.0, description="The maximum longitude for the bounding box in the Solr query. Valid values are -90.0 <= 0 <= 90."),
+    query: str = Query(
+        default="*:*",
+        description="Solr query to use for selecting Things. Details at https://solr.apache.org/guide/6_6/the-standard-query-parser.html#the-standard-query-parser",
+    ),
+    min_lat: float = Query(
+        default=-180.0,
+        description="The minimum latitude for the bounding box in the Solr query. Valid values are -180.0 <= min_lat <= 180.",
+    ),
+    max_lat: float = Query(
+        default=180.0,
+        description="The maximum latitude for the bounding box in the Solr query. Valid values are -180.0 <= max_lat <= 180.",
+    ),
+    min_lon: float = Query(
+        default=-90.0,
+        description="The minimum longitude for the bounding box in the Solr query. Valid values are -90.0 <= min_lon <= 90.",
+    ),
+    max_lon: float = Query(
+        default=90.0,
+        description="The maximum longitude for the bounding box in the Solr query. Valid values are -90.0 <= max_lon <= 90.",
+    ),
 ):
     """
     Returns a GeoJSON heatmap of all Things matching the specified Solr query in the bounding box described by the
@@ -204,11 +219,26 @@ async def get_things_geojson_heatmap(
     tags=["heatmaps"],
 )
 async def get_things_leaflet_heatmap(
-    query: str = Query(default="*:*", description="Solr query to use for selecting Things. Details at https://solr.apache.org/guide/6_6/the-standard-query-parser.html#the-standard-query-parser"),
-    min_lat: float = Query(default=-180.0, description="The minimum latitude for the bounding box in the Solr query. Valid values are -180.0 <= 0 <= 180."),
-    max_lat: float = Query(default=180.0, description="The maximum latitude for the bounding box in the Solr query. Valid values are -180.0 <= 0 <= 180."),
-    min_lon: float = Query(default=-90.0, description="The minimum longitude for the bounding box in the Solr query. Valid values are -90.0 <= 0 <= 90."),
-    max_lon: float = Query(default=90.0, description="The maximum longitude for the bounding box in the Solr query. Valid values are -90.0 <= 0 <= 90."),
+    query: str = Query(
+        default="*:*",
+        description="Solr query to use for selecting Things. Details at https://solr.apache.org/guide/6_6/the-standard-query-parser.html#the-standard-query-parser",
+    ),
+    min_lat: float = Query(
+        default=-180.0,
+        description="The minimum latitude for the bounding box in the Solr query. Valid values are -180.0 <= min_lat <= 180.",
+    ),
+    max_lat: float = Query(
+        default=180.0,
+        description="The maximum latitude for the bounding box in the Solr query. Valid values are -180.0 <= max_lat <= 180.",
+    ),
+    min_lon: float = Query(
+        default=-90.0,
+        description="The minimum longitude for the bounding box in the Solr query. Valid values are -90.0 <= min_lon <= 90.",
+    ),
+    max_lon: float = Query(
+        default=90.0,
+        description="The maximum longitude for the bounding box in the Solr query. Valid values are -90.0 <= max_lon <= 90.",
+    ),
 ):
     """
     Returns a Leaflet heatmap of all Things matching the specified Solr query in the bounding box described by the
