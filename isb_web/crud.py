@@ -5,8 +5,10 @@ import logging
 import igsn_lib.models.thing
 import igsn_lib.models.relation
 
+
 def getLogger():
     return logging.getLogger("isb_web")
+
 
 SOLR_RESERVED_CHAR_LIST = [
     "+",
@@ -34,6 +36,7 @@ def escapeSolrQueryTerm(term):
     for c in SOLR_RESERVED_CHAR_LIST:
         term = term.replace(c, "\{}".format(c))
     return term
+
 
 def thingExists(db: sqlalchemy.orm.Session, identifier):
     try:
@@ -79,11 +82,18 @@ def getThings(
     nrec_qry = db.query(igsn_lib.models.thing.Thing.id)
     nrec_qry.filter(igsn_lib.models.thing.Thing.resolved_status == status)
     if not authority_id is None:
-        nrec_qry = nrec_qry.filter(igsn_lib.models.thing.Thing.authority_id == authority_id)
+        nrec_qry = nrec_qry.filter(
+            igsn_lib.models.thing.Thing.authority_id == authority_id
+        )
     nrecs = nrec_qry.count()
-    npages = nrecs/limit
-    sql = "SELECT * FROM thing WHERE resolved_status=:status"
-    params = {"status":status,}
+    npages = nrecs / limit
+    sql = (
+        "SELECT _id, id, authority_id, tcreated, resolved_status, resolved_url, resolve_elapsed"
+        " FROM thing WHERE resolved_status=:status"
+    )
+    params = {
+        "status": status,
+    }
     if authority_id is not None:
         sql = sql + " AND authority_id=:authority_id"
         params["authority_id"] = authority_id
@@ -91,11 +101,11 @@ def getThings(
     params["offset"] = offset
     params["limit"] = limit
     qry = db.execute(sql, params)
-    #qry = db.query(igsn_lib.models.thing.Thing)
-    #qry = qry.filter(igsn_lib.models.thing.Thing.resolved_status == status)
-    #if not authority_id is None:
+    # qry = db.query(igsn_lib.models.thing.Thing)
+    # qry = qry.filter(igsn_lib.models.thing.Thing.resolved_status == status)
+    # if not authority_id is None:
     #    qry = qry.filter(igsn_lib.models.thing.Thing.authority_id == authority_id)
-    #return nrecs, npages, qry.order_by(igsn_lib.models.thing.Thing._id).fetch(limit).all()
+    # return nrecs, npages, qry.order_by(igsn_lib.models.thing.Thing._id).fetch(limit).all()
     return nrecs, npages, qry.all()
 
 
@@ -132,15 +142,15 @@ def getRelations(
 
 
 def getRelationsSolr(
-        rsession: requests.Session,
-        s: str = None,
-        p: str = None,
-        o: str = None,
-        source: str = None,
-        name: str = None,
-        offset: int = 0,
-        limit: int = 1000,
-        url:str ="http://localhost:8983/solr/isb_rel/"
+    rsession: requests.Session,
+    s: str = None,
+    p: str = None,
+    o: str = None,
+    source: str = None,
+    name: str = None,
+    offset: int = 0,
+    limit: int = 1000,
+    url: str = "http://localhost:8983/solr/isb_rel/",
 ):
     q = []
     if not s is None:
@@ -155,16 +165,16 @@ def getRelationsSolr(
         q.append(f"name:{escapeSolrQueryTerm(name)}")
     if len(q) == 0:
         q.append("*:*")
-    headers = {"Accept":"application/json"}
+    headers = {"Accept": "application/json"}
     params = {
         "q": " AND ".join(q),
-        "wt":"json",
+        "wt": "json",
         "rows": limit,
-        "start":offset,
+        "start": offset,
     }
     _url = f"{url}select"
     res = rsession.get(_url, headers=headers, params=params).json()
-    return res.get("response",{}).get("docs",[])
+    return res.get("response", {}).get("docs", [])
 
 
 def getPredicateCounts(db: sqlalchemy.orm.Session):
@@ -176,20 +186,18 @@ def getPredicateCounts(db: sqlalchemy.orm.Session):
     ).group_by(igsn_lib.models.relation.Relation.p)
     return q.all()
 
-def getPredicateCountsSolr(rsession: requests.Session, url="http://localhost:8983/solr/isb_rel/"):
-    params = {
-        "q":"*:*",
-        "rows":"0",
-        "facet":"true",
-        "facet.field":"p"
-    }
-    headers = {"Accept":"application/json"}
+
+def getPredicateCountsSolr(
+    rsession: requests.Session, url="http://localhost:8983/solr/isb_rel/"
+):
+    params = {"q": "*:*", "rows": "0", "facet": "true", "facet.field": "p"}
+    headers = {"Accept": "application/json"}
     _url = f"{url}select"
     res = rsession.get(_url, headers=headers, params=params).json()
-    fc = res.get("facet_counts",{}).get("facet_fields",{}).get("p",[])
+    fc = res.get("facet_counts", {}).get("facet_fields", {}).get("p", [])
     result = []
     for i in range(0, len(fc), 2):
-        entry = {"predicate":fc[i], "count":fc[i+1]}
+        entry = {"predicate": fc[i], "count": fc[i + 1]}
         result.append(entry)
     return result
 
