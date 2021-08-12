@@ -194,9 +194,10 @@ def solr_geojson_heatmap(
                     )
                     feature = geojson.Feature(geometry=pts, properties={"count": v})
                     grid.append(feature)
-    grid.append(geojson.Feature(properties={"max_value": _max_value}))
-    grid.append(geojson.Feature(properties={"grid_level": gl}))
-    return geojson.FeatureCollection(grid)
+    geodata = geojson.FeatureCollection(grid)
+    geodata["max_count"] = _max_value
+    geodata["grid_level"] = gl
+    return geodata
 
 
 # Generate a list of [latitude, longitude, value] from
