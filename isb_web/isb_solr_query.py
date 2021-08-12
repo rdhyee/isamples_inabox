@@ -1,5 +1,4 @@
 import typing
-
 import requests
 import geojson
 
@@ -21,6 +20,7 @@ MAX_LON = "max_lon"
 _GEOJSON_ERR_PCT = 0.2
 # 0.1 for the leaflet heatmap tends to generate more cells for the heatmap “blob” generation
 _LEAFLET_ERR_PCT = 0.1
+
 
 def clip_float(v, min_v, max_v):
     if v < min_v:
@@ -228,3 +228,34 @@ def solr_leaflet_heatmap(q, bb, grid_level=None):
                         max_value = v
     # return list of [lat, lon, count] and maximum count value
     return {"data": data, "max_value": max_value}
+
+
+def solr_query(params):
+    """
+    Issue a request against the solr select endpoint.
+
+    Args:
+        params: dict, see https://solr.apache.org/guide/8_9/common-query-parameters.html
+
+    Returns:
+        Iterator for the solr response.
+    """
+    url = f"{BASE_URL}/select"
+    headers = {"Accept": "application/json"}
+    response = requests.get(url, headers=headers, params=params, stream=True)
+    return response.iter_content()
+
+
+def solr_luke():
+    """
+    Information about the solr isb_core_records schema
+    See: https://solr.apache.org/guide/8_9/luke-request-handler.html
+
+    Returns:
+        JSON document iterator
+    """
+    url = f"{BASE_URL}/admin/luke"
+    params = {"show": "schema", "wt": "json"}
+    headers = {"Accept": "application/json"}
+    response = requests.get(url, headers=headers, params=params, stream=True)
+    return response.iter_content()

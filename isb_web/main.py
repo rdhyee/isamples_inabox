@@ -133,42 +133,35 @@ async def thing_list_types(
     return crud.getSampleTypes(db)
 
 
-#TODO: Config input params
-#TODO: Config solr url
-#TODO: Don't blindly accept user input!
+# TODO: Don't blindly accept user input!
 @app.get("/thing/select", response_model=typing.Any)
-async def get_solr_select(
-    q: str = "*:*",
-    fq: typing.Optional[str] = None,
-    rows: int = fastapi.Query(10, gt=-1),
-    start: int = fastapi.Query(0, gt=-1),
-    fl: typing.Optional[str] = "id,source,hasContextCategory,hasMaterialCategory,hasSpecimenCategory,producedBy_resultTime,producedBy_samplingSite_location_ll",
-    _sort: str = fastapi.Query(None),
-    p: str = fastapi.Query(None),
-):
-    extra_params = {}
+async def get_solr_select(request: fastapi.Request):
+    """Send select request to the Solr isb_core_records collection.
+
+    See https://solr.apache.org/guide/8_9/common-query-parameters.html
+    """
+    # Somewhat sensible defaults
     params = {
         "wt": "json",
-        "q": q,
-        "fl": fl,
-        "rows": rows,
-        "start": start,
+        "q": "*:*",
+        "fl": "id",
+        "rows": 10,
+        "start": 0,
     }
-    if fq is not None:
-        params["fq"] = fq
-    if not _sort is None:
-        params["sort"] = _sort
-    if not p is None:
-        try:
-            extra_params = json.loads(p)
-        except json.JSONDecodeError as e:
-            pass
-    params.update(extra_params)
-    url = "http://localhost:8984/solr/isb_core_records/select"
-    headers = {"Accept": "application/json"}
-    response = requests.get(url, headers=headers, params=params, stream=True)
+    params.update(request.query_params)
     return fastapi.responses.StreamingResponse(
-        response.iter_content(), media_type="application/json"
+        isb_solr_query.solr_query(params), media_type="application/json"
+    )
+
+
+@app.get("/thing/select/info", response_model=typing.Any)
+async def get_solr_luke_info():
+    """Retrieve information about the record schema.
+
+    Returns: JSON
+    """
+    return fastapi.responses.StreamingResponse(
+        isb_solr_query.solr_luke(), media_type="application/json"
     )
 
 
@@ -399,6 +392,7 @@ async def get_related_solr(
             "\n".join(rows), media_type=MEDIA_NQUADS
         )
     return res
+
 
 @app.get("/map", include_in_schema=False)
 async def root(request: fastapi.Request):
