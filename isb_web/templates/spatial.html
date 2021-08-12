@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Records Heatmap</title>
         <!-- Leaflet as usual -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js" integrity="sha512-yocoLferfPbcwpCMr8v/B0AB4SWpJlouBwgE0D3ZHaiP1nuu5djZclFEIj9znuqghaZ3tdCMRrreLoM8km+jIQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
     <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
     <!-- enough styling to make a full-page map -->
@@ -21,9 +22,21 @@
     function initMap() {
         var map = L.map('map').setView([0, 0], 2);
 
-        L.tileLayer('http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+        //L.tileLayer('http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+        //    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="http://cartodb.com/attributions">CartoDB</a>'
+        //}).addTo(map)
+        L.tileLayer('http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="http://cartodb.com/attributions">CartoDB</a>'
-        }).addTo(map)
+            }).addTo(map);
+
+
+        removeHeatmap = function() {
+            map.eachLayer(function(layer){
+                if (layer._tag && layer._tag === "heatmap") {
+                    map.removeLayer(layer);
+                }
+            })
+        }
 
         getHeatmap = function() {
             var bb = map.getBounds();
@@ -38,8 +51,23 @@
             fetch(hm_url)
                 .then(response => response.json())
                 .then(data => {
-                    var hm = L.geoJson(data);
-                    hm.addTo(map);
+                    var count_max = Math.log10(data.max_count+1);
+                    var cscale = chroma.scale(["blue","yellow","red"]).domain([0,count_max]);
+                    heatmap_layer = L.geoJson(
+                        data,
+                        {style: function(feature) {
+                            return {
+                                color: "black",
+                                opacity: 0.3,
+                                weight: 1,
+                                fillColor: cscale(Math.log10(feature.properties.count+1)),
+                                fillOpacity: 0.3
+                            }
+                            }}
+                    );
+                    heatmap_layer._tag = "heatmap"
+                    removeHeatmap();
+                    heatmap_layer.addTo(map);
                 });
         }
 
@@ -47,6 +75,7 @@
             getHeatmap();
         }
         map.on("zoomend", doZoom);
+        map.on("moveend", doZoom);
         getHeatmap();
     }
     </script>
