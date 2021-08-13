@@ -148,10 +148,15 @@ async def get_solr_select(request: fastapi.Request):
         "rows": 10,
         "start": 0,
     }
+
+    # Update params with the provided parameters
     params.update(request.query_params)
-    return fastapi.responses.StreamingResponse(
-        isb_solr_query.solr_query(params), media_type="application/json"
-    )
+
+    # response object is generated in the called method. This is necessary
+    # for the streaming response as otherwise the iterator is consumed
+    # before returning here, hence defeating the purpose of the streaming
+    # response.
+    return isb_solr_query.solr_query(params)
 
 
 @app.get("/thing/select/info", response_model=typing.Any)
@@ -160,9 +165,7 @@ async def get_solr_luke_info():
 
     Returns: JSON
     """
-    return fastapi.responses.StreamingResponse(
-        isb_solr_query.solr_luke(), media_type="application/json"
-    )
+    return isb_solr_query.solr_luke()
 
 
 @app.get("/thing/{identifier:path}", response_model=typing.Any)
