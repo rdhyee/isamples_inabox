@@ -1,6 +1,7 @@
 import typing
 import requests
 import geojson
+import fastapi
 
 import isb_web.config
 
@@ -64,7 +65,9 @@ def _get_heatmap(
 
     # logging.debug("Got: %s", response.url)
     res = response.json()
+    total_matching = res.get("response", {}).get("numFound", 0)
     hm = res.get("facet_counts", {}).get("facet_heatmaps", {}).get(_RPT_FIELD, {})
+    hm["numDocs"] = total_matching
     return hm
 
 
@@ -157,46 +160,52 @@ def solr_geojson_heatmap(
     # Process the Solr heatmap response. Draw a box for each cell
     # that has a count > 0 and set the "count" property of the
     # feature to that value.
-    for i_row in range(0, hm["rows"]):
-        for i_col in range(0, hm["columns"]):
-            if hm["counts_ints2D"][i_row] is not None:
-                v = hm["counts_ints2D"][i_row][i_col]
-                if v > 0:
-                    if v > _max_value:
-                        _max_value = v
-                    p0lat = lat_0 - dd_lat * i_row
-                    p0lon = lon_0 + dd_lon * i_col
-                    pts = geojson.Polygon(
-                        [
+    _total = 0
+    _count_matrix = hm.get("counts_ints2D", None)
+    if _count_matrix is not None:
+        for i_row in range(0, hm["rows"]):
+            for i_col in range(0, hm["columns"]):
+                if _count_matrix[i_row] is not None:
+                    v = _count_matrix[i_row][i_col]
+                    if v > 0:
+                        _total = _total + v
+                        if v > _max_value:
+                            _max_value = v
+                        p0lat = lat_0 - dd_lat * i_row
+                        p0lon = lon_0 + dd_lon * i_col
+                        pts = geojson.Polygon(
                             [
-                                (
-                                    p0lon,
-                                    p0lat,
-                                ),
-                                (
-                                    p0lon + dd_lon,
-                                    p0lat,
-                                ),
-                                (
-                                    p0lon + dd_lon,
-                                    p0lat - dd_lat,
-                                ),
-                                (
-                                    p0lon,
-                                    p0lat - dd_lat,
-                                ),
-                                (
-                                    p0lon,
-                                    p0lat,
-                                ),
+                                [
+                                    (
+                                        p0lon,
+                                        p0lat,
+                                    ),
+                                    (
+                                        p0lon + dd_lon,
+                                        p0lat,
+                                    ),
+                                    (
+                                        p0lon + dd_lon,
+                                        p0lat - dd_lat,
+                                    ),
+                                    (
+                                        p0lon,
+                                        p0lat - dd_lat,
+                                    ),
+                                    (
+                                        p0lon,
+                                        p0lat,
+                                    ),
+                                ]
                             ]
-                        ]
-                    )
-                    feature = geojson.Feature(geometry=pts, properties={"count": v})
-                    grid.append(feature)
+                        )
+                        feature = geojson.Feature(geometry=pts, properties={"count": v})
+                        grid.append(feature)
     geodata = geojson.FeatureCollection(grid)
     geodata["max_count"] = _max_value
     geodata["grid_level"] = gl
+    geodata["total"] = _total
+    geodata["num_docs"] = hm.get("numDocs", 0)
     return geodata
 
 
@@ -216,18 +225,25 @@ def solr_leaflet_heatmap(q, bb, grid_level=None):
     lon_0 = hm["minX"] + dd_lon / 2.0
     data = []
     max_value = 0
+    _total = 0
     for i_row in range(0, hm["rows"]):
         for i_col in range(0, hm["columns"]):
             if hm["counts_ints2D"][i_row] is not None:
                 v = hm["counts_ints2D"][i_row][i_col]
                 if v > 0:
+                    _total = _total + v
                     lt = lat_0 - dd_lat * i_row
                     lg = lon_0 + dd_lon * i_col
                     data.append([lt, lg, v])
                     if v > max_value:
                         max_value = v
     # return list of [lat, lon, count] and maximum count value
-    return {"data": data, "max_value": max_value}
+    return {
+        "data": data,
+        "max_value": max_value,
+        "total": _total,
+        "num_docs": hm.get("numDocs", 0),
+    }
 
 
 def solr_query(params):
@@ -242,8 +258,18 @@ def solr_query(params):
     """
     url = f"{BASE_URL}/select"
     headers = {"Accept": "application/json"}
+    wt_map = {
+        "csv": "text/plain",
+        "xml": "application/xml",
+        "geojson": "application/geo+json",
+        "smile": "application/x-jackson-smile",
+        "json": "application/json",
+    }
+    content_type = wt_map.get(params.get("wt", "json").lower(), "json")
     response = requests.get(url, headers=headers, params=params, stream=True)
-    return response.iter_content()
+    return fastapi.responses.StreamingResponse(
+        response.iter_content(chunk_size=2048), media_type=content_type
+    )
 
 
 def solr_luke():
@@ -258,4 +284,6 @@ def solr_luke():
     params = {"show": "schema", "wt": "json"}
     headers = {"Accept": "application/json"}
     response = requests.get(url, headers=headers, params=params, stream=True)
-    return response.iter_content()
+    return fastapi.responses.StreamingResponse(
+        response.iter_content(chunk_size=2048), media_type="application/json"
+    )
