@@ -1,3 +1,6 @@
+
+const PAGE_SIZE = 50;
+
 //create split bar for table and content
 Split(["#records_table", "#info"], {
     direction: "vertical",
@@ -37,6 +40,15 @@ function changePanes(direction) {
             direction: "vertical",
         })
     }
+}
+
+// navigate to the specified identifier
+function navigateTo(identifier) {
+    const url = `/thing/${id}?format=full`
+    fetch(url).then(response => response.json()).then(doc => {
+        var offset = doc._id;
+        var page = Math.floor(offset / PAGE_SIZE);
+    });
 }
 
 //table ---------------------------------------------------------------------
@@ -153,13 +165,19 @@ var table = new Tabulator("#records_table", {
         delete params.keys;
     },
     ajaxProgressiveLoad: "scroll",
-    paginationSize: 500,
+    pagination: "remote",
+    paginationSize: PAGE_SIZE,
     ajaxParams: {
         key1: "id",
         keys: "tcreated"
     },
+    index: "_id",
     columns: [{
-        "title": "Id",
+        "title":"id",
+        "field":"_id",
+        "width": 10
+    }, {
+        "title": "Identifier",
         field: "id",
         width: 500
     }, {

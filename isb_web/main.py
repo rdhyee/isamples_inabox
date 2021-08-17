@@ -3,6 +3,7 @@ import uvicorn
 import datetime
 import typing
 import requests
+import json
 from fastapi.logger import logger as fastapi_logger
 import fastapi.staticfiles
 import fastapi.templating
@@ -10,16 +11,18 @@ import fastapi.middleware.cors
 import sqlalchemy.orm
 import accept_types
 import pydantic
-from isamples_metadata.SmithsonianTransformer import SmithsonianTransformer
+from fastapi.params import Query
 
 from isb_web import database
 from isb_web import schemas
 from isb_web import crud
 from isb_web import config
 from isb_web import isb_format
+from isb_web import isb_solr_query
 from isamples_metadata.SESARTransformer import SESARTransformer
 from isamples_metadata.GEOMETransformer import GEOMETransformer
 from isamples_metadata.OpenContextTransformer import OpenContextTransformer
+from isamples_metadata.SmithsonianTransformer import SmithsonianTransformer
 
 import logging
 
@@ -27,8 +30,15 @@ THIS_PATH = os.path.dirname(os.path.abspath(__file__))
 WEB_ROOT = config.Settings().web_root
 MEDIA_JSON = "application/json"
 MEDIA_NQUADS = "application/n-quads"
+MEDIA_GEO_JSON = "application/geo+json"
 
-app = fastapi.FastAPI(root_path=WEB_ROOT)
+tags_metadata = [
+    {
+        "name": "heatmaps",
+        "description": "Heatmap representations of Things, suitable for consumption by mapping APIs",
+    }
+]
+app = fastapi.FastAPI(root_path=WEB_ROOT, openapi_tags=tags_metadata)
 
 app.add_middleware(
     fastapi.middleware.cors.CORSMiddleware,
@@ -85,10 +95,11 @@ async def thing_list_metadata(
     meta = crud.getThingMeta(db)
     return meta
 
+
 @app.get("/thing/", response_model=schemas.ThingPage)
 async def thing_list(
-    offset: int = fastapi.Query(0,ge=0),
-    limit: int = fastapi.Query(1000,lt=10000, gt=0),
+    offset: int = fastapi.Query(0, ge=0),
+    limit: int = fastapi.Query(1000, lt=10000, gt=0),
     status: int = 200,
     authority: str = fastapi.Query(None),
     db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
@@ -100,8 +111,18 @@ async def thing_list(
     total_records, npages, things = crud.getThings(
         db, offset=offset, limit=limit, status=status, authority_id=authority
     )
-    params = {"limit":limit, "offset":offset, "status":status, "authority":authority}
-    return {"params":params, "last_page": npages, "total_records": total_records, "data": things}
+    params = {
+        "limit": limit,
+        "offset": offset,
+        "status": status,
+        "authority": authority,
+    }
+    return {
+        "params": params,
+        "last_page": npages,
+        "total_records": total_records,
+        "data": things,
+    }
 
 
 @app.get("/thing/types", response_model=typing.List[schemas.ThingType])
@@ -110,6 +131,41 @@ async def thing_list_types(
 ):
     """List of types of things with counts"""
     return crud.getSampleTypes(db)
+
+
+# TODO: Don't blindly accept user input!
+@app.get("/thing/select", response_model=typing.Any)
+async def get_solr_select(request: fastapi.Request):
+    """Send select request to the Solr isb_core_records collection.
+
+    See https://solr.apache.org/guide/8_9/common-query-parameters.html
+    """
+    # Somewhat sensible defaults
+    params = {
+        "wt": "json",
+        "q": "*:*",
+        "fl": "id",
+        "rows": 10,
+        "start": 0,
+    }
+
+    # Update params with the provided parameters
+    params.update(request.query_params)
+
+    # response object is generated in the called method. This is necessary
+    # for the streaming response as otherwise the iterator is consumed
+    # before returning here, hence defeating the purpose of the streaming
+    # response.
+    return isb_solr_query.solr_query(params)
+
+
+@app.get("/thing/select/info", response_model=typing.Any)
+async def get_solr_luke_info():
+    """Retrieve information about the record schema.
+
+    Returns: JSON
+    """
+    return isb_solr_query.solr_luke()
 
 
 @app.get("/thing/{identifier:path}", response_model=typing.Any)
@@ -147,6 +203,92 @@ async def get_thing(
     return fastapi.responses.JSONResponse(
         content=content, media_type=item.resolved_media_type
     )
+
+
+@app.get(
+    "/things_geojson_heatmap",
+    response_model=typing.Any,
+    summary="Gets a GeoJSON heatmap of Things",
+    tags=["heatmaps"],
+)
+async def get_things_geojson_heatmap(
+    query: str = Query(
+        default="*:*",
+        description="Solr query to use for selecting Things. Details at https://solr.apache.org/guide/6_6/the-standard-query-parser.html#the-standard-query-parser",
+    ),
+    min_lat: float = Query(
+        default=-90.0,
+        description="The minimum latitude for the bounding box in the Solr query. Valid values are -90.0 <= min_lat <= 90.",
+    ),
+    max_lat: float = Query(
+        default=90.0,
+        description="The maximum latitude for the bounding box in the Solr query. Valid values are -90.0 <= max_lat <= 90.",
+    ),
+    min_lon: float = Query(
+        default=-180.0,
+        description="The minimum longitude for the bounding box in the Solr query. Valid values are -180.0 <= min_lon <= 180.",
+    ),
+    max_lon: float = Query(
+        default=180.0,
+        description="The maximum longitude for the bounding box in the Solr query. Valid values are -180.0 <= max_lon <= 180.",
+    ),
+):
+    """
+    Returns a GeoJSON heatmap of all Things matching the specified Solr query in the bounding box described by the
+    latitude and longitude parameters.  The format of the response is a GeoJSON Feature Collection:
+    https://datatracker.ietf.org/doc/html/rfc7946#section-3.3
+    """
+    bounds = {
+        isb_solr_query.MIN_LAT: min_lat,
+        isb_solr_query.MAX_LAT: max_lat,
+        isb_solr_query.MIN_LON: min_lon,
+        isb_solr_query.MAX_LON: max_lon,
+    }
+    results = isb_solr_query.solr_geojson_heatmap(query, bounds, None, False, False)
+    return fastapi.responses.JSONResponse(content=results, media_type=MEDIA_GEO_JSON)
+
+
+@app.get(
+    "/things_leaflet_heatmap",
+    response_model=typing.Any,
+    summary="Gets a Leaflet heatmap of Things",
+    tags=["heatmaps"],
+)
+async def get_things_leaflet_heatmap(
+    query: str = Query(
+        default="*:*",
+        description="Solr query to use for selecting Things. Details at https://solr.apache.org/guide/6_6/the-standard-query-parser.html#the-standard-query-parser",
+    ),
+    min_lat: float = Query(
+        default=-90.0,
+        description="The minimum latitude for the bounding box in the Solr query. Valid values are -90.0 <= min_lat <= 90.",
+    ),
+    max_lat: float = Query(
+        default=90.0,
+        description="The maximum latitude for the bounding box in the Solr query. Valid values are -90.0 <= max_lat <= 90.",
+    ),
+    min_lon: float = Query(
+        default=-180.0,
+        description="The minimum longitude for the bounding box in the Solr query. Valid values are -180.0 <= min_lon <= 180.",
+    ),
+    max_lon: float = Query(
+        default=180.0,
+        description="The maximum longitude for the bounding box in the Solr query. Valid values are -180.0 <= max_lon <= 180.",
+    ),
+):
+    """
+    Returns a Leaflet heatmap of all Things matching the specified Solr query in the bounding box described by the
+    latitude and longitude parameters.  The format of the response is suitable for consumption by the Leaflet JavaScript
+    library https://leafletjs.com
+    """
+    bounds = {
+        isb_solr_query.MIN_LAT: min_lat,
+        isb_solr_query.MAX_LAT: max_lat,
+        isb_solr_query.MIN_LON: min_lon,
+        isb_solr_query.MAX_LON: max_lon,
+    }
+    results = isb_solr_query.solr_leaflet_heatmap(query, bounds, None)
+    return fastapi.responses.JSONResponse(content=results, media_type=MEDIA_JSON)
 
 
 @app.get(
@@ -255,6 +397,11 @@ async def get_related_solr(
     return res
 
 
+@app.get("/map", include_in_schema=False)
+async def root(request: fastapi.Request):
+    return templates.TemplateResponse("spatial.html", {"request": request})
+
+
 @app.get("/", include_in_schema=False)
 async def root(request: fastapi.Request):
     return templates.TemplateResponse("index.html", {"request": request})
@@ -267,11 +414,15 @@ def main():
 
 if __name__ == "__main__":
     formatter = logging.Formatter(
-        "[%(asctime)s.%(msecs)03d] %(levelname)s [%(thread)d] - %(message)s", "%Y-%m-%d %H:%M:%S")
-    handler = logging.StreamHandler() #RotatingFileHandler('/log/abc.log', backupCount=0)
+        "[%(asctime)s.%(msecs)03d] %(levelname)s [%(thread)d] - %(message)s",
+        "%Y-%m-%d %H:%M:%S",
+    )
+    handler = (
+        logging.StreamHandler()
+    )  # RotatingFileHandler('/log/abc.log', backupCount=0)
     logging.getLogger().setLevel(logging.NOTSET)
     fastapi_logger.addHandler(handler)
     handler.setFormatter(formatter)
 
-    fastapi_logger.info('****************** Starting Server *****************')
+    fastapi_logger.info("****************** Starting Server *****************")
     main()
