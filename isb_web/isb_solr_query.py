@@ -250,8 +250,11 @@ def solr_query(params):
     """
     Issue a request against the solr select endpoint.
 
+    Params is a list of [k, v] to support duplicate keys, which solr
+    uses a lot of.
+
     Args:
-        params: dict, see https://solr.apache.org/guide/8_9/common-query-parameters.html
+        params: list of list, see https://solr.apache.org/guide/8_9/common-query-parameters.html
 
     Returns:
         Iterator for the solr response.
@@ -265,7 +268,9 @@ def solr_query(params):
         "smile": "application/x-jackson-smile",
         "json": "application/json",
     }
-    content_type = wt_map.get(params.get("wt", "json").lower(), "json")
+    for k,v in params:
+        if k == "wt":
+            content_type = wt_map.get(v.lower(),"json")
     response = requests.get(url, headers=headers, params=params, stream=True)
     return fastapi.responses.StreamingResponse(
         response.iter_content(chunk_size=2048), media_type=content_type
