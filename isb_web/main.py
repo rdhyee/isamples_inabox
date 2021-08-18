@@ -132,6 +132,7 @@ async def thing_list_types(
     """List of types of things with counts"""
     return crud.getSampleTypes(db)
 
+
 def set_default_params(params, defs):
     for k in defs.keys():
         fnd = False
@@ -142,6 +143,7 @@ def set_default_params(params, defs):
         if not fnd:
             params.append([k, defs[k]])
     return params
+
 
 # TODO: Don't blindly accept user input!
 @app.get("/thing/select", response_model=typing.Any)
@@ -160,8 +162,8 @@ async def get_solr_select(request: fastapi.Request):
     }
     params = []
     # Update params with the provided parameters
-    for k,v in request.query_params.multi_items():
-        params.append([k,v])
+    for k, v in request.query_params.multi_items():
+        params.append([k, v])
     params = set_default_params(params, defparams)
     logging.warning(params)
     # response object is generated in the called method. This is necessary
@@ -263,6 +265,10 @@ async def get_things_geojson_heatmap(
         default="*:*",
         description="Solr query to use for selecting Things. Details at https://solr.apache.org/guide/6_6/the-standard-query-parser.html#the-standard-query-parser",
     ),
+    fq: str = Query(
+        default="",
+        description="Filter query to use for selecting Things. Details at https://solr.apache.org/guide/8_9/the-standard-query-parser.html#the-standard-query-parser",
+    ),
     min_lat: float = Query(
         default=-90.0,
         description="The minimum latitude for the bounding box in the Solr query. Valid values are -90.0 <= min_lat <= 90.",
@@ -291,7 +297,9 @@ async def get_things_geojson_heatmap(
         isb_solr_query.MIN_LON: min_lon,
         isb_solr_query.MAX_LON: max_lon,
     }
-    results = isb_solr_query.solr_geojson_heatmap(query, bounds, None, False, False)
+    results = isb_solr_query.solr_geojson_heatmap(
+        query, bounds, fq=fq, grid_level=None, show_bounds=False, show_solr_bounds=False
+    )
     return fastapi.responses.JSONResponse(content=results, media_type=MEDIA_GEO_JSON)
 
 
@@ -304,7 +312,11 @@ async def get_things_geojson_heatmap(
 async def get_things_leaflet_heatmap(
     query: str = Query(
         default="*:*",
-        description="Solr query to use for selecting Things. Details at https://solr.apache.org/guide/6_6/the-standard-query-parser.html#the-standard-query-parser",
+        description="Solr query to use for selecting Things. Details at https://solr.apache.org/guide/8_9/the-standard-query-parser.html#the-standard-query-parser",
+    ),
+    fq: str = Query(
+        default="",
+        description="Filter query to use for selecting Things. Details at https://solr.apache.org/guide/8_9/the-standard-query-parser.html#the-standard-query-parser",
     ),
     min_lat: float = Query(
         default=-90.0,
@@ -334,7 +346,7 @@ async def get_things_leaflet_heatmap(
         isb_solr_query.MIN_LON: min_lon,
         isb_solr_query.MAX_LON: max_lon,
     }
-    results = isb_solr_query.solr_leaflet_heatmap(query, bounds, None)
+    results = isb_solr_query.solr_leaflet_heatmap(query, bounds, fq=fq, grid_level=None)
     return fastapi.responses.JSONResponse(content=results, media_type=MEDIA_JSON)
 
 

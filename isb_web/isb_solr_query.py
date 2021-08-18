@@ -32,7 +32,11 @@ def clip_float(v, min_v, max_v):
 
 
 def _get_heatmap(
-    q: typing.AnyStr, bb: typing.Dict, dist_err_pct: float, grid_level=None
+    q: typing.AnyStr,
+    bb: typing.Dict,
+    dist_err_pct: float,
+    fq: typing.AnyStr = "",
+    grid_level=None,
 ) -> typing.Dict:
     # TODO: dealing with the antimeridian ("dateline") in the Solr request.
     # Should probably do this by computing two requests when the request BB
@@ -55,6 +59,8 @@ def _get_heatmap(
         # "facet.heatmap.gridLevel": grid_level,
         "facet.heatmap.geom": f"[{bb[MIN_LON]} {bb[MIN_LAT]} TO {bb[MAX_LON]} {bb[MAX_LAT]}]",
     }
+    if not fq is None:
+        params["fq"] = fq
     # if grid level is None, then Solr calculates an "appropriate" grid scale
     # based on the bounding box and distErrPct. Seems a bit off...
     if grid_level is not None:
@@ -78,9 +84,9 @@ def _get_heatmap(
 # Returns the generated features as a GeoJSON FeatureCollection,
 # https://datatracker.ietf.org/doc/html/rfc7946#section-3.3
 def solr_geojson_heatmap(
-    q, bb, grid_level=None, show_bounds=False, show_solr_bounds=False
+    q, bb, fq=None, grid_level=None, show_bounds=False, show_solr_bounds=False
 ):
-    hm = _get_heatmap(q, bb, _GEOJSON_ERR_PCT, grid_level)
+    hm = _get_heatmap(q, bb, _GEOJSON_ERR_PCT, fq=fq, grid_level=grid_level)
     # print(hm)
     gl = hm.get("gridLevel", -1)
     # logging.warning(hm)
@@ -214,8 +220,8 @@ def solr_geojson_heatmap(
 # centers of the solr heatmap grid cells. The value is the count
 # for the grid cell.
 # Suitable for consumption by leaflet: https://leafletjs.com
-def solr_leaflet_heatmap(q, bb, grid_level=None):
-    hm = _get_heatmap(q, bb, _LEAFLET_ERR_PCT, grid_level)
+def solr_leaflet_heatmap(q, bb, fq=None, grid_level=None):
+    hm = _get_heatmap(q, bb, _LEAFLET_ERR_PCT, fq=fq, grid_level=grid_level)
     # logging.warning(hm)
     d_lat = hm["maxY"] - hm["minY"]
     dd_lat = d_lat / (hm["rows"])
@@ -268,9 +274,9 @@ def solr_query(params):
         "smile": "application/x-jackson-smile",
         "json": "application/json",
     }
-    for k,v in params:
+    for k, v in params:
         if k == "wt":
-            content_type = wt_map.get(v.lower(),"json")
+            content_type = wt_map.get(v.lower(), "json")
     response = requests.get(url, headers=headers, params=params, stream=True)
     return fastapi.responses.StreamingResponse(
         response.iter_content(chunk_size=2048), media_type=content_type
