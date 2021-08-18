@@ -28,6 +28,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.0/MarkerCluster.min.css" integrity="sha512-ENrTWqddXrLJsQS2A86QmvA17PkJ0GVm1bqj5aTgpeMAfDKN2+SIOLpKG8R/6KkimnhTb+VW5qqUHB/r1zaRgg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.0/MarkerCluster.Default.css" integrity="sha512-6ZCLMiYwTeli2rVh3XAPxy3YoR5fVxGdH/pz+KMCzRY2M65Emgkw00Yqmhh8qLGeYQ3LbVZGdmOX9KUjSKr0TA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.0/leaflet.markercluster.js" integrity="sha512-pWPELjRaw2ZdoT0PDi7iRpRlk1XX3rtnfejJ/HwskyojpHei+9hKpwdphC4yssNt4FM0TjMQOmMrk6ZYSn274w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/spatial.js"></script>
 
     <!-- enough styling to make a full-page map -->
     <style>
@@ -42,8 +44,6 @@
     const FIELD = "producedBy_samplingSite_location_rpt";
     const PT_FIELD = "producedBy_samplingSite_location_ll";
     const MAX_ROWS = 5000;
-    const SOLR_RESERVED = ['+', '-', '&', '!', '(', ')', '{', '}', '[', ']', '^', '"', '~', '*', '?', ':', '\\'];
-    const SOLR_VALUE_REGEXP = new RegExp("(\\" + SOLR_RESERVED.join("|\\") + ")", "g");
     const DEFAULT_FACETS = [
         "source",
         "hasMaterialCategory",
@@ -71,9 +71,6 @@
         document.getElementById("show_docs").innerText = collection_metadata.show_docs;
     }
 
-    function escapeLucene(value) {
-        return value.replace(SOLR_VALUE_REGEXP, "\\$1");
-    }
 
     function getCollectionMetadata(){
         var url = "/thing/select/info";
@@ -141,16 +138,17 @@
         })
     }
 
-    function updatePointsLayer(q) {
+    function updatePointsLayer(q, fq) {
         var bb = map.getBounds();
-        var params = {
-            q: q,
-            fq: PT_FIELD + ":["+bb.getSouth()+","+bb.getWest()+" TO "+bb.getNorth()+","+bb.getEast()+"]",
-            rows: MAX_ROWS,
-            fl:"id," + PT_FIELD,
-            wt:"json"
-        }
-        var pts_url = "/thing/select?" + new URLSearchParams(params);
+        var pts_url = new URL("/thing/select", document.location);
+        let params = pts_url.searchParams;
+        params.append("q", q);
+        params.append("fq", fq);
+        params.append("fq",PT_FIELD + ":["+bb.getSouth()+","+bb.getWest()+" TO "+bb.getNorth()+","+bb.getEast()+"]");
+        params.append("rows", MAX_ROWS);
+        params.append("fl", "id,"+PT_FIELD);
+        params.append("wt", "json");
+        //var pts_url = "/thing/select?" + new URLSearchParams(params);
         fetch(pts_url)
             .then(response =>response.json())
             .then(data => {
@@ -178,7 +176,7 @@
     }
 
 
-    function updateHeatmapLayer(q) {
+    function updateHeatmapLayer(q, fq) {
         var bb = map.getBounds();
         var params = {
             query: q,
@@ -186,6 +184,9 @@
             min_lon: bb.getWest(),
             max_lat: bb.getNorth(),
             max_lon: bb.getEast()
+        }
+        if (fq !== undefined && fq !== '') {
+            params.fq = fq;
         }
 
         var hm_url = "/things_geojson_heatmap?" + new URLSearchParams(params);
@@ -216,7 +217,7 @@
                 collection_metadata.show_docs = data.total;
                 updateCurrentMeta();
                 if (data.total < MAX_ROWS) {
-                    updatePointsLayer(q);
+                    updatePointsLayer(q, fq);
                 }
             });
     }
@@ -238,9 +239,9 @@
         doZoom = function(e) {
             clearTimeout(_debounce);
             _debounce = setTimeout(function() {
-                var q = document.getElementById("query").value;
-                updateHeatmapLayer(q);
-                solrFacets(q);
+                const q = document.getElementById("query").value;
+                const fq =  document.getElementById("fquery").value;
+                updateHeatmapLayer(q, fq);
             }, 300);
         }
         //map.on("zoomend", doZoom);
@@ -258,32 +259,20 @@
     </script>
 </head>
 <body onLoad="initMap();">
-    <header>Displayng <span id="show_docs"></span> / <span id="match_docs"></span> / <span id="total_docs"></span> records</header>
+    <header x-data="{}">
+        <p>Displayng <span id="show_docs"></span> / <span id="match_docs"></span> / <span id="total_docs"></span> records</p>
+    </header>
     <main>
-        <section id="query_display">
-            <input  id="query" value="*:*"></input>
+        <section id="query_display" x-data="queryParams()" x-on:query-changed.window="update($event);">
+            <input  id="query" :value="q"></input>
+            <input  id="fquery" :value="fq"></input>
         </section>
         <section id="map_display">
             <div id="map"></div>
         </section>
-        <details>
-            <summary>Controlled Vocabs</summary>
-            <table x-data="{facets:{}}" x-on:facet-load.window="facets.hasSpecimenCategory = $event.detail.facet_info.hasSpecimenCategory; console.log( facets.hasSpecimenCategory );">
-                <thead>
-                    <tr><td>hasSpecimenCategory</td><td>Counts</td></tr>
-                </thead>
-                <tbody id="hasSpecimenCategory">
-                    <template x-for="(row, index) in facets.hasSpecimenCategory" :key="index">
-                        <tr>
-                            <td x-text="row.k"></td>
-                            <td x-text="row.v"></td>
-                        </tr>
-                    </template>
-                </tbody>
-            </table>
-        </details>
-        <section id="table_display"></section>
     </main>
-    <footer></footer>
+    <footer x-data="siteInfo()">
+        <p x-text="_info"></p>
+    </footer>
 </body>
 </html>

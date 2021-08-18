@@ -37,7 +37,7 @@ function getPivotTotal(pdata, f0) {
     return 0;
 }
 
-async function getSolrRecordSummary(query = "*:*", facets = DEFAULT_FACETS) {
+async function getSolrRecordSummary(query = DEFAULT_Q, facets = DEFAULT_FACETS, fq=null) {
     const TOTAL = "Total";
     var _url = new URL("/thing/select", document.location);
     let params = _url.searchParams;
@@ -69,7 +69,10 @@ async function getSolrRecordSummary(query = "*:*", facets = DEFAULT_FACETS) {
     facet_info.total_records = data.response.numFound;
     for (var i = 0; i < data.facet_counts.facet_fields[SOURCE].length; i += 2) {
         facet_info.sources.push(data.facet_counts.facet_fields[SOURCE][i]);
-        facet_info.totals[data.facet_counts.facet_fields[SOURCE][i]] = data.facet_counts.facet_fields[SOURCE][i + 1]
+        facet_info.totals[data.facet_counts.facet_fields[SOURCE][i]] = {
+            v:data.facet_counts.facet_fields[SOURCE][i + 1],
+            fq:SOURCE+":"+data.facet_counts.facet_fields[SOURCE][i]
+        };
     }
     for (const f in data.facet_counts.facet_fields) {
         /*
@@ -92,9 +95,15 @@ async function getSolrRecordSummary(query = "*:*", facets = DEFAULT_FACETS) {
             let k = data.facet_counts.facet_fields[f][i];
             entry._keys.push(k);
             entry[k] = {};
-            entry[k][TOTAL] = data.facet_counts.facet_fields[f][i + 1];
+            entry[k][TOTAL] = {
+                v:data.facet_counts.facet_fields[f][i + 1],
+                fq:f + ":" + escapeLucene(k)
+            };
             for (const col in columns) {
-                entry[k][columns[col]] = getPivotValue(_pdata, columns[col], k);
+                entry[k][columns[col]] = {
+                    v: getPivotValue(_pdata, columns[col], k),
+                    fq: SOURCE +":"+columns[col]+" AND " + f + ":" + escapeLucene(k)
+                }
             }
         }
         entry._keys.push(TOTAL);
@@ -102,7 +111,10 @@ async function getSolrRecordSummary(query = "*:*", facets = DEFAULT_FACETS) {
             TOTAL: MISSING_VALUE
         };
         for (const col in columns) {
-            entry[TOTAL][columns[col]] = getPivotTotal(_pdata, columns[col]);
+            entry[TOTAL][columns[col]] = {
+                v:getPivotTotal(_pdata, columns[col]),
+                fq:SOURCE + ":" + escapeLucene(columns[col])
+            };
         }
         facet_info.facets[f] = entry;
     }
@@ -114,13 +126,15 @@ Provide the overview data to the Alpine.js driven UI.
  */
 function dataSummary() {
     return {
-        query: "*:*",
+        query: DEFAULT_Q,
+        fquery: "",
         total_records: 0,
         sources: [],
         fields: [],
         facets: {
             source: [{}, {}, {}, {}]
         },
+        _q_debounce:null,
         // Update values, such as when the query changes
         update() {
             getSolrRecordSummary(this.query, DEFAULT_FACETS).then((res) => {
@@ -133,10 +147,20 @@ function dataSummary() {
         },
         // Called on initialization of the component
         init() {
-            const _qry = new URLSearchParams(window.location.search);
-            const _params = Object.fromEntries(_qry.entries());
+            const _params = getPageQueryParams();
             this.query = _params.q || this.query;
             this.update();
+        },
+        setFQ(query) {
+            clearTimeout(this._q_debounce);
+            let _this = this;
+            this._q_debounce = setTimeout(function() {
+                _this.fquery = query;
+                broadcastQuery(_this.query, _this.fquery);
+            }, HOVER_TIME);
+        },
+        cancelFQ() {
+            clearTimeout(this._q_debounce);
         }
     }
 }
