@@ -132,6 +132,53 @@ async def thing_list_types(
     """List of types of things with counts"""
     return crud.getSampleTypes(db)
 
+def set_default_params(params, defs):
+    for k in defs.keys():
+        fnd = False
+        for row in params:
+            if k == row[0]:
+                fnd = True
+                break
+        if not fnd:
+            params.append([k, defs[k]])
+    return params
+
+# TODO: Don't blindly accept user input!
+@app.get("/thing/select", response_model=typing.Any)
+async def get_solr_select(request: fastapi.Request):
+    """Send select request to the Solr isb_core_records collection.
+
+    See https://solr.apache.org/guide/8_9/common-query-parameters.html
+    """
+    # Somewhat sensible defaults
+    defparams = {
+        "wt": "json",
+        "q": "*:*",
+        "fl": "id",
+        "rows": 10,
+        "start": 0,
+    }
+    params = []
+    # Update params with the provided parameters
+    for k,v in request.query_params.multi_items():
+        params.append([k,v])
+    params = set_default_params(params, defparams)
+    logging.warning(params)
+    # response object is generated in the called method. This is necessary
+    # for the streaming response as otherwise the iterator is consumed
+    # before returning here, hence defeating the purpose of the streaming
+    # response.
+    return isb_solr_query.solr_query(params)
+
+
+@app.get("/thing/select/info", response_model=typing.Any)
+async def get_solr_luke_info():
+    """Retrieve information about the record schema.
+
+    Returns: JSON
+    """
+    return isb_solr_query.solr_luke()
+
 
 # TODO: Don't blindly accept user input!
 @app.get("/thing/select", response_model=typing.Any)
@@ -402,9 +449,14 @@ async def root(request: fastapi.Request):
     return templates.TemplateResponse("spatial.html", {"request": request})
 
 
-@app.get("/", include_in_schema=False)
+@app.get("/records", include_in_schema=False)
 async def root(request: fastapi.Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+
+@app.get("/", include_in_schema=False)
+async def root(request: fastapi.Request):
+    return templates.TemplateResponse("overview.html", {"request": request})
 
 
 def main():

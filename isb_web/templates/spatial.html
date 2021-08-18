@@ -11,6 +11,8 @@
             max-width: 95%;
         }
     </style>
+    <!-- using alpine.JS for UI interaction -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
         <!-- Leaflet as usual -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
@@ -40,6 +42,14 @@
     const FIELD = "producedBy_samplingSite_location_rpt";
     const PT_FIELD = "producedBy_samplingSite_location_ll";
     const MAX_ROWS = 5000;
+    const SOLR_RESERVED = ['+', '-', '&', '!', '(', ')', '{', '}', '[', ']', '^', '"', '~', '*', '?', ':', '\\'];
+    const SOLR_VALUE_REGEXP = new RegExp("(\\" + SOLR_RESERVED.join("|\\") + ")", "g");
+    const DEFAULT_FACETS = [
+        "source",
+        "hasMaterialCategory",
+        "hasSpecimenCategory",
+        "hasContextCategory",
+    ]
 
     var map = null;
     var _debounce;
@@ -50,6 +60,7 @@
         last_modified: "",
         field_name: []
     };
+    var facet_info = {};
 
     function updateUiMeta() {
         document.getElementById("total_docs").innerText = collection_metadata.total_docs;
@@ -58,6 +69,10 @@
     function updateCurrentMeta() {
         document.getElementById("match_docs").innerText = collection_metadata.match_docs;
         document.getElementById("show_docs").innerText = collection_metadata.show_docs;
+    }
+
+    function escapeLucene(value) {
+        return value.replace(SOLR_VALUE_REGEXP, "\\$1");
     }
 
     function getCollectionMetadata(){
@@ -82,6 +97,50 @@
         })
     }
 
+    function recordDetail(_id) {
+        const params = {
+            "q":"id:" + escapeLucene(_id),
+            "fl":"*",
+            "wt":"json"
+        }
+        let _url = "/thing/select?" + new URLSearchParams(params);
+        return "<a href='"+_url+"'>" + _id + "</a>";
+    }
+
+    function updateFacetsUI() {
+        let event = new CustomEvent("facet-load", {
+            detail: {
+                facet_info: facet_info
+            }
+        });
+        window.dispatchEvent(event);
+    }
+
+    function solrFacets(query="*:*", facets=DEFAULT_FACETS) {
+        var _url = new URL("/thing/select", document.location);
+        let params = _url.searchParams;
+        params.append("q", query);
+        params.append("facet","on");
+        params.append("facet.method", "enum");
+        params.append("wt","json");
+        for (var i=0; i < facets.length; i++) {
+            params.append("facet.field", facets[i]);
+        }
+        fetch(_url).then(response => response.json()).then(data => {
+            for (const f in data.facet_counts.facet_fields) {
+                let entry = [];
+                for (var i=0; i<data.facet_counts.facet_fields[f].length; i+=2){
+                    entry.push({
+                        k: data.facet_counts.facet_fields[f][i],
+                        v: data.facet_counts.facet_fields[f][i+1]
+                    });
+                }
+                facet_info[f] = entry;
+            }
+            updateFacetsUI();
+        })
+    }
+
     function updatePointsLayer(q) {
         var bb = map.getBounds();
         var params = {
@@ -103,7 +162,7 @@
                     pt[1] = parseFloat(pt[1]);
                     var m = L.marker(new L.LatLng(pt[0], pt[1]), {title:_doc["id"]});
                     m.bindPopup(_doc["id"]).openPopup();
-                    //m.bindPopup("<a href='/thing/"+_doc["id"]+"'>" +_doc["id"] + "</a>").openPopup();
+                    m.bindPopup(recordDetail(_doc["id"])).openPopup();
                     cluster.addLayer(m);
                 }
                 removeLayer("hmcluster");
@@ -168,7 +227,7 @@
             preferCanvas: true,
             updateWhenZooming: false,
             updateWhenIdle: true,
-            updateInterval: 1000
+            updateInterval: 1000,
         }
         map = L.map('map', map_opts).setView([0, 0], 2);
 
@@ -181,6 +240,7 @@
             _debounce = setTimeout(function() {
                 var q = document.getElementById("query").value;
                 updateHeatmapLayer(q);
+                solrFacets(q);
             }, 300);
         }
         //map.on("zoomend", doZoom);
@@ -206,6 +266,22 @@
         <section id="map_display">
             <div id="map"></div>
         </section>
+        <details>
+            <summary>Controlled Vocabs</summary>
+            <table x-data="{facets:{}}" x-on:facet-load.window="facets.hasSpecimenCategory = $event.detail.facet_info.hasSpecimenCategory; console.log( facets.hasSpecimenCategory );">
+                <thead>
+                    <tr><td>hasSpecimenCategory</td><td>Counts</td></tr>
+                </thead>
+                <tbody id="hasSpecimenCategory">
+                    <template x-for="(row, index) in facets.hasSpecimenCategory" :key="index">
+                        <tr>
+                            <td x-text="row.k"></td>
+                            <td x-text="row.v"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </details>
         <section id="table_display"></section>
     </main>
     <footer></footer>
