@@ -1,36 +1,22 @@
 // Name of the field for data sources
-const SOURCE="source";
+const SOURCE = "source";
 
 // Fields for faceting
 const DEFAULT_FACETS = [
     "hasMaterialCategory",
     "hasSpecimenCategory",
     "hasContextCategory",
-]
-
-MISSING_VALUE = "-9999";
-
-const FORMAT="0,0";
-
-function nFormat(v) {
-    if (v === undefined) {
-        return "";
-    }
-    if (v === MISSING_VALUE){
-        return v;
-    }
-    return numeral(v).format(FORMAT);
-}
+];
 
 // Get a value from the solr pivot table list of lists
 function getPivotValue(pdata, f0, f1) {
-    for (var p=0; p<pdata.length; p++) {
+    for (var p = 0; p < pdata.length; p++) {
         if (pdata[p].value === f0) {
             let _pivot = pdata[p].pivot;
             if (_pivot === undefined) {
                 return 0;
             }
-            for (var i=0; i<_pivot.length; i++) {
+            for (var i = 0; i < _pivot.length; i++) {
                 if (_pivot[i].value === f1) {
                     return _pivot[i].count;
                 }
@@ -43,7 +29,7 @@ function getPivotValue(pdata, f0, f1) {
 
 // Get a pivot total value from a solr pivot table
 function getPivotTotal(pdata, f0) {
-    for (var p=0; p<pdata.length; p++) {
+    for (var p = 0; p < pdata.length; p++) {
         if (pdata[p].value === f0) {
             return pdata[p].count;
         }
@@ -63,7 +49,7 @@ async function getSolrRecordSummary(query = "*:*", facets = DEFAULT_FACETS) {
     params.append("facet.field", SOURCE);
     for (var i = 0; i < facets.length; i++) {
         params.append("facet.field", facets[i]);
-        params.append("facet.pivot", SOURCE+"," + facets[i]);
+        params.append("facet.pivot", SOURCE + "," + facets[i]);
     }
     let response = await fetch(_url);
     let data = await response.json();
@@ -83,7 +69,7 @@ async function getSolrRecordSummary(query = "*:*", facets = DEFAULT_FACETS) {
     facet_info.total_records = data.response.numFound;
     for (var i = 0; i < data.facet_counts.facet_fields[SOURCE].length; i += 2) {
         facet_info.sources.push(data.facet_counts.facet_fields[SOURCE][i]);
-        facet_info.totals[data.facet_counts.facet_fields[SOURCE][i]] = data.facet_counts.facet_fields[SOURCE][i+1]
+        facet_info.totals[data.facet_counts.facet_fields[SOURCE][i]] = data.facet_counts.facet_fields[SOURCE][i + 1]
     }
     for (const f in data.facet_counts.facet_fields) {
         /*
@@ -101,7 +87,7 @@ async function getSolrRecordSummary(query = "*:*", facets = DEFAULT_FACETS) {
         }
         let entry = {_keys: []};
         let columns = facet_info.sources;
-        let _pdata = data.facet_counts.facet_pivot[SOURCE+","+f];
+        let _pdata = data.facet_counts.facet_pivot[SOURCE + "," + f];
         for (var i = 0; i < data.facet_counts.facet_fields[f].length; i += 2) {
             let k = data.facet_counts.facet_fields[f][i];
             entry._keys.push(k);
@@ -136,7 +122,7 @@ function dataSummary() {
             source: [{}, {}, {}, {}]
         },
         // Update values, such as when the query changes
-        update(){
+        update() {
             getSolrRecordSummary(this.query, DEFAULT_FACETS).then((res) => {
                 this.fields = res.fields;
                 this.totals = res.totals;
@@ -155,24 +141,6 @@ function dataSummary() {
     }
 }
 
-/*
-Gather some basic info about the repo.
- */
-function siteInfo() {
-    return {
-        _info: "",
-        init() {
-            const url = "https://api.github.com/repos/isamplesorg/isamples_inabox/commits/develop";
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    let _sha = data.sha.substr(0,7);
-                    var dmod = data.commit.author.date;
-                    this._info = "Revision " + _sha + " at " + dmod;
-                })
-        }
-    }
-}
 
 function onLoad() {
     //place holder to call when body is loaded
