@@ -98,7 +98,7 @@ tests = ["coverage[toml] (>=5.0.2)", "hypothesis", "pytest"]
 
 [[package]]
 name = "astropy"
-version = "4.3.post1"
+version = "4.3.1"
 description = "Astronomy and astrophysics core library"
 category = "main"
 optional = false
@@ -406,14 +406,6 @@ async = ["asgiref (>=3.2)"]
 dotenv = ["python-dotenv"]
 
 [[package]]
-name = "geojson"
-version = "2.5.0"
-description = "Python bindings and utilities for GeoJSON"
-category = "main"
-optional = false
-python-versions = "*"
-
-[[package]]
 name = "greenlet"
 version = "1.1.1"
 description = "Lightweight in-process concurrent programming"
@@ -505,7 +497,7 @@ python-versions = "*"
 
 [[package]]
 name = "ipykernel"
-version = "6.0.3"
+version = "6.1.0"
 description = "IPython Kernel for Jupyter"
 category = "dev"
 optional = false
@@ -584,7 +576,7 @@ test = ["pytest (>=3.6.0)", "pytest-cov", "mock"]
 
 [[package]]
 name = "isamples-metadata"
-version = "0.2.6"
+version = "0.2.7"
 description = ""
 category = "main"
 optional = false
@@ -601,8 +593,8 @@ requests = "^2.25.1"
 [package.source]
 type = "git"
 url = "https://github.com/isamplesorg/metadata.git"
-reference = "null_island"
-resolved_reference = "83a168e1b37628a6669520f376cf4f6e6141cdef"
+reference = "last_updated"
+resolved_reference = "b33d27e4fff8571490421bc7565e1459344eee28"
 
 [[package]]
 name = "itsdangerous"
@@ -1436,7 +1428,7 @@ full = ["aiofiles", "graphene", "itsdangerous", "jinja2", "python-multipart", "p
 
 [[package]]
 name = "terminado"
-version = "0.10.1"
+version = "0.11.0"
 description = "Tornado websocket backend for the Xterm.js Javascript terminal emulator library."
 category = "dev"
 optional = false
@@ -1517,15 +1509,26 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "tzdata"
+version = "2021.1"
+description = "Provider of IANA time zone data"
+category = "main"
+optional = false
+python-versions = ">=2"
+
+[[package]]
 name = "tzlocal"
-version = "2.1"
+version = "3.0"
 description = "tzinfo object for the local timezone"
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.6"
 
 [package.dependencies]
-pytz = "*"
+tzdata = {version = "*", markers = "platform_system == \"Windows\""}
+
+[package.extras]
+test = ["pytest-mock (>=3.3)", "pytest (>=4.3)"]
 
 [[package]]
 name = "urllib3"
@@ -1652,7 +1655,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "9066afaf87a9b78bbbe0ae0d022ca3f3d9217a0f54a269c973515f5da79bf43b"
+content-hash = "79f463b3446c549919d584369e369d222c17e5502294b87143c222c6ff8776d5"
 
 [metadata.files]
 accept-types = [
@@ -1743,22 +1746,22 @@ argon2-cffi = [
     {file = "argon2_cffi-20.1.0-pp37-pypy37_pp73-win_amd64.whl", hash = "sha256:36320372133a003374ef4275fbfce78b7ab581440dfca9f9471be3dd9a522428"},
 ]
 astropy = [
-    {file = "astropy-4.3.post1-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:460e07cb72789976421689833556a0a364dba89e25fe9183e669702dbcbf72c2"},
-    {file = "astropy-4.3.post1-cp37-cp37m-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:8062ece72d6fe6f4349219c9e2e0f213847de4f7f3bc3796ce7949bc1a202bf9"},
-    {file = "astropy-4.3.post1-cp37-cp37m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:8d70811b68f702d7b2e21fc0d644f88baf977482b1f915011460cc1b7fa285ea"},
-    {file = "astropy-4.3.post1-cp37-cp37m-win32.whl", hash = "sha256:1d879b91bbd61d69682c72b773d9c8851eff23e51cf1fb86b32dc80e783be643"},
-    {file = "astropy-4.3.post1-cp37-cp37m-win_amd64.whl", hash = "sha256:52c1038bad27e7ae1154eda0447ba790f13cb9bcb98e04c60493c2e547a87e6c"},
-    {file = "astropy-4.3.post1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:a420917baf9e02252e3477da265675167a324716f8a09e78607577b5bd27a159"},
-    {file = "astropy-4.3.post1-cp38-cp38-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:ffe13ed14298e819f2be5224aa649c44f8ddc9fcf32b5d4296fc62624ae867cd"},
-    {file = "astropy-4.3.post1-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:607739958f8fcc37d4f2efdb8b9bbcc3bf063c880e2d83104cf72a81c3e89b91"},
-    {file = "astropy-4.3.post1-cp38-cp38-win32.whl", hash = "sha256:e2670fc08868cd8d0d1e653dcfcf224b506235b30434742538702f74c6859d24"},
-    {file = "astropy-4.3.post1-cp38-cp38-win_amd64.whl", hash = "sha256:e95ddb6fb0850fe28690e498fe8d2c3cee72d54c098083a2fe0e01b7b3895771"},
-    {file = "astropy-4.3.post1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:a1b57aa21fdc8526dbca96b69cdcaba83066d7688ff52b87b7cdf5362e75f112"},
-    {file = "astropy-4.3.post1-cp39-cp39-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:be62ba888f0dd82a7265698a602e64ca2466f1f17bd6c4ef085a055c5968e458"},
-    {file = "astropy-4.3.post1-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:dc8acf92a20c9c916f25b17dbb0f618f91751941ec36f240452871e72fb608ca"},
-    {file = "astropy-4.3.post1-cp39-cp39-win32.whl", hash = "sha256:6779cc4c840128d12a6721d6fc835c826646967b019daaeacc6e71ed79850973"},
-    {file = "astropy-4.3.post1-cp39-cp39-win_amd64.whl", hash = "sha256:6ac307416a8718e4f4ed42f42c14587754fe6df38d822533c6d795db64a29453"},
-    {file = "astropy-4.3.post1.tar.gz", hash = "sha256:1b9f976f32675ae715bd38fcfb3540fcf01f6be1d75266c39b6fb085adac9410"},
+    {file = "astropy-4.3.1-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:a0764d7f68034c584dda8d1c9cc4357ade05cec4c1134db43bce804fcf656ff1"},
+    {file = "astropy-4.3.1-cp37-cp37m-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:ce1095e385ec74c655866eacd1853535fbc2dd2c42a8188503fe9a68b8a98ea0"},
+    {file = "astropy-4.3.1-cp37-cp37m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:9a01cc7b9d50f265d5d77e1f7206cda22c62720f5bed63158ee56440708848ea"},
+    {file = "astropy-4.3.1-cp37-cp37m-win32.whl", hash = "sha256:98bba44f60bb3584b3ad24d1ffad1763138d4d18fc7ca31921732d2449419dd9"},
+    {file = "astropy-4.3.1-cp37-cp37m-win_amd64.whl", hash = "sha256:aae1e9e6b2c7811070e4a3373c54eac603f882dc381a796b981a25c02e7fafe2"},
+    {file = "astropy-4.3.1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:6a5fb4ce4c964f02d7ac2b755f80f5210157a413cbfcdccbc25ad6e7586c258f"},
+    {file = "astropy-4.3.1-cp38-cp38-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:9e5613e897cb6da64330c5969981f576385491ff5ea61435218117d717a71ff2"},
+    {file = "astropy-4.3.1-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:0b4576d9bc2ab8359f2c4b87d0496c5ad768c7a14d1b16dc634ec24d22147c79"},
+    {file = "astropy-4.3.1-cp38-cp38-win32.whl", hash = "sha256:26f8dce66d3de8aa761508d76b99627ed745d99ec7c5e10289566c2082fa7dc3"},
+    {file = "astropy-4.3.1-cp38-cp38-win_amd64.whl", hash = "sha256:bcedff7bad0fbc70209751e8eb98eec7c0bd3f0e202f4ee7ff65b8ddf19d5e53"},
+    {file = "astropy-4.3.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:beddc4a365d696214e13ff9aa9362d418ecc112f1dba6338f8ac4218fe475e25"},
+    {file = "astropy-4.3.1-cp39-cp39-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:4b0ff70baee2a2c768cfc5f7966a371fa0741c93a7283d7e99d6a668f2606851"},
+    {file = "astropy-4.3.1-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:34992c0ac1da577d7a1b13171cd8097cdb4544f09687bbd27e433806d3fd2e9f"},
+    {file = "astropy-4.3.1-cp39-cp39-win32.whl", hash = "sha256:dcb6d7e6631d92d5d15b7ae4e0a994829609b09a4e3af2055995187edb8989e3"},
+    {file = "astropy-4.3.1-cp39-cp39-win_amd64.whl", hash = "sha256:434ab46e85f5406acc9f2d2084e5e36890abeaf615c8aa71178e835134b64726"},
+    {file = "astropy-4.3.1.tar.gz", hash = "sha256:2d3951223b4eb7f368fcad8c8340d27374c5d8e3b635a636275acdb38f35cd51"},
 ]
 asttokens = [
     {file = "asttokens-2.0.5-py2.py3-none-any.whl", hash = "sha256:0844691e88552595a6f4a4281a9f7f79b8dd45ca4ccea82e5e05b4bbdb76705c"},
@@ -1990,10 +1993,6 @@ flask = [
     {file = "Flask-2.0.1-py3-none-any.whl", hash = "sha256:a6209ca15eb63fc9385f38e452704113d679511d9574d09b2cf9183ae7d20dc9"},
     {file = "Flask-2.0.1.tar.gz", hash = "sha256:1c4c257b1892aec1398784c63791cbaa43062f1f7aeb555c4da961b20ee68f55"},
 ]
-geojson = [
-    {file = "geojson-2.5.0-py2.py3-none-any.whl", hash = "sha256:ccbd13368dd728f4e4f13ffe6aaf725b6e802c692ba0dde628be475040c534ba"},
-    {file = "geojson-2.5.0.tar.gz", hash = "sha256:6e4bb7ace4226a45d9c8c8b1348b3fc43540658359f93c3f7e03efa9f15f658a"},
-]
 greenlet = [
     {file = "greenlet-1.1.1-cp27-cp27m-macosx_10_14_x86_64.whl", hash = "sha256:476ba9435afaead4382fbab8f1882f75e3fb2285c35c9285abb3dd30237f9142"},
     {file = "greenlet-1.1.1-cp27-cp27m-manylinux1_x86_64.whl", hash = "sha256:44556302c0ab376e37939fd0058e1f0db2e769580d340fb03b01678d1ff25f68"},
@@ -2080,8 +2079,8 @@ iniconfig = [
     {file = "iniconfig-1.1.1.tar.gz", hash = "sha256:bc3af051d7d14b2ee5ef9969666def0cd1a000e121eaea580d4a313df4b37f32"},
 ]
 ipykernel = [
-    {file = "ipykernel-6.0.3-py3-none-any.whl", hash = "sha256:9f9f41a14caf2fde2b7802446adf83885afcbf50585a46d6c687292599a3c3af"},
-    {file = "ipykernel-6.0.3.tar.gz", hash = "sha256:0df34a78c7e1422800d6078cde65ccdcdb859597046c338c759db4dbc535c58f"},
+    {file = "ipykernel-6.1.0-py3-none-any.whl", hash = "sha256:804202fb4a621dce163bf88ce2687c98450d7ed728ef1d17d6f5ed20744c6e02"},
+    {file = "ipykernel-6.1.0.tar.gz", hash = "sha256:e21a718c696ded7d4d5e25b13d2bdd88e099e782fd3be66f9d2e66397543d283"},
 ]
 ipython = [
     {file = "ipython-7.26.0-py3-none-any.whl", hash = "sha256:892743b65c21ed72b806a3a602cca408520b3200b89d1924f4b3d2cdb3692362"},
@@ -2783,8 +2782,8 @@ starlette = [
     {file = "starlette-0.14.2.tar.gz", hash = "sha256:7d49f4a27f8742262ef1470608c59ddbc66baf37c148e938c7038e6bc7a998aa"},
 ]
 terminado = [
-    {file = "terminado-0.10.1-py3-none-any.whl", hash = "sha256:c89ace5bffd0e7268bdcf22526830eb787fd146ff9d78691a0528386f92b9ae3"},
-    {file = "terminado-0.10.1.tar.gz", hash = "sha256:89d5dac2f4e2b39758a0ff9a3b643707c95a020a6df36e70583b88297cd59cbe"},
+    {file = "terminado-0.11.0-py3-none-any.whl", hash = "sha256:221eef83e6a504894842f7dccfa971ca2e98ec22a8a9118577e5257527674b42"},
+    {file = "terminado-0.11.0.tar.gz", hash = "sha256:1e01183885f64c1bba3cf89a5a995ad4acfed4e5f00aebcce1bf7f089b0825a1"},
 ]
 testpath = [
     {file = "testpath-0.5.0-py3-none-any.whl", hash = "sha256:8044f9a0bab6567fc644a3593164e872543bb44225b0e24846e2c89237937589"},
@@ -2850,9 +2849,13 @@ typing-extensions = [
     {file = "typing_extensions-3.10.0.0-py3-none-any.whl", hash = "sha256:779383f6086d90c99ae41cf0ff39aac8a7937a9283ce0a414e5dd782f4c94a84"},
     {file = "typing_extensions-3.10.0.0.tar.gz", hash = "sha256:50b6f157849174217d0656f99dc82fe932884fb250826c18350e159ec6cdf342"},
 ]
+tzdata = [
+    {file = "tzdata-2021.1-py2.py3-none-any.whl", hash = "sha256:9ad21eada54c97001e3e9858a674b3ee6bebe4a4fb2b58465930f2af0ba6c85d"},
+    {file = "tzdata-2021.1.tar.gz", hash = "sha256:e19c7351f887522a1ac739d21041e592ddde6dd1b764fdefa8f7b2b3551d3d38"},
+]
 tzlocal = [
-    {file = "tzlocal-2.1-py2.py3-none-any.whl", hash = "sha256:e2cb6c6b5b604af38597403e9852872d7f534962ae2954c7f35efcb1ccacf4a4"},
-    {file = "tzlocal-2.1.tar.gz", hash = "sha256:643c97c5294aedc737780a49d9df30889321cbe1204eac2c2ec6134035a92e44"},
+    {file = "tzlocal-3.0-py3-none-any.whl", hash = "sha256:c736f2540713deb5938d789ca7c3fc25391e9a20803f05b60ec64987cf086559"},
+    {file = "tzlocal-3.0.tar.gz", hash = "sha256:f4e6e36db50499e0d92f79b67361041f048e2609d166e93456b50746dc4aef12"},
 ]
 urllib3 = [
     {file = "urllib3-1.26.6-py2.py3-none-any.whl", hash = "sha256:39fb8672126159acb139a7718dd10806104dec1e2f0f6c88aab05d17df10c8d4"},

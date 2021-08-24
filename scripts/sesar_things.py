@@ -26,10 +26,10 @@ def getLogger():
     return logging.getLogger("main")
 
 
-def wrapLoadThing(igsn, tc):
+def wrapLoadThing(igsn, tc, existing_thing: igsn_lib.models.thing.Thing = None):
     """Return request information to assist future management"""
     try:
-        return igsn, tc, isb_lib.sesar_adapter.loadThing(igsn, tc)
+        return igsn, tc, isb_lib.sesar_adapter.loadThing(igsn, tc, existing_thing)
     except:
         pass
     return igsn, tc, None
@@ -68,16 +68,17 @@ async def _loadSesarEntries(session, max_count, start_from=None):
                     igsn = igsn_lib.normalize(_id[0])
                     try:
                         res = (
-                            session.query(igsn_lib.models.thing.Thing.id)
+                            session.query(igsn_lib.models.thing.Thing)
                             .filter_by(id=isb_lib.sesar_adapter.fullIgsn(igsn))
                             .one()
                         )
                         logging.info("Already have %s at %s", igsn, _id[1])
+                        future = executor.submit(wrapLoadThing, igsn, _id[1], res)
                     except sqlalchemy.orm.exc.NoResultFound:
                         future = executor.submit(wrapLoadThing, igsn, _id[1])
-                        futures.append(future)
-                        working[igsn] = 0
-                        total_requested += 1
+                    futures.append(future)
+                    working[igsn] = 0
+                    total_requested += 1
                 except StopIteration as e:
                     L.info("Reached end of identifier iteration.")
                     num_prepared = 0
@@ -172,14 +173,9 @@ def loadRecords(ctx, max_records):
         max_records = 999999999
     session = isb_lib.core.get_db_session(ctx.obj["db_url"])
     try:
-        oldest_record = None
-        res = (
-            session.query(igsn_lib.models.thing.Thing)
-            .order_by(igsn_lib.models.thing.Thing.tcreated.desc())
-            .first()
+        oldest_record = isb_lib.core.last_time_thing_created(
+            session, isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID
         )
-        if not res is None:
-            oldest_record = res.tcreated
         logging.info("Oldest = %s", oldest_record)
         time.sleep(1)
         loadSesarEntries(session, max_records, start_from=oldest_record)
@@ -327,12 +323,18 @@ def reloadRecords(ctx, status_code):
 def populateIsbCoreSolr(ctx):
     L = getLogger()
     db_url = ctx.obj["db_url"]
+    max_solr_updated_date = isb_lib.core.solr_max_source_updated_time(
+        url="http://localhost:8983/api/collections/isb_core_records/",
+        authority_id=isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID,
+    )
+    L.info(f"Going to index Things with tcreated > {max_solr_updated_date}")
     solr_importer = isb_lib.core.CoreSolrImporter(
         db_url=db_url,
         authority_id=isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID,
         db_batch_size=1000,
         solr_batch_size=1000,
         solr_url="http://localhost:8983/api/collections/isb_core_records/",
+        min_time_created=max_solr_updated_date
     )
     allkeys = solr_importer.run_solr_import(isb_lib.sesar_adapter.reparseAsCoreRecord)
     L.info(f"Total keys= {len(allkeys)}")

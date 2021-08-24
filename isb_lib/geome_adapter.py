@@ -364,11 +364,11 @@ def reparseAsCoreRecord(thing: igsn_lib.models.thing.Thing) -> typing.List[typin
     _validateResolvedContent(thing)
     core_records = []
     transformer = isamples_metadata.GEOMETransformer.GEOMETransformer(thing.resolved_content)
-    parent_core_record = isb_lib.core.coreRecordAsSolrDoc(transformer.transform())
+    parent_core_record = isb_lib.core.coreRecordAsSolrDoc(transformer)
     _set_source_on_core_record(parent_core_record)
     core_records.append(parent_core_record)
     for child_transfomer in transformer.child_transformers:
-        child_core_record = isb_lib.core.coreRecordAsSolrDoc(child_transfomer.transform())
+        child_core_record = isb_lib.core.coreRecordAsSolrDoc(child_transfomer)
         _set_source_on_core_record(child_core_record)
         core_records.append(child_core_record)
     return core_records

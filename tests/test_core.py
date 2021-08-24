@@ -22,7 +22,7 @@ def test_IdentifierIterator(max_entries, expected_outcome):
 
 def _try_to_add_solr_doc(core_doc_str):
     core_doc = json.loads(core_doc_str)
-    solr_dict = isb_lib.core.coreRecordAsSolrDoc(core_doc)
+    solr_dict = isb_lib.core._coreRecordAsSolrDoc(core_doc)
     isb_lib.core.solrAddRecords(requests.session(), [solr_dict], url="http://localhost:8983/api/collections/isb_core_records/")
     return solr_dict
 
@@ -60,7 +60,7 @@ def test_coreRecordAsSolrDoc():
 }    
     """
     solr_dict = _try_to_add_solr_doc(core_doc_str)
-    assert "producedBy_samplingSite_location_latlon" in solr_dict
+    assert "producedBy_samplingSite_location_ll" in solr_dict
 
 def test_coreRecordAsSolrDoc2():
     core_doc_str = """

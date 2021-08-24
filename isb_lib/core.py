@@ -18,6 +18,7 @@ import re
 import requests
 import shapely.wkt
 import shapely.geometry
+from sqlalchemy import select
 
 RECOGNIZED_DATE_FORMATS = [
     "%Y",  # e.g. 1985
@@ -71,11 +72,41 @@ def things_main(ctx, db_url, verbosity, heart_rate):
     if heart_rate:
         heartrate.trace(browser=True)
 
+
 def get_db_session(db_url):
     engine = igsn_lib.models.getEngine(db_url)
     igsn_lib.models.createAll(engine)
     session = igsn_lib.models.getSession(engine)
     return session
+
+
+def last_time_thing_created(
+    session, authority_id: typing.AnyStr
+) -> typing.Optional[datetime.datetime]:
+    try:
+        # A bit of a hack to work around postgres perf issues.  Limit the number of records to examine by including a
+        # time created date in the qualifier.
+        current_year = datetime.datetime(year=datetime.date.today().year - 1, month=1, day=1).strftime("%Y-%m-%d")
+        return (
+            session.execute(
+                select(igsn_lib.models.thing.Thing.tcreated)
+                .where(igsn_lib.models.thing.Thing.authority_id == authority_id)
+                .where(igsn_lib.models.thing.Thing.tcreated >= current_year)
+                .limit(1)
+                .order_by(igsn_lib.models.thing.Thing.tcreated.desc())
+            )
+            .fetchone()
+            ._asdict()["tcreated"]
+        )
+    except:
+        e = sys.exc_info()[0]
+        getLogger().error(
+            "Exception trying to fetch the last time a thing was created for authority_id %s:\n\n%s",
+            authority_id,
+            e,
+        )
+        return None
+
 
 def datetimeToSolrStr(dt):
     if dt is None:
@@ -129,16 +160,7 @@ def _shouldAddMetadataValueToSolrDoc(metadata: typing.Dict, key: typing.AnyStr) 
             shouldAdd = True
     return shouldAdd
 
-
-def coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
-    """
-    Args:
-        coreMetadata: the iSamples Core metadata dictionary
-
-    Returns: The coreMetadata in solr document format, suitable for posting to the solr JSON api
-    (https://solr.apache.org/guide/8_1/json-request-api.html)
-    """
-
+def _coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
     # Before preparing the document in solr format, strip out any whitespace in string values
     for k, v in coreMetadata.items():
         if type(v) is str:
@@ -147,7 +169,10 @@ def coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
     doc = {
         "id": coreMetadata["sampleidentifier"],
         "isb_core_id": coreMetadata["@id"],
+        "indexUpdatedTime": datetimeToSolrStr(igsn_lib.time.dtnow())
     }
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "sourceUpdatedTime"):
+        doc["sourceUpdatedTime"] = coreMetadata["sourceUpdatedTime"]
     if _shouldAddMetadataValueToSolrDoc(coreMetadata, "label"):
         doc["label"] = coreMetadata["label"]
     if _shouldAddMetadataValueToSolrDoc(coreMetadata, "description"):
@@ -174,6 +199,24 @@ def coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
         handle_related_resources(coreMetadata, doc)
 
     return doc
+
+
+def coreRecordAsSolrDoc(transformer: Transformer) -> typing.Dict:
+    """
+    Args:
+        transformer: A Transformer instance containing the document to transform
+
+    Returns: The coreMetadata in solr document format, suitable for posting to the solr JSON api
+    (https://solr.apache.org/guide/8_1/json-request-api.html)
+    """
+    coreMetadata = transformer.transform()
+
+    last_updated = transformer.last_updated_time()
+    if last_updated is not None:
+        date_time = parsed_date(last_updated)
+        if date_time is not None:
+            coreMetadata["sourceUpdatedTime"] = datetimeToSolrStr(date_time)
+    return _coreRecordAsSolrDoc(coreMetadata)
 
 
 def handle_curation_fields(coreMetadata: typing.Dict, doc: typing.Dict):
@@ -302,6 +345,25 @@ def solrCommit(rsession, url):
     L.debug("Solr commit: %s", res.text)
 
 
+def solr_max_source_updated_time(
+    url: typing.AnyStr, authority_id: typing.AnyStr, rsession=requests.session()
+) -> typing.Optional[datetime.datetime]:
+    headers = {"Content-Type": "application/json"}
+    params = {
+        "q": f"source:{authority_id}",
+        "sort": "sourceUpdatedTime desc",
+        "rows": 1,
+    }
+    _url = f"{url}select"
+    res = rsession.get(_url, headers=headers, params=params)
+    dict = res.json()
+    docs = dict["response"]["docs"]
+    if docs is not None and len(docs) > 0:
+        return dateparser.parse(docs[0]["sourceUpdatedTime"])
+    else:
+        return None
+
+
 class IdentifierIterator:
     def __init__(
         self,
@@ -422,17 +484,21 @@ class ThingRecordIterator:
         status: int = 200,
         page_size: int = 5000,
         offset: int = 0,
+        min_time_created: datetime.datetime = None,
     ):
         self._session = session
-        sql = "SELECT * FROM thing WHERE resolved_status=:status"
+        sql = "SELECT * FROM thing WHERE resolved_status=:status and _id > :_id"
         params = {
             "status": status,
+            "_id": offset
         }
         if authority_id is not None:
             sql = sql + " AND authority_id=:authority_id"
             params["authority_id"] = authority_id
-        self._sql = sql + " ORDER BY _id OFFSET :offset FETCH NEXT :limit ROWS ONLY"
-        params["offset"] = offset
+        if min_time_created is not None:
+            sql = sql + " AND tcreated>=:tcreated"
+            params["tcreated"] = min_time_created
+        self._sql = sql + " ORDER BY _id asc limit :limit"
         params["limit"] = page_size
         self._params = params
 
@@ -440,13 +506,15 @@ class ThingRecordIterator:
         while True:
             n = 0
             qry = self._session.execute(self._sql, self._params)
+            max_id_in_page = 0
             for rec in qry:
                 n += 1
                 yield rec
+                max_id_in_page = rec["_id"]
             if n == 0:
                 break
-            # Set up to fetch the next 'limit' records
-            self._params["offset"] = self._params["offset"] + self._params["limit"]
+            # Grab the next page, by only selecting records with _id > than the last one we fetched
+            self._params["_id"] = max_id_in_page
 
 
 class CoreSolrImporter:
@@ -457,17 +525,20 @@ class CoreSolrImporter:
         db_batch_size: int,
         solr_batch_size: int,
         solr_url: typing.AnyStr,
-        offset: int = 0
+        offset: int = 0,
+        min_time_created: datetime.datetime = None,
     ):
         engine = igsn_lib.models.getEngine(db_url)
         igsn_lib.models.createAll(engine)
         self._db_session = igsn_lib.models.getSession(engine)
         self._authority_id = authority_id
+        self._min_time_created = min_time_created
         self._thing_iterator = ThingRecordIterator(
             self._db_session,
             authority_id=self._authority_id,
             page_size=db_batch_size,
-            offset=offset
+            offset=offset,
+            min_time_created=min_time_created,
         )
         self._db_batch_size = db_batch_size
         self._solr_batch_size = solr_batch_size

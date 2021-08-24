@@ -3,6 +3,7 @@ Module for parsing sitemap.xml documents.
 
 Chunks of this code based on https://github.com/scrapy/scrapy/blob/master/scrapy/utils/sitemap.py
 """
+import datetime
 import types
 import logging
 import re
@@ -124,11 +125,19 @@ class SiteMapIterator(object):
 
 
 class SiteMap(object):
-    def __init__(self, url, alt_rules=None):
+    def __init__(self, url, start_from: datetime.datetime, alt_rules=None):
         self.sitemap_url = url
         self.sitemap_alternate_links = False
         self.sitemap_rules = [("", "parse")]
         self.sitemap_follow = [""]
+        # The Sitemap timestamp is only a date with no timezone, so create a new datetime with only year, month, and day
+        if start_from is not None:
+            self.start_from = datetime.datetime(
+                year=start_from.year,
+                month=start_from.month,
+                day=start_from.day,
+                tzinfo=None
+            )
         self._session = requests.Session()
         self._cbs = []
         self._all_sitemaps = []  # list of all sitemaps visited
@@ -179,8 +188,11 @@ class SiteMap(object):
                         }
             elif s.type == "urlset":
                 for (loc, ts) in iterloc(s_it, self.sitemap_alternate_links):
+                    # ts looks like this: 2018-03-27, shockingly dateparser.parse was very slow on these
+                    pieces = ts.split("-")
+                    ts_datetime = datetime.datetime(year=int(pieces[0]), month=int(pieces[1]), day=int(pieces[2]), tzinfo=None)
                     for r, c in self._cbs:
-                        if r.search(loc):
+                        if r.search(loc) and ts_datetime >= self.start_from:
                             req = {
                                 "task": "load",
                                 "body": {"url": loc, "cb": c, "loc_timestamp": ts},

@@ -84,8 +84,17 @@ def addDynamicField(dynamic_field_dict: typing.Dict):
     res = requests.post(f"{SOLR_API}schema", headers=headers, data=data)
     pj(res.json())
 
+#############
+# Internal iSamples bookkeeping columns
 # createField("isb_core_id", "string", True, True, None)
 # createField("source", "string", True, True, None)
+# The time the record was last updated in the source db
+createField("sourceUpdatedTime", "pdate", True, True, None)
+# The time the record was last updated in the iSamples index
+createField("indexUpdatedTime", "pdate", True, True, None)
+#############
+
+
 # createField("label", "string", True, True, None)
 # createField("description", "string", True, True, None)
 # createField("description_text", "text_general", True, True, None)
@@ -162,7 +171,7 @@ def addDynamicField(dynamic_field_dict: typing.Dict):
 #     "stored":True
 # })
 
-deleteField("producedBy_samplingSite_location_latlon")
-createField("producedBy_samplingSite_location_ll", "location", True, True, None)
-createField("producedBy_samplingSite_location_bb", "bbox", True, True, None)
-createField("producedBy_samplingSite_location_rpt", "location_rpt", True, True, None)
+#deleteField("producedBy_samplingSite_location_latlon")
+#createField("producedBy_samplingSite_location_ll", "location", True, True, None)
+#createField("producedBy_samplingSite_location_bb", "bbox", True, True, None)
+#createField("producedBy_samplingSite_location_rpt", "location_rpt", True, True, None)

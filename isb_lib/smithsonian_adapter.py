@@ -89,7 +89,7 @@ def reparse_as_core_record(thing: igsn_lib.models.thing.Thing) -> typing.Dict:
         transformer = isamples_metadata.SmithsonianTransformer.SmithsonianTransformer(
             thing.resolved_content
         )
-        return isb_lib.core.coreRecordAsSolrDoc(transformer.transform())
+        return isb_lib.core.coreRecordAsSolrDoc(transformer)
     except Exception as e:
         logging.fatal(
             "Failed trying to run transformer on %s", str(thing.resolved_content)

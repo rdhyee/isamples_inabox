@@ -40,8 +40,13 @@ async def _load_open_context_entries(session, max_count, start_from):
         num_ids += 1
         id = record["uri"]
         try:
-            res = session.query(igsn_lib.models.thing.Thing.id).filter_by(id=id).one()
+            res = session.query(igsn_lib.models.thing.Thing).filter_by(id=id).one()
             logging.info("Already have %s", id)
+            isb_lib.opencontext_adapter.update_thing(
+                res, record, datetime.datetime.now(), records.last_url_str()
+            )
+            session.commit()
+            logging.info("Just saved existing thing")
         except sqlalchemy.orm.exc.NoResultFound:
             logging.debug("Don't have %s", id)
             thing = isb_lib.opencontext_adapter.load_thing(
@@ -116,9 +121,12 @@ def main(ctx, db_url, verbosity, heart_rate):
 def load_records(ctx, max_records):
     L = get_logger()
     session = isb_lib.core.get_db_session(ctx.obj["db_url"])
+    max_created = isb_lib.core.last_time_thing_created(
+        session, isb_lib.opencontext_adapter.OpenContextItem.AUTHORITY_ID
+    )
     L.info("loadRecords: %s", str(session))
     # ctx.obj["db_url"] = db_url
-    load_open_context_entries(session, max_records, None)
+    load_open_context_entries(session, max_records, max_created)
 
 
 @main.command("populate_isb_core_solr")
@@ -126,12 +134,18 @@ def load_records(ctx, max_records):
 def populate_isb_core_solr(ctx):
     L = get_logger()
     db_url = ctx.obj["db_url"]
+    max_solr_updated_date = isb_lib.core.solr_max_source_updated_time(
+        url="http://localhost:8983/api/collections/isb_core_records/",
+        authority_id=isb_lib.opencontext_adapter.OpenContextItem.AUTHORITY_ID,
+    )
+    L.info(f"Going to index Things with tcreated > {max_solr_updated_date}")
     solr_importer = isb_lib.core.CoreSolrImporter(
         db_url=db_url,
         authority_id=isb_lib.opencontext_adapter.OpenContextItem.AUTHORITY_ID,
         db_batch_size=1000,
         solr_batch_size=1000,
         solr_url="http://localhost:8983/api/collections/isb_core_records/",
+        min_time_created=max_solr_updated_date
     )
     allkeys = solr_importer.run_solr_import(isb_lib.opencontext_adapter.reparse_as_core_record)
     L.info(f"Total keys= {len(allkeys)}")

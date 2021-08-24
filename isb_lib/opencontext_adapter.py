@@ -106,6 +106,15 @@ class OpenContextRecordIterator(isb_lib.core.IdentifierIterator):
             data = response.json()
             for record in data.get("oc-api:has-results", {}):
                 L.info("records_in_page Record id: %s", record.get("uri", None))
+                record_updated = dateparser.parse(record["updated"])
+                if self._date_start is not None and record_updated is not None and record_updated < self._date_start:
+                    L.info(
+                        "Iterated record with updated date %s earlier than previous max %s. Update is complete.",
+                        record_updated,
+                        self._date_start
+                    )
+                    data = {}
+                    break
                 # print(json.dumps(record, indent=2))
                 # raise NotImplementedError
                 yield record
@@ -156,7 +165,7 @@ def reparse_as_core_record(thing: igsn_lib.models.thing.Thing) -> typing.Dict:
     _validate_resolved_content(thing)
     try:
         transformer = isamples_metadata.OpenContextTransformer.OpenContextTransformer(thing.resolved_content)
-        return isb_lib.core.coreRecordAsSolrDoc(transformer.transform())
+        return isb_lib.core.coreRecordAsSolrDoc(transformer)
     except Exception as e:
         get_logger().error("Failed trying to run transformer on %s", str(thing.resolved_content))
         raise
@@ -179,7 +188,7 @@ def load_thing(
     """
     L = get_logger()
     id = thing_dict["uri"]
-    t_created = dateparser.parse(thing_dict.get("published"))
+    t_created = dateparser.parse(thing_dict.get("updated"))
     L.info("loadThing: %s", id)
     item = OpenContextItem(id, thing_dict)
     # TODO, unlike the other collections, we are fetching these via a pre-paginated API, so we can't put anything in the
@@ -187,3 +196,17 @@ def load_thing(
     # nothing to do here, but it's a difference between collections.
     thing = item.as_thing(t_created, 200, url, t_resolved, None)
     return thing
+
+def update_thing(thing: igsn_lib.models.thing.Thing, updated_record: typing.Dict, t_resolved: datetime.datetime, url: typing.AnyStr):
+    """
+    Updates an existing Thing row in the database
+
+    Args:
+        thing: The thing row from the database
+        t_resolved: When the item was resolved from the source
+        url: The url the row was retrieved from
+    """
+    thing.resolved_content = updated_record
+    thing.tresolved = t_resolved
+    thing.tcreated = dateparser.parse(updated_record.get("updated"))
+    thing.resolved_url = url
