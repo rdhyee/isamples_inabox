@@ -303,6 +303,27 @@ def parsed_date(raw_date_str):
     return date_time
 
 
+def solr_delete_records(rsession, ids_to_delete: typing.List[typing.AnyStr], url):
+    L = getLogger()
+    headers = {"Content-Type": "application/json"}
+    dicts_to_delete = []
+    for id in ids_to_delete:
+        dicts_to_delete.append({"id": id})
+    params = {
+        "delete": dicts_to_delete,
+    }
+    data = json.dumps(params).encode("utf-8")
+    _url = f"{url}update?commit=true"
+    res = rsession.post(_url, headers=headers, data=data)
+    L.debug("post status: %s", res.status_code)
+    L.debug("Solr update: %s", res.text)
+    if res.status_code != 200:
+        L.error(res.text)
+        # TODO: something more elegant for error handling
+        raise ValueError()
+    else:
+        L.debug("Successfully posted data %s to url %s", str(data), str(_url))
+
 def solrAddRecords(rsession, records, url):
     """
     Push records to Solr.
@@ -363,6 +384,19 @@ def solr_max_source_updated_time(
     else:
         return None
 
+def sesar_fetch_lowercase_igsn_records(
+    url: typing.AnyStr, rows: int, rsession=requests.session()
+) -> typing.List[typing.Dict]:
+    headers = {"Content-Type": "application/json"}
+    params = {
+        "q": f"source:SESAR AND id:*igsn*",
+        "rows": rows,
+    }
+    _url = f"{url}select"
+    res = rsession.get(_url, headers=headers, params=params)
+    dict = res.json()
+    docs = dict["response"]["docs"]
+    return docs
 
 class IdentifierIterator:
     def __init__(
