@@ -207,6 +207,11 @@ async def get_solr_select(request: fastapi.Request):
     # response.
     return isb_solr_query.solr_query(params)
 
+@app.post("/thing/select", response_model=typing.Any)
+async def get_solr_query(request: fastapi.Request, query:typing.Any=fastapi.Body(...)):
+    logging.warning(query)
+    return isb_solr_query.solr_query(request.query_params, query=query)
+
 
 @app.get("/thing/select/info", response_model=typing.Any)
 async def get_solr_luke_info():
@@ -461,10 +466,13 @@ async def root(request: fastapi.Request):
     return templates.TemplateResponse("spatial.html", {"request": request})
 
 
-@app.get("/records", include_in_schema=False)
+@app.get("/records_orig", include_in_schema=False)
 async def root(request: fastapi.Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.get("/records", include_in_schema=False)
+async def root(request: fastapi.Request):
+    return templates.TemplateResponse("records.html", {"request": request})
 
 @app.get("/", include_in_schema=False)
 async def root(request: fastapi.Request):
