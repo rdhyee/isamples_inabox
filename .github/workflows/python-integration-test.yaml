@@ -4,11 +4,8 @@
  name: Python integration test
 
  on:
-#   schedule:
-#     - cron: '5 */4 * * *'
-   push:
-     branches:  
-       - '**'
+   schedule:
+     - cron: '* * * * *'
    workflow_dispatch:
 
  jobs:
