@@ -268,4 +268,4 @@ window.onclick = function(event) {
     if (event.target == reportModel) {
         reportModel.style.display = "none";
     }
-}
+} 
