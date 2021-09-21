@@ -1,19 +1,17 @@
 import os
 import uvicorn
-import datetime
 import typing
 import requests
-import json
 from fastapi.logger import logger as fastapi_logger
 import fastapi.staticfiles
 import fastapi.templating
 import fastapi.middleware.cors
-import sqlalchemy.orm
 import accept_types
-import pydantic
-from fastapi.params import Query
+from fastapi.params import Query, Depends
+from sqlmodel import Session
 
-from isb_web import database
+import isb_web
+from isb_web import sqlmodel_database
 from isb_web import schemas
 from isb_web import crud
 from isb_web import config
@@ -25,6 +23,9 @@ from isamples_metadata.OpenContextTransformer import OpenContextTransformer
 from isamples_metadata.SmithsonianTransformer import SmithsonianTransformer
 
 import logging
+
+from isb_web.schemas import ThingPage
+from isb_web.sqlmodel_database import SQLModelDAO
 
 THIS_PATH = os.path.dirname(os.path.abspath(__file__))
 WEB_ROOT = config.Settings().web_root
@@ -39,6 +40,7 @@ tags_metadata = [
     }
 ]
 app = fastapi.FastAPI(root_path=WEB_ROOT, openapi_tags=tags_metadata)
+dao = SQLModelDAO(None)
 
 app.add_middleware(
     fastapi.middleware.cors.CORSMiddleware,
@@ -57,6 +59,16 @@ templates = fastapi.templating.Jinja2Templates(
 )
 
 
+@app.on_event("startup")
+def on_startup():
+    dao.connect_sqlmodel(isb_web.config.Settings().database_url)
+
+
+def get_session():
+    with dao.get_session() as session:
+        yield session
+
+
 def predicateToURI(p: str):
     """
     Convert a predicate to a URI for n-quads generation.
@@ -73,44 +85,27 @@ def predicateToURI(p: str):
     return f"https://isamples.org/def/predicates/{p}"
 
 
-def getDb():
-    """
-    Get an instance of a database session with auto-close
-
-    Returns:
-        sqlalchemy.Session
-    """
-    db = database.SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
 @app.get("/thing", response_model=schemas.ThingListMeta)
 async def thing_list_metadata(
-    db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
+    session: Session = Depends(get_session),
 ):
     """Information about list identifiers"""
-    meta = crud.getThingMeta(db)
+    meta = sqlmodel_database.get_thing_meta(session)
     return meta
 
 
-@app.get("/thing/", response_model=schemas.ThingPage)
-async def thing_list(
+@app.get("/thing/", response_model=ThingPage)
+def thing_list(
     offset: int = fastapi.Query(0, ge=0),
     limit: int = fastapi.Query(1000, lt=10000, gt=0),
     status: int = 200,
     authority: str = fastapi.Query(None),
-    db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
+    session: Session = Depends(get_session),
 ):
-    """List identifiers of all Things on this service"""
-    fastapi_logger.info("test")
-    if limit <= 0:
-        return "limit must be > 0"
-    total_records, npages, things = crud.getThings(
-        db, offset=offset, limit=limit, status=status, authority_id=authority
+    total_records, npages, things = sqlmodel_database.read_things_summary(
+        session, offset, limit, status, authority
     )
+
     params = {
         "limit": limit,
         "offset": offset,
@@ -127,10 +122,10 @@ async def thing_list(
 
 @app.get("/thing/types", response_model=typing.List[schemas.ThingType])
 async def thing_list_types(
-    db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
+    session: Session = Depends(get_session),
 ):
     """List of types of things with counts"""
-    return crud.getSampleTypes(db)
+    return sqlmodel_database.get_sample_types(session)
 
 
 def set_default_params(params, defs):
@@ -222,10 +217,10 @@ async def get_thing(
     identifier: str,
     full: bool = False,
     format: isb_format.ISBFormat = isb_format.ISBFormat.ORIGINAL,
-    db: sqlalchemy.orm.Session = fastapi.Depends((getDb)),
+    session: Session = Depends(get_session),
 ):
     """Record for the specified identifier"""
-    item = crud.getThing(db, identifier)
+    item = sqlmodel_database.get_thing_with_id(session, identifier)
     if item is None:
         raise fastapi.HTTPException(
             status_code=404, detail=f"Thing not found: {identifier}"

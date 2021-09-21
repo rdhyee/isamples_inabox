@@ -1,24 +1,24 @@
 """
 
 """
-
 import logging
 import datetime
 import hashlib
 import json
 import typing
-import isamples_metadata.Transformer
 
 import igsn_lib.time
-import igsn_lib.models
-import igsn_lib.models.thing
+from isb_lib.models.thing import Thing
 from isamples_metadata.Transformer import Transformer
 import dateparser
 import re
 import requests
 import shapely.wkt
 import shapely.geometry
-from sqlalchemy import select
+import heartrate
+
+from isb_web import sqlmodel_database
+from isb_web.sqlmodel_database import SQLModelDAO
 
 RECOGNIZED_DATE_FORMATS = [
     "%Y",  # e.g. 1985
@@ -73,41 +73,6 @@ def things_main(ctx, db_url, verbosity, heart_rate):
         heartrate.trace(browser=True)
 
 
-def get_db_session(db_url):
-    engine = igsn_lib.models.getEngine(db_url)
-    igsn_lib.models.createAll(engine)
-    session = igsn_lib.models.getSession(engine)
-    return session
-
-
-def last_time_thing_created(
-    session, authority_id: typing.AnyStr
-) -> typing.Optional[datetime.datetime]:
-    try:
-        # A bit of a hack to work around postgres perf issues.  Limit the number of records to examine by including a
-        # time created date in the qualifier.
-        current_year = datetime.datetime(year=datetime.date.today().year - 1, month=1, day=1).strftime("%Y-%m-%d")
-        return (
-            session.execute(
-                select(igsn_lib.models.thing.Thing.tcreated)
-                .where(igsn_lib.models.thing.Thing.authority_id == authority_id)
-                .where(igsn_lib.models.thing.Thing.tcreated >= current_year)
-                .limit(1)
-                .order_by(igsn_lib.models.thing.Thing.tcreated.desc())
-            )
-            .fetchone()
-            ._asdict()["tcreated"]
-        )
-    except:
-        e = sys.exc_info()[0]
-        getLogger().error(
-            "Exception trying to fetch the last time a thing was created for authority_id %s:\n\n%s",
-            authority_id,
-            e,
-        )
-        return None
-
-
 def datetimeToSolrStr(dt):
     if dt is None:
         return None
@@ -133,7 +98,7 @@ def relationAsSolrDoc(
     doc["tstamp"] = datetimeToSolrStr(ts)
     return doc
 
-def validate_resolved_content(authority_id: typing.AnyStr, thing: igsn_lib.models.thing.Thing):
+def validate_resolved_content(authority_id: typing.AnyStr, thing: Thing):
     if not isinstance(thing.resolved_content, dict):
         raise ValueError("Thing.resolved_content is not an object")
     if not thing.authority_id == authority_id:
@@ -521,34 +486,34 @@ class ThingRecordIterator:
         min_time_created: datetime.datetime = None,
     ):
         self._session = session
-        sql = "SELECT * FROM thing WHERE resolved_status=:status and _id > :_id"
-        params = {
-            "status": status,
-            "_id": offset
-        }
-        if authority_id is not None:
-            sql = sql + " AND authority_id=:authority_id"
-            params["authority_id"] = authority_id
-        if min_time_created is not None:
-            sql = sql + " AND tcreated>=:tcreated"
-            params["tcreated"] = min_time_created
-        self._sql = sql + " ORDER BY _id asc limit :limit"
-        params["limit"] = page_size
-        self._params = params
+        self._authority_id = authority_id
+        self._status = status
+        self._page_size = page_size
+        self._offset = offset
+        self._min_time_created = min_time_created
+        self._id = offset
 
     def yieldRecordsByPage(self):
         while True:
             n = 0
-            qry = self._session.execute(self._sql, self._params)
+            things = sqlmodel_database.paged_things_with_ids(
+                self._session,
+                self._authority_id,
+                self._status,
+                self._page_size,
+                self._offset,
+                self._min_time_created,
+                self._id,
+            )
             max_id_in_page = 0
-            for rec in qry:
+            for rec in things:
                 n += 1
                 yield rec
-                max_id_in_page = rec["_id"]
+                max_id_in_page = rec.primary_key
             if n == 0:
                 break
             # Grab the next page, by only selecting records with _id > than the last one we fetched
-            self._params["_id"] = max_id_in_page
+            self._id = max_id_in_page
 
 
 class CoreSolrImporter:
@@ -562,9 +527,7 @@ class CoreSolrImporter:
         offset: int = 0,
         min_time_created: datetime.datetime = None,
     ):
-        engine = igsn_lib.models.getEngine(db_url)
-        igsn_lib.models.createAll(engine)
-        self._db_session = igsn_lib.models.getSession(engine)
+        self._db_session = SQLModelDAO(db_url).get_session()
         self._authority_id = authority_id
         self._min_time_created = min_time_created
         self._thing_iterator = ThingRecordIterator(

@@ -9,12 +9,12 @@ import igsn_lib
 import isb_lib.core
 import isb_lib.geome_adapter
 import igsn_lib.time
-import igsn_lib.models
-import igsn_lib.models.thing
 import asyncio
 import concurrent.futures
 import click
 import click_config_file
+from isb_lib.models.thing import Thing
+from isb_web.sqlmodel_database import SQLModelDAO, get_thing_with_id
 
 CONCURRENT_DOWNLOADS = 10
 BACKLOG_SIZE = 40
@@ -28,12 +28,12 @@ def wrapLoadThing(ark, tc):
         return ark, tc, isb_lib.geome_adapter.loadThing(ark, tc)
     except:
         pass
-    return ark, tc, None, None
+    return ark, tc, None
 
 
 def countThings(session):
     """Return number of things already collected in database"""
-    cnt = session.query(igsn_lib.models.thing.Thing).count()
+    cnt = session.query(Thing).count()
     return cnt
 
 
@@ -71,14 +71,10 @@ async def _loadGEOMEEntries(session, max_count, start_from=None):
                 try:
                     _id = next(ids)
                     identifier = _id[0]
-                    try:
-                        res = (
-                            session.query(igsn_lib.models.thing.Thing.id)
-                            .filter_by(id=identifier)
-                            .one()
-                        )
+                    existing_thing = get_thing_with_id(session, identifier)
+                    if existing_thing is not None:
                         logging.debug("Already have %s at %s", identifier, _id[1])
-                    except sqlalchemy.orm.exc.NoResultFound:
+                    else:
                         future = executor.submit(wrapLoadThing, identifier, _id[1])
                         futures.append(future)
                         working[identifier] = 0
@@ -178,12 +174,12 @@ def loadRecords(ctx, max_records):
     if max_records == -1:
         max_records = 999999999
 
-    session = isb_lib.core.get_db_session(ctx.obj["db_url"])
+    session = SQLModelDAO((ctx.obj["db_url"])).get_session()
     try:
         oldest_record = None
         res = (
-            session.query(igsn_lib.models.thing.Thing)
-            .order_by(igsn_lib.models.thing.Thing.tcreated.desc())
+            session.query(Thing)
+            .order_by(Thing.tcreated.desc())
             .first()
         )
         if not res is None:
@@ -218,11 +214,11 @@ def reparseRecords(ctx):
     L = getLogger()
     batch_size = 50
     L.info("reparseRecords with batch size: %s", batch_size)
-    session = isb_lib.core.get_db_session(ctx.obj["db_url"])
+    session = SQLModelDAO((ctx.obj["db_url"])).get_session()
     try:
         i = 0
-        qry = session.query(igsn_lib.models.thing.Thing)
-        pk = igsn_lib.models.thing.Thing.id
+        qry = session.query(Thing)
+        pk = Thing.id
         for thing in _yieldRecordsByPage(qry, pk):
             itype = thing.item_type
             isb_lib.geome_adapter.reparseThing(thing, and_relations=False)
@@ -258,16 +254,16 @@ def reparseRelations(ctx):
     rsession = requests.session()
     batch_size = 1000
     L.info("reparseRecords with batch size: %s", batch_size)
-    session = isb_lib.core.get_db_session(ctx.obj["db_url"])
+    session = SQLModelDAO(ctx.obj["db_url"]).get_session()
     allkeys = set()
     try:
         i = 0
         n = 0
-        qry = session.query(igsn_lib.models.thing.Thing).filter(
-            igsn_lib.models.thing.Thing.authority_id
+        qry = session.query(Thing).filter(
+            Thing.authority_id
             == isb_lib.geome_adapter.GEOMEItem.AUTHORITY_ID
         )
-        pk = igsn_lib.models.thing.Thing.id
+        pk = Thing.id
         relations = []
         for thing in _yieldRecordsByPage(qry, pk):
             batch = isb_lib.geome_adapter.reparseRelations(thing)
@@ -307,7 +303,7 @@ def reloadRecords(ctx, status_code):
     raise NotImplementedError("reloadRecords")
     L = getLogger()
     L.info("reloadRecords, status_code = %s", status_code)
-    session = isb_lib.core.get_db_session(ctx.obj["db_url"])
+    session = SQLModelDAO(ctx.obj["db_url"]).get_session()
     try:
         pass
 
@@ -322,7 +318,7 @@ def populateIsbCoreSolr(ctx):
     db_batch_size = 1000
     solr_batch_size = 20
     L.info("reparseRecords with batch size: %s", db_batch_size)
-    session = isb_lib.core.get_db_session(ctx.obj["db_url"])
+    session = SQLModelDAO(ctx.obj["db_url"]).get_session()
     allkeys = set()
     try:
         offset = 0

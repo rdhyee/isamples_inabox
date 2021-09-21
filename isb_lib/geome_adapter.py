@@ -15,9 +15,8 @@ import sickle.oaiexceptions
 import sickle.utils
 import igsn_lib.oai
 import igsn_lib.time
-import igsn_lib.models.thing
-import igsn_lib.models.relation
 import isb_lib.core
+from isb_lib.models.thing import Thing
 
 HTTP_TIMEOUT = 10.0  # seconds
 GEOME_API = "https://api.geome-db.org/v1/"
@@ -212,35 +211,6 @@ class GEOMEItem(object):
         self.identifier = identifier
         self.item = source
 
-    def asRelations(self):
-        related = []
-        _id = self.item.get("parent", {}).get("bcid", "")
-        _typ = self.item.get("parent", {}).get("entity", "UNDEFINED")
-        if _id != "":
-            related.append(
-                igsn_lib.models.relation.Relation(
-                    source=self.identifier,
-                    name="",
-                    s=self.identifier,
-                    p=GEOMEItem.RELATION_TYPE[_typ],
-                    o=_id,
-                )
-            )
-        for child in self.item.get("children", []):
-            _id = child.get("bcid")
-            if _id != "":
-                _typ = child.get("entity", "UNDEFINED")
-                related.append(
-                    igsn_lib.models.relation.Relation(
-                        source=self.identifier,
-                        name="",
-                        s=self.identifier,
-                        p=GEOMEItem.RELATION_TYPE[_typ],
-                        o=_id,
-                    )
-                )
-        return related
-
     def solrRelations(self):
         related = []
         _id = self.item.get("parent", {}).get("bcid", "")
@@ -290,7 +260,7 @@ class GEOMEItem(object):
         if t_created is None:
             parent_record = self.item.get("parent", {})
             t_created = geomeEventRecordTimestamp(parent_record)
-        _thing = igsn_lib.models.thing.Thing(
+        _thing = Thing(
             id=identifier,
             tcreated=t_created,
             item_type=None,
@@ -304,20 +274,18 @@ class GEOMEItem(object):
             L.error("Item is not an object")
             return _thing
         _thing.item_type = self.getItemType()
-        _thing.related = None
         _thing.resolved_media_type = media_type
         _thing.resolve_elapsed = resolve_elapsed
         _thing.resolved_content = self.item
         return _thing
 
-def _validateResolvedContent(thing: igsn_lib.models.thing.Thing):
+def _validateResolvedContent(thing: Thing):
     isb_lib.core.validate_resolved_content(GEOMEItem.AUTHORITY_ID, thing)
 
 def reparseRelations(thing):
     _validateResolvedContent(thing)
     item = GEOMEItem(thing.id, thing.resolved_content)
     return item.solrRelations()
-    #return item.asRelations()
 
 
 def reparseThing(thing):
@@ -360,7 +328,7 @@ def reloadThing(thing):
 def _set_source_on_core_record(core_record: typing.Dict):
     core_record["source"] = "GEOME"
 
-def reparseAsCoreRecord(thing: igsn_lib.models.thing.Thing) -> typing.List[typing.Dict]:
+def reparseAsCoreRecord(thing: Thing) -> typing.List[typing.Dict]:
     _validateResolvedContent(thing)
     core_records = []
     transformer = isamples_metadata.GEOMETransformer.GEOMETransformer(thing.resolved_content)

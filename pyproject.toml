@@ -28,6 +28,8 @@ geojson = "^2.5.0"
 # shouldn't be needed but poetry is having difficulty here
 pandas = "1.2.5"
 
+sqlmodel = "^0.0.4"
+
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.3"
 jupyter = "^1.0.0"

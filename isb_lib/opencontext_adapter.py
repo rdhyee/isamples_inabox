@@ -4,7 +4,7 @@ import time
 import isb_lib.core
 import logging
 import requests
-import igsn_lib.models.thing
+import isb_lib.models.thing
 import typing
 import dateparser
 import isamples_metadata.OpenContextTransformer
@@ -33,12 +33,12 @@ class OpenContextItem(object):
         t_resolved: datetime.datetime,
         resolve_elapsed: float,
         media_type: str = None,
-    ) -> igsn_lib.models.thing.Thing:
+    ) -> isb_lib.models.thing.Thing:
         L = get_logger()
         L.debug("OpenContextItem.asThing")
         if media_type is None:
             media_type = MEDIA_JSON
-        _thing = igsn_lib.models.thing.Thing(
+        _thing = isb_lib.models.thing.Thing(
             id=self.identifier,
             tcreated=t_created,
             item_type=None,
@@ -52,7 +52,6 @@ class OpenContextItem(object):
             L.error("Item is not an object")
             return _thing
         _thing.item_type = "sample"
-        _thing.related = None
         _thing.resolved_media_type = media_type
         # Note that we can't use this field in opencontext as the information is batched and we don't have access
         # to the raw http response here.
@@ -158,10 +157,10 @@ class OpenContextRecordIterator(isb_lib.core.IdentifierIterator):
     def last_url_str(self) -> typing.AnyStr:
         return self.url
 
-def _validate_resolved_content(thing: igsn_lib.models.thing.Thing):
+def _validate_resolved_content(thing: isb_lib.models.thing.Thing):
     isb_lib.core.validate_resolved_content(OpenContextItem.AUTHORITY_ID, thing)
 
-def reparse_as_core_record(thing: igsn_lib.models.thing.Thing) -> typing.Dict:
+def reparse_as_core_record(thing: isb_lib.models.thing.Thing) -> typing.Dict:
     _validate_resolved_content(thing)
     try:
         transformer = isamples_metadata.OpenContextTransformer.OpenContextTransformer(thing.resolved_content)
@@ -173,7 +172,7 @@ def reparse_as_core_record(thing: igsn_lib.models.thing.Thing) -> typing.Dict:
 
 def load_thing(
     thing_dict: typing.Dict, t_resolved: datetime.datetime, url: typing.AnyStr
-) -> igsn_lib.models.thing.Thing:
+) -> isb_lib.models.thing.Thing:
     """
     Load a thing from its source.
 
@@ -197,7 +196,7 @@ def load_thing(
     thing = item.as_thing(t_created, 200, url, t_resolved, None)
     return thing
 
-def update_thing(thing: igsn_lib.models.thing.Thing, updated_record: typing.Dict, t_resolved: datetime.datetime, url: typing.AnyStr):
+def update_thing(thing: isb_lib.models.thing.Thing, updated_record: typing.Dict, t_resolved: datetime.datetime, url: typing.AnyStr):
     """
     Updates an existing Thing row in the database
 

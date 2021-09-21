@@ -6,17 +6,17 @@ import json
 import isb_lib.smithsonian_adapter
 import logging
 import sqlalchemy
-import igsn_lib.models.thing
 import datetime
+from isb_web.sqlmodel_database import get_thing_with_id, SQLModelDAO
 
 
 def _save_record_to_db(session, file_path, record):
     id = record["id"]
     logging.info("got next id from smithsonian %s", id)
-    try:
-        res = session.query(igsn_lib.models.thing.Thing.id).filter_by(id=id).one()
+    existing_thing = get_thing_with_id(session, id)
+    if existing_thing is not None:
         logging.info("Already have %s", id)
-    except sqlalchemy.orm.exc.NoResultFound:
+    else:
         logging.debug("Don't have %s", id)
         thing = isb_lib.smithsonian_adapter.load_thing(
             record, datetime.datetime.now(), file_path
@@ -94,7 +94,7 @@ def main(ctx, db_url, verbosity, heart_rate):
 )
 @click.pass_context
 def load_records(ctx, max_records, file):
-    session = isb_lib.core.get_db_session(ctx.obj["db_url"])
+    session = SQLModelDAO(ctx.obj["db_url"]).get_session()
     logging.info("loadRecords: %s", str(session))
     load_smithsonian_entries(session, max_records, file, None)
 
