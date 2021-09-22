@@ -148,6 +148,9 @@ def loadGEOMEEntries(session, max_count, start_from=None):
     "-d", "--db_url", default=None, help="SQLAlchemy database URL for storage"
 )
 @click.option(
+    "-s", "--solr_url", default=None, help="Solr index URL"
+)
+@click.option(
     "-v", "--verbosity", default="INFO", help="Specify logging level", show_default=True
 )
 @click.option(
@@ -155,8 +158,8 @@ def loadGEOMEEntries(session, max_count, start_from=None):
 )
 @click_config_file.configuration_option(config_file_name="sesar.cfg")
 @click.pass_context
-def main(ctx, db_url, verbosity, heart_rate):
-    isb_lib.core.things_main(ctx, db_url, verbosity, heart_rate)
+def main(ctx, db_url, solr_url, verbosity, heart_rate):
+    isb_lib.core.things_main(ctx, db_url, solr_url, verbosity, heart_rate)
 
 
 @main.command("load")
@@ -319,6 +322,7 @@ def populateIsbCoreSolr(ctx):
     solr_batch_size = 20
     L.info("reparseRecords with batch size: %s", db_batch_size)
     session = SQLModelDAO(ctx.obj["db_url"]).get_session()
+    solr_url = ctx.obj["solr_url"]
     allkeys = set()
     try:
         offset = 0
@@ -337,11 +341,11 @@ def populateIsbCoreSolr(ctx):
                 allkeys.add(r["id"])
             batch_size = len(all_core_records)
             if batch_size > solr_batch_size:
-                isb_lib.core.solrAddRecords(rsession, all_core_records, url="http://localhost:8983/api/collections/isb_core_records/")
+                isb_lib.core.solrAddRecords(rsession, all_core_records, url=solr_url)
                 all_core_records = []
         if len(all_core_records) > 0:
-            isb_lib.core.solrAddRecords(rsession, all_core_records, url="http://localhost:8983/api/collections/isb_core_records/")
-        isb_lib.core.solrCommit(rsession, url="http://localhost:8983/api/collections/isb_core_records/")
+            isb_lib.core.solrAddRecords(rsession, all_core_records, url=solr_url)
+        isb_lib.core.solrCommit(rsession, url=solr_url)
         print(f"Total keys= {len(allkeys)}")
         # verify records
         # for verifying that all records were added to solr

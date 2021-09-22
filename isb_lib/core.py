@@ -63,12 +63,14 @@ def initialize_logging(verbosity: typing.AnyStr):
     if verbosity not in LOG_LEVELS.keys():
         L.warning("%s is not a log level, set to INFO", verbosity)
 
-def things_main(ctx, db_url, verbosity, heart_rate):
+def things_main(ctx, db_url, solr_url, verbosity, heart_rate):
     ctx.ensure_object(dict)
     initialize_logging(verbosity)
 
     getLogger().info("Using database at: %s", db_url)
     ctx.obj["db_url"] = db_url
+    getLogger().info("Using solr at: %s", solr_url)
+    ctx.obj["solr_url"] = solr_url
     if heart_rate:
         heartrate.trace(browser=True)
 
@@ -342,12 +344,15 @@ def solr_max_source_updated_time(
     }
     _url = f"{url}select"
     res = rsession.get(_url, headers=headers, params=params)
-    dict = res.json()
-    docs = dict["response"]["docs"]
-    if docs is not None and len(docs) > 0:
-        return dateparser.parse(docs[0]["sourceUpdatedTime"])
-    else:
-        return None
+    try:
+        dict = res.json()
+        docs = dict["response"]["docs"]
+        if docs is not None and len(docs) > 0:
+            return dateparser.parse(docs[0]["sourceUpdatedTime"])
+    except:
+        getLogger().error("Didn't get expected JSON back from %s when fetching max source updated time for %s", _url, authority_id)
+
+    return None
 
 def sesar_fetch_lowercase_igsn_records(
     url: typing.AnyStr, rows: int, rsession=requests.session()

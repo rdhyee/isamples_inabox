@@ -96,6 +96,9 @@ def load_open_context_entries(session, max_count, start_from=None):
     "-d", "--db_url", default=None, help="SQLAlchemy database URL for storage"
 )
 @click.option(
+    "-s", "--solr_url", default=None, help="Solr index URL"
+)
+@click.option(
     "-v",
     "--verbosity",
     default="DEBUG",
@@ -107,8 +110,8 @@ def load_open_context_entries(session, max_count, start_from=None):
 )
 @click_config_file.configuration_option(config_file_name="opencontext.cfg")
 @click.pass_context
-def main(ctx, db_url, verbosity, heart_rate):
-    isb_lib.core.things_main(ctx, db_url, verbosity, heart_rate)
+def main(ctx, db_url, solr_url, verbosity, heart_rate):
+    isb_lib.core.things_main(ctx, db_url, solr_url, verbosity, heart_rate)
 
 
 @main.command("load")
@@ -136,8 +139,9 @@ def load_records(ctx, max_records):
 def populate_isb_core_solr(ctx):
     L = get_logger()
     db_url = ctx.obj["db_url"]
+    solr_url = ctx.obj["solr_url"]
     max_solr_updated_date = isb_lib.core.solr_max_source_updated_time(
-        url="http://localhost:8983/api/collections/isb_core_records/",
+        url=solr_url,
         authority_id=isb_lib.opencontext_adapter.OpenContextItem.AUTHORITY_ID,
     )
     L.info(f"Going to index Things with tcreated > {max_solr_updated_date}")
@@ -146,7 +150,7 @@ def populate_isb_core_solr(ctx):
         authority_id=isb_lib.opencontext_adapter.OpenContextItem.AUTHORITY_ID,
         db_batch_size=1000,
         solr_batch_size=1000,
-        solr_url="http://localhost:8983/api/collections/isb_core_records/",
+        solr_url=solr_url,
         min_time_created=max_solr_updated_date
     )
     allkeys = solr_importer.run_solr_import(isb_lib.opencontext_adapter.reparse_as_core_record)

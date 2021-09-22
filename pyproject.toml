@@ -24,6 +24,8 @@ accept-types = "^0.4.1"
 isamples_metadata = {git = "https://github.com/isamplesorg/metadata.git", branch = "develop"}
 shapely = "^1.7.1"
 geojson = "^2.5.0"
+Jinja2 = "^3.0.1"
+heartrate = "^0.2.1"
 
 # shouldn't be needed but poetry is having difficulty here
 pandas = "1.2.5"

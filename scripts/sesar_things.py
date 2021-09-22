@@ -141,6 +141,9 @@ def loadSesarEntries(session, max_count, start_from=None):
     "-d", "--db_url", default=None, help="SQLAlchemy database URL for storage"
 )
 @click.option(
+    "-s", "--solr_url", default=None, help="Solr index URL"
+)
+@click.option(
     "-v", "--verbosity", default="INFO", help="Specify logging level", show_default=True
 )
 @click.option(
@@ -148,8 +151,8 @@ def loadSesarEntries(session, max_count, start_from=None):
 )
 @click_config_file.configuration_option(config_file_name="sesar.cfg")
 @click.pass_context
-def main(ctx, db_url, verbosity, heart_rate):
-    isb_lib.core.things_main(ctx, db_url, verbosity, heart_rate)
+def main(ctx, db_url, solr_url, verbosity, heart_rate):
+    isb_lib.core.things_main(ctx, db_url, solr_url, verbosity, heart_rate)
 
 
 @main.command("load")
@@ -299,8 +302,9 @@ def reloadRecords(ctx, status_code):
 def populateIsbCoreSolr(ctx):
     L = getLogger()
     db_url = ctx.obj["db_url"]
+    solr_url = ctx.obj["solr_url"]
     max_solr_updated_date = isb_lib.core.solr_max_source_updated_time(
-        url="http://localhost:8983/api/collections/isb_core_records/",
+        url=solr_url,
         authority_id=isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID,
     )
     L.info(f"Going to index Things with tcreated > {max_solr_updated_date}")
@@ -309,7 +313,7 @@ def populateIsbCoreSolr(ctx):
         authority_id=isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID,
         db_batch_size=1000,
         solr_batch_size=1000,
-        solr_url="http://localhost:8983/api/collections/isb_core_records/",
+        solr_url=solr_url,
         min_time_created=max_solr_updated_date
     )
     allkeys = solr_importer.run_solr_import(isb_lib.sesar_adapter.reparseAsCoreRecord)

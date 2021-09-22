@@ -1,6 +1,9 @@
 import datetime
 import sqlalchemy
 from typing import Optional, List
+
+from sqlalchemy import Index
+from sqlalchemy.exc import ProgrammingError
 from sqlmodel import SQLModel, create_engine, Session, select
 from isb_lib.models.thing import Thing
 from isb_web.schemas import ThingPage
@@ -19,6 +22,41 @@ class SQLModelDAO:
     def connect_sqlmodel(self, db_url: str):
         self.engine = create_engine(db_url, echo=False)
         SQLModel.metadata.create_all(self.engine)
+        # There doesn't appear to be a SQLModel-native way of creating those, so fall back to SQLAlchemy
+        id_resolved_status_authority_id_idx = Index(
+            "_id_resolved_status_authority_id_idx",
+            Thing.primary_key,
+            Thing.resolved_status,
+            Thing.authority_id,
+        )
+        # These index creations will throw if they already exist -- there's nothing to do in that case
+        try:
+            id_resolved_status_authority_id_idx.create(self.engine)
+        except ProgrammingError:
+            pass
+        authority_id_tcreated_idx = Index(
+            "authority_id_tcreated_idx", Thing.authority_id, Thing.tcreated
+        )
+        try:
+            authority_id_tcreated_idx.create(self.engine)
+        except ProgrammingError:
+            pass
+        item_type_status_idx = Index(
+            "item_type_status_idx", Thing.item_type, Thing.resolved_status
+        )
+        try:
+            item_type_status_idx.create(self.engine)
+        except ProgrammingError:
+            pass
+        resolved_status_authority_id_idx = Index(
+            "resolved_status_authority_id_idx",
+            Thing.resolved_status,
+            Thing.authority_id,
+        )
+        try:
+            resolved_status_authority_id_idx.create(self.engine)
+        except ProgrammingError:
+            pass
 
     def get_session(self) -> Session:
         return Session(self.engine)
@@ -92,7 +130,7 @@ def paged_things_with_ids(
     limit: int = 100,
     offset: int = 0,
     min_time_created: datetime.datetime = None,
-    min_id: int = 0
+    min_id: int = 0,
 ) -> List[Thing]:
     thing_select = select(Thing).filter(Thing.resolved_status == status)
     if authority is not None:
@@ -112,16 +150,12 @@ def paged_things_with_ids(
 def get_thing_meta(session: Session):
     dbq = session.query(
         sqlalchemy.sql.label("status", Thing.resolved_status),
-        sqlalchemy.sql.label(
-            "count", sqlalchemy.func.count(Thing.resolved_status)
-        ),
+        sqlalchemy.sql.label("count", sqlalchemy.func.count(Thing.resolved_status)),
     ).group_by(Thing.resolved_status)
     meta = {"status": dbq.all()}
     dbq = session.query(
         sqlalchemy.sql.label("authority", Thing.authority_id),
-        sqlalchemy.sql.label(
-            "count", sqlalchemy.func.count(Thing.authority_id)
-        ),
+        sqlalchemy.sql.label("count", sqlalchemy.func.count(Thing.authority_id)),
     ).group_by(Thing.authority_id)
     meta["authority"] = dbq.all()
     return meta
@@ -131,9 +165,7 @@ def get_sample_types(session: Session):
     dbq = (
         session.query(
             sqlalchemy.sql.label("item_type", Thing.item_type),
-            sqlalchemy.sql.label(
-                "count", sqlalchemy.func.count(Thing.item_type)
-            ),
+            sqlalchemy.sql.label("count", sqlalchemy.func.count(Thing.item_type)),
         )
         .filter(Thing.resolved_status == 200)
         .group_by(Thing.item_type)
