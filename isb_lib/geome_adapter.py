@@ -8,6 +8,7 @@ import datetime
 import typing
 import urllib.parse
 import json
+import dateparser
 
 import isamples_metadata.GEOMETransformer
 import requests
@@ -96,39 +97,65 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
     def recordsInProject(self, project_id, record_type):
         L = getLogger()
         L.debug("recordsInProject project %s", project_id)
-        url = f"{GEOME_API}records/{record_type}/json"
+        params = {"includePublic": "true", "admin": "false"}
+        url = f"{GEOME_API}projects/{project_id}/expeditions"
         headers = {
             "Accept": "application/json",
         }
         _page_size = 1000
-        params = {
-            "limit": _page_size,
-            "page": 0,
-            "q": f"_projects_:{project_id}",
-        }
-        more_work = True
-        while more_work:
-            response = requests.get(
-                url, params=params, headers=headers, timeout=HTTP_TIMEOUT
+        response = requests.get(
+            url, params=params, headers=headers, timeout=HTTP_TIMEOUT
+        )
+        if response.status_code != 200:
+            L.error(
+                "Unable to load project expeditions project:%s; status: %s; reason: %s",
+                project_id,
+                response.status_code,
+                response.reason,
             )
-            if response.status_code != 200:
-                L.error(
-                    "Unable to load records project:%s; status: %s; reason: %s",
-                    project_id,
-                    response.status_code,
-                    response.reason,
-                )
-                break
-            # L.debug("recordsInProject data: %s", response.text[:256])
-            data = response.json()
-            for record in data.get("content", {}).get(record_type, []):
-                L.debug("recordsInProject Record id: %s", record.get("bcid", None))
-                # print(json.dumps(record, indent=2))
-                # raise NotImplementedError
-                yield record
-            if len(data.get("content", {}).get(record_type, [])) < _page_size:
-                more_work = False
-            params["page"] = params["page"] + 1
+            return
+        expeditions_json = response.json()
+        if len(expeditions_json) == 0:
+            L.error("Project doesn't have any expeditions project:%s", project_id)
+        for expedition_dict in expeditions_json:
+            # Skip developer messages
+            if type(expedition_dict) is dict:
+                expedition_modified_date = expedition_dict["modified"]
+                expedition_modified_datetime = dateparser.parse(expedition_modified_date)
+                # For each expedition, check to see if the mod date is greater than the last time we fetched.
+                # If it is, fetch the bcids of the samples in the expedition.
+                if expedition_modified_datetime.timestamp() > self._date_start.timestamp():
+                    more_work = True
+                    params = {
+                        "limit": _page_size,
+                        "page": 0,
+                        "q": f"_expeditions_:{expedition_dict['expeditionCode']}",
+                    }
+                    while more_work:
+                        expedition_records_url = f"{GEOME_API}records/Sample/json"
+                        response = requests.get(
+                            expedition_records_url, params=params, headers=headers, timeout=HTTP_TIMEOUT
+                        )
+                        if response.status_code != 200:
+                            L.error(
+                                "Unable to load project expeditions project:%s; expedition:%s, status: %s; reason: %s",
+                                project_id,
+                                expedition_dict["expeditionCode"],
+                                response.status_code,
+                                response.reason,
+                            )
+                            break
+                        # L.debug("recordsInProject data: %s", response.text[:256])
+                        expeditions_json = response.json()
+
+                        for record in expeditions_json.get("content", {}).get(record_type, []):
+                            L.debug("recordsInProject Record id: %s", record.get("bcid", None))
+                            # When we yield here, yield both the record and the expedition modify date, since
+                            # we'll compare the modify date of the expedition when we go to fetch again.
+                            yield (record, expedition_modified_datetime)
+                        if len(expeditions_json.get("content", {}).get(record_type, [])) < _page_size:
+                            more_work = False
+                        params["page"] = params["page"] + 1
 
     def _loadEntries(self):
         L = getLogger()
@@ -150,13 +177,11 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
         for p in self._project_ids:
             # return the next set of identifiers within a project
             if not p["loaded"]:
-                for record in self.recordsInProject(p["project_id"], self._record_type):
+                for (record, modified_date) in self.recordsInProject(p["project_id"], self._record_type):
                     # record identifier
                     rid = record.get("bcid", None)
-                    # record timestamp
-                    t_collected = geomeEventRecordTimestamp(record)
                     if not rid is None:
-                        p["identifiers"].append((rid, t_collected))
+                        p["identifiers"].append((rid, modified_date))
                 p["loaded"] = True
                 L.info(
                     "Added %s identifiers from project %s",
@@ -297,7 +322,7 @@ def reparseThing(thing):
     return thing
 
 
-def loadThing(identifier, t_created):
+def loadThing(identifier: str, t_created: datetime.datetime, existing_thing: Thing) -> Thing:
     L = getLogger()
     L.info("loadThing: %s", identifier)
     response = getGEOMEItem_json(identifier, verify=True)
@@ -313,8 +338,18 @@ def loadThing(identifier, t_created):
         obj = response.json()
     except Exception as e:
         L.warning(e)
-    item = GEOMEItem(identifier, obj)
-    thing = item.asThing(t_created, r_status, r_url, t_resolved, elapsed, media_type)
+    if existing_thing is None:
+        item = GEOMEItem(identifier, obj)
+        thing = item.asThing(identifier, t_created, r_status, r_url, t_resolved, elapsed, media_type)
+    else:
+        # Already have the row fetched from the db, set the fields on it since it's a SQLModel proxy
+        thing = existing_thing
+        thing.resolved_content = obj
+        thing.resolved_url = r_url
+        thing.resolved_status = r_status
+        thing.tresolved = t_resolved
+        thing.resolve_elapsed = elapsed
+        thing.tcreated = t_created
     return thing
 
 
