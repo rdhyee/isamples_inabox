@@ -6,17 +6,17 @@ import json
 import isb_lib.smithsonian_adapter
 import logging
 import sqlalchemy
-import igsn_lib.models.thing
 import datetime
+from isb_web.sqlmodel_database import get_thing_with_id, SQLModelDAO
 
 
 def _save_record_to_db(session, file_path, record):
     id = record["id"]
     logging.info("got next id from smithsonian %s", id)
-    try:
-        res = session.query(igsn_lib.models.thing.Thing.id).filter_by(id=id).one()
+    existing_thing = get_thing_with_id(session, id)
+    if existing_thing is not None:
         logging.info("Already have %s", id)
-    except sqlalchemy.orm.exc.NoResultFound:
+    else:
         logging.debug("Don't have %s", id)
         thing = isb_lib.smithsonian_adapter.load_thing(
             record, datetime.datetime.now(), file_path
@@ -62,6 +62,9 @@ def load_smithsonian_entries(session, max_count, file_path, start_from=None):
     "-d", "--db_url", default=None, help="SQLAlchemy database URL for storage"
 )
 @click.option(
+    "-s", "--solr_url", default=None, help="Solr index URL"
+)
+@click.option(
     "-v",
     "--verbosity",
     default="DEBUG",
@@ -73,8 +76,8 @@ def load_smithsonian_entries(session, max_count, file_path, start_from=None):
 )
 @click_config_file.configuration_option(config_file_name="smithsonian.cfg")
 @click.pass_context
-def main(ctx, db_url, verbosity, heart_rate):
-    isb_lib.core.things_main(ctx, db_url, verbosity, heart_rate)
+def main(ctx, db_url, solr_url, verbosity, heart_rate):
+    isb_lib.core.things_main(ctx, db_url, solr_url, verbosity, heart_rate)
 
 
 @main.command("load")
@@ -94,7 +97,7 @@ def main(ctx, db_url, verbosity, heart_rate):
 )
 @click.pass_context
 def load_records(ctx, max_records, file):
-    session = isb_lib.core.get_db_session(ctx.obj["db_url"])
+    session = SQLModelDAO(ctx.obj["db_url"]).get_session()
     logging.info("loadRecords: %s", str(session))
     load_smithsonian_entries(session, max_records, file, None)
 
@@ -104,12 +107,13 @@ def load_records(ctx, max_records, file):
 def populate_isb_core_solr(ctx):
     L = isb_lib.core.getLogger()
     db_url = ctx.obj["db_url"]
+    solr_url = ctx.obj["solr_url"]
     solr_importer = isb_lib.core.CoreSolrImporter(
         db_url=db_url,
         authority_id=isb_lib.smithsonian_adapter.SmithsonianItem.AUTHORITY_ID,
         db_batch_size=1000,
         solr_batch_size=1000,
-        solr_url="http://localhost:8983/api/collections/isb_core_records/",
+        solr_url=solr_url,
     )
     allkeys = solr_importer.run_solr_import(
         isb_lib.smithsonian_adapter.reparse_as_core_record

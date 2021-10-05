@@ -12,13 +12,13 @@ import json
 import igsn_lib
 import igsn_lib.oai
 import igsn_lib.time
-import igsn_lib.models.thing
-import igsn_lib.models.relation
 import isb_lib.core
 import isb_lib.sitemaps
 import uuid
 import isamples_metadata.SESARTransformer
 import dateparser
+
+from isb_lib.models.thing import Thing
 
 HTTP_TIMEOUT = 10.0  # seconds
 ##############
@@ -79,39 +79,6 @@ class SESARItem(object):
         self.identifier = fullIgsn(identifier)
         self.item = source
 
-    def asRelations(self) -> typing.List[igsn_lib.models.relation.Relation]:
-        related = []
-        _id = self.item.get("description", {}).get("parentIdentifier", None)
-        if _id is not None:
-            _id = fullIgsn(_id)
-            related.append(
-                igsn_lib.models.relation.Relation(
-                    source=self.identifier,
-                    name="",
-                    s=self.identifier,
-                    p=SESARItem.RELATION_TYPE["parent"],
-                    o=_id,
-                )
-            )
-        for child in (
-            self.item.get("description", {})
-            .get("supplementMetadata", {})
-            .get("childIGSN", [])
-        ):
-            _id = fullIgsn(child)
-            related.append(
-                igsn_lib.models.relation.Relation(
-                    source=self.identifier,
-                    name="",
-                    s=self.identifier,
-                    p=SESARItem.RELATION_TYPE["child"],
-                    o=_id,
-                )
-            )
-        # Don't include siblings.
-        # Adding siblings adds about an order of magnitude more relations, and
-        # computing the siblings is simple - all the o with parent s
-        return related
 
     def solrRelations(self):
         """Provides a list of relation dicts suitable for adding to Solr"""
@@ -159,13 +126,13 @@ class SESARItem(object):
         t_resolved: datetime.datetime,
         resolve_elapsed: float,
         media_type: str = None,
-    ) -> igsn_lib.models.thing.Thing:
+    ) -> Thing:
         L = getLogger()
         L.debug("SESARItem.asThing")
         # Note: SESAR incorrectly returns "application/json;charset=UTF-8" for json-ld content
         if media_type is None:
             media_type = MEDIA_JSON_LD
-        _thing = igsn_lib.models.thing.Thing(
+        _thing = Thing(
             id=self.identifier,
             tcreated=t_created,
             item_type=None,
@@ -179,17 +146,16 @@ class SESARItem(object):
             L.error("Item is not an object")
             return _thing
         _thing.item_type = self.getItemType()
-        _thing.related = None
         _thing.resolved_media_type = media_type
         _thing.resolve_elapsed = resolve_elapsed
         _thing.resolved_content = self.item
         return _thing
 
 
-def _validateResolvedContent(thing: igsn_lib.models.thing.Thing):
+def _validateResolvedContent(thing: Thing):
     isb_lib.core.validate_resolved_content(SESARItem.AUTHORITY_ID, thing)
 
-def reparseRelations(thing: igsn_lib.models.thing.Thing, as_solr: bool = False):
+def reparseRelations(thing: Thing, as_solr: bool = False):
     _validateResolvedContent(thing)
     item = SESARItem(thing.id, thing.resolved_content)
     if as_solr:
@@ -197,7 +163,7 @@ def reparseRelations(thing: igsn_lib.models.thing.Thing, as_solr: bool = False):
     return item.asRelations()
 
 
-def reparseThing(thing: igsn_lib.models.thing.Thing) -> igsn_lib.models.thing.Thing:
+def reparseThing(thing: Thing) -> Thing:
     """Reparse the resolved_content"""
     _validateResolvedContent(thing)
     item = SESARItem(thing.resolved_content)
@@ -205,7 +171,7 @@ def reparseThing(thing: igsn_lib.models.thing.Thing) -> igsn_lib.models.thing.Th
     thing.tstamp = igsn_lib.time.dtnow()
     return thing
 
-def reparseAsCoreRecord(thing: igsn_lib.models.thing.Thing) -> typing.Dict:
+def reparseAsCoreRecord(thing: Thing) -> typing.Dict:
     _validateResolvedContent(thing)
     transformer = isamples_metadata.SESARTransformer.SESARTransformer(thing.resolved_content)
     return isb_lib.core.coreRecordAsSolrDoc(transformer)
@@ -221,8 +187,8 @@ def _sesar_last_updated(dict: typing.Dict) -> typing.Optional[datetime.datetime]
     return None
 
 def loadThing(
-    identifier: str, t_created: datetime.datetime, existing_thing: igsn_lib.models.thing.Thing
-) -> igsn_lib.models.thing.Thing:
+    identifier: str, t_created: datetime.datetime, existing_thing: Thing
+) -> Thing:
     """
     Load a thing from its source.
 

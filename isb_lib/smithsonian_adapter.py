@@ -5,8 +5,8 @@ import re
 import isamples_metadata.SmithsonianTransformer
 
 import isb_lib.core
-import igsn_lib.models.thing
 import logging
+from isb_lib.models.thing import Thing
 
 n2t_regex = re.compile(r"https?://n2t\.net/")
 
@@ -28,9 +28,9 @@ class SmithsonianItem(object):
         status: int,
         source_file_path: str,
         t_resolved: datetime.datetime,
-    ) -> igsn_lib.models.thing.Thing:
+    ) -> Thing:
         logging.debug("SmithsonianItem.asThing")
-        _thing = igsn_lib.models.thing.Thing(
+        _thing = Thing(
             id=self.identifier,
             tcreated=t_created,
             item_type=None,
@@ -44,7 +44,6 @@ class SmithsonianItem(object):
             L.error("Item is not an object")
             return _thing
         _thing.item_type = "sample"
-        _thing.related = None
         _thing.resolved_media_type = SmithsonianItem.TEXT_CSV
         # Note that this field doesn't make sense for Smithsonian as the information is coming from a local file
         # _thing.resolve_elapsed = resolve_elapsed
@@ -54,7 +53,7 @@ class SmithsonianItem(object):
 
 def load_thing(
     thing_dict: typing.Dict, t_resolved: datetime.datetime, file_path: typing.AnyStr
-) -> igsn_lib.models.thing.Thing:
+) -> Thing:
     """
     Load a thing from its source.
 
@@ -89,11 +88,11 @@ def load_thing(
     return thing
 
 
-def _validate_resolved_content(thing: igsn_lib.models.thing.Thing):
+def _validate_resolved_content(thing: Thing):
     isb_lib.core.validate_resolved_content(SmithsonianItem.AUTHORITY_ID, thing)
 
 
-def reparse_as_core_record(thing: igsn_lib.models.thing.Thing) -> typing.Dict:
+def reparse_as_core_record(thing: Thing) -> typing.Dict:
     _validate_resolved_content(thing)
     try:
         transformer = isamples_metadata.SmithsonianTransformer.SmithsonianTransformer(

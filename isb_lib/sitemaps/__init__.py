@@ -138,6 +138,8 @@ class SiteMap(object):
                 day=start_from.day,
                 tzinfo=None
             )
+        else:
+            self.start_from = None
         self._session = requests.Session()
         self._cbs = []
         self._all_sitemaps = []  # list of all sitemaps visited
@@ -192,7 +194,7 @@ class SiteMap(object):
                     pieces = ts.split("-")
                     ts_datetime = datetime.datetime(year=int(pieces[0]), month=int(pieces[1]), day=int(pieces[2]), tzinfo=None)
                     for r, c in self._cbs:
-                        if r.search(loc) and ts_datetime >= self.start_from:
+                        if r.search(loc) and self.start_from is None or ts_datetime >= self.start_from:
                             req = {
                                 "task": "load",
                                 "body": {"url": loc, "cb": c, "loc_timestamp": ts},
