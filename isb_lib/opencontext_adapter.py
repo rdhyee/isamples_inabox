@@ -196,6 +196,7 @@ def load_thing(
     thing = item.as_thing(t_created, 200, url, t_resolved, None)
     return thing
 
+
 def update_thing(thing: isb_lib.models.thing.Thing, updated_record: typing.Dict, t_resolved: datetime.datetime, url: typing.AnyStr):
     """
     Updates an existing Thing row in the database

@@ -1,11 +1,14 @@
 import datetime
 import sqlalchemy
+import logging
 from typing import Optional, List
 
 from sqlalchemy import Index
 from sqlalchemy.exc import ProgrammingError
 from sqlmodel import SQLModel, create_engine, Session, select
-from isb_lib.models.thing import Thing
+
+import isb_lib
+from isb_lib.models.thing import Thing, ThingIdentifier
 from isb_web.schemas import ThingPage
 
 
@@ -19,6 +22,13 @@ class SQLModelDAO:
         else:
             self.engine = None
 
+    # Utility method to attempt to create an index but catch an exception if it already exists
+    def _create_index(self, index: Index):
+        try:
+            index.create(self.engine)
+        except ProgrammingError:
+            pass
+
     def connect_sqlmodel(self, db_url: str):
         self.engine = create_engine(db_url, echo=False)
         SQLModel.metadata.create_all(self.engine)
@@ -30,33 +40,29 @@ class SQLModelDAO:
             Thing.authority_id,
         )
         # These index creations will throw if they already exist -- there's nothing to do in that case
-        try:
-            id_resolved_status_authority_id_idx.create(self.engine)
-        except ProgrammingError:
-            pass
+        self._create_index(id_resolved_status_authority_id_idx)
+
         authority_id_tcreated_idx = Index(
             "authority_id_tcreated_idx", Thing.authority_id, Thing.tcreated
         )
-        try:
-            authority_id_tcreated_idx.create(self.engine)
-        except ProgrammingError:
-            pass
+        self._create_index(authority_id_tcreated_idx)
+
         item_type_status_idx = Index(
             "item_type_status_idx", Thing.item_type, Thing.resolved_status
         )
-        try:
-            item_type_status_idx.create(self.engine)
-        except ProgrammingError:
-            pass
+        self._create_index(item_type_status_idx)
+
         resolved_status_authority_id_idx = Index(
             "resolved_status_authority_id_idx",
             Thing.resolved_status,
             Thing.authority_id,
         )
-        try:
-            resolved_status_authority_id_idx.create(self.engine)
-        except ProgrammingError:
-            pass
+        self._create_index(resolved_status_authority_id_idx)
+
+        guid_thing_id_idx = Index(
+            "guid_thing_id_idx", ThingIdentifier.guid, ThingIdentifier.thing_id
+        )
+        self._create_index(guid_thing_id_idx)
 
     def get_session(self) -> Session:
         return Session(self.engine)
@@ -101,7 +107,16 @@ def read_things_summary(
 
 def get_thing_with_id(session: Session, identifier: str) -> Optional[Thing]:
     statement = select(Thing).filter(Thing.id == identifier)
-    return session.exec(statement).first()
+    result = session.exec(statement).first()
+    if result is None:
+        # Fall back to querying the Identifiers table
+        join_statement = (
+            select(Thing)
+            .join(ThingIdentifier)
+            .where(ThingIdentifier.guid == identifier)
+        )
+        result = session.exec(join_statement).first()
+    return result
 
 
 def last_time_thing_created(
@@ -171,3 +186,74 @@ def get_sample_types(session: Session):
         .group_by(Thing.item_type)
     )
     return dbq.all()
+
+
+def _insert_geome_identifiers(session: Session, thing: Thing):
+    # For now, we will fail all requests for parent IDs, because events appear in multiple samples
+    # and would violate referential integrity if we made pointers to children from the event ID
+    # parent = thing.resolved_content.get("parent")
+    # if parent is not None:
+    #     event_ark = parent["bcid"]
+    #     if event_ark in arks_to_bp:
+    #         print()
+    #     event_identifier = ThingIdentifier(guid=event_ark, thing_id=thing.primary_key)
+    #     session.add(event_identifier)
+    children = thing.resolved_content.get("children")
+    if children is not None:
+        for child in children:
+            child_ark = child["bcid"]
+            child_identifier = ThingIdentifier(
+                guid=child_ark, thing_id=thing.primary_key
+            )
+            session.add(child_identifier)
+
+
+def _insert_open_context_identifiers(session: Session, thing: Thing):
+    citation_uri = thing.resolved_content["citation uri"]
+    if citation_uri is not None and type(citation_uri) is str:
+        open_context_uri = isb_lib.normalized_id(citation_uri)
+        open_context_identifier = ThingIdentifier(
+            guid=open_context_uri, thing_id=thing.primary_key
+        )
+        session.add(open_context_identifier)
+
+
+def _insert_standard_identifier(session: Session, thing: Thing):
+    thing_identifier = ThingIdentifier(guid=thing.id, thing_id=thing.primary_key)
+    session.add(thing_identifier)
+
+
+def insert_identifiers(session: Session, thing: Thing):
+    if thing.authority_id == "GEOME":
+        _insert_geome_identifiers(session, thing)
+    elif thing.authority_id == "OPENCONTEXT":
+        _insert_open_context_identifiers(session, thing)
+    _insert_standard_identifier(session, thing)
+
+
+def delete_identifiers(session: Session, thing: Thing) -> bool:
+    if thing.primary_key is None:
+        # No pk, hasn't been saved
+        return False
+    else:
+        identifier_select = select(ThingIdentifier).where(
+            ThingIdentifier.thing_id == thing.primary_key
+        )
+        thing_identifiers = session.exec(identifier_select).all()
+        for identifier in thing_identifiers:
+            session.delete(identifier)
+        session.commit()
+        return True
+
+
+def save_thing(session: Session, thing: Thing):
+    logging.debug("Going to delete existing identifiers (if any)")
+    delete_identifiers(session, thing)
+    logging.debug("Going to add thing to session")
+    session.add(thing)
+    logging.debug("Added thing to session")
+    session.commit()
+    logging.debug("committed session")
+    insert_identifiers(session, thing)
+    logging.debug("going to insert identifiers")
+    session.commit()

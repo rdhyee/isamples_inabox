@@ -1,18 +1,14 @@
 import typing
 import datetime
-import re
 
 import isamples_metadata.SmithsonianTransformer
 
+import isb_lib
 import isb_lib.core
 import logging
+
 from isb_lib.models.thing import Thing
 
-n2t_regex = re.compile(r"https?://n2t\.net/")
-
-
-def _normalized_id(raw_id: typing.AnyStr) -> typing.AnyStr:
-    return n2t_regex.sub("", raw_id)
 
 class SmithsonianItem(object):
     AUTHORITY_ID = "SMITHSONIAN"
@@ -41,7 +37,7 @@ class SmithsonianItem(object):
             resolve_elapsed=0,
         )
         if not isinstance(self.source_item, dict):
-            L.error("Item is not an object")
+            logging.error("Item is not an object")
             return _thing
         _thing.item_type = "sample"
         _thing.resolved_media_type = SmithsonianItem.TEXT_CSV
@@ -71,7 +67,7 @@ def load_thing(
     # For the purposes of the Things db, we want to use a normalized form of the identifier.  Note that there is one
     # other column in the Smithsonian dump that we'd need to transform to the normalized form if we wanted to use it,
     # that is occurrenceID.  Currently it is unused in our Transformer codebase.
-    normalized_id = _normalized_id(thing_dict["id"])
+    normalized_id = isb_lib.normalized_id(thing_dict["id"])
     try:
         t_created = datetime.datetime(
             year=int(thing_dict["year"]),

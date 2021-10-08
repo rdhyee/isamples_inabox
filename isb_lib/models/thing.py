@@ -2,12 +2,9 @@ import igsn_lib.time
 import json
 from typing import Optional
 import typing
-from sqlmodel import Field, SQLModel, create_engine, Session, select
+from sqlmodel import Field, SQLModel
 from datetime import datetime
 import sqlalchemy
-import isb_web.config
-import click
-import click_config_file
 
 
 class Thing(SQLModel, table=True):
@@ -94,3 +91,21 @@ class Thing(SQLModel, table=True):
             "resolved_media_type": self.resolved_media_type,
         }
         return res
+
+
+class ThingIdentifier(SQLModel, table=True):
+    guid: Optional[str] = Field(
+        primary_key=True,
+        default=None,
+        nullable=False,
+        index=False,
+        description="The String GUID",
+    )
+    tstamp: datetime = Field(
+        default=igsn_lib.time.dtnow(),
+        description="When the identifier was added to this database",
+        index=False,
+    )
+    thing_id: Optional[int] = Field(
+        default=None, nullable=False, foreign_key="thing._id", index=False
+    )

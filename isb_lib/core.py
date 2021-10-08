@@ -63,6 +63,10 @@ def initialize_logging(verbosity: typing.AnyStr):
     if verbosity not in LOG_LEVELS.keys():
         L.warning("%s is not a log level, set to INFO", verbosity)
 
+
+
+
+
 def things_main(ctx, db_url, solr_url, verbosity, heart_rate):
     ctx.ensure_object(dict)
     initialize_logging(verbosity)

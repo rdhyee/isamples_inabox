@@ -1,9 +1,15 @@
 import json
 import datetime
+import typing
+import re
+
 
 JSON_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 """datetime format string for generating JSON content
 """
+
+n2t_regex = re.compile(r"https?://n2t\.net/")
+
 
 def datetimeToJsonStr(dt):
     """Convert datetime to a JSON compatible string"""
@@ -20,6 +26,11 @@ def _jsonConverter(o):
         return datetimeToJsonStr(o)
     return o.__str__()
 
+
 def jsonDumps(obj):
     """Dump object as JSON, handling date conversion"""
     return json.dumps(obj, indent=2, default=_jsonConverter, sort_keys=True)
+
+
+def normalized_id(raw_id: typing.AnyStr) -> typing.AnyStr:
+    return n2t_regex.sub("", raw_id)
