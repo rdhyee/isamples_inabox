@@ -372,6 +372,21 @@ def sesar_fetch_lowercase_igsn_records(
     docs = dict["response"]["docs"]
     return docs
 
+def opencontext_fetch_broken_id_records(
+    url: typing.AnyStr, rows: int, rsession=requests.session()
+) -> typing.List[typing.Dict]:
+    headers = {"Content-Type": "application/json"}
+    params = {
+        "q": f"source:OPENCONTEXT AND id:http*",
+        "rows": rows,
+    }
+    _url = f"{url}select"
+    res = rsession.get(_url, headers=headers, params=params)
+    dict = res.json()
+    docs = dict["response"]["docs"]
+    return docs
+
+
 class IdentifierIterator:
     def __init__(
         self,
