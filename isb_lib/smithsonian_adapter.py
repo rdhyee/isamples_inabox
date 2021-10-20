@@ -88,13 +88,13 @@ def _validate_resolved_content(thing: Thing):
     isb_lib.core.validate_resolved_content(SmithsonianItem.AUTHORITY_ID, thing)
 
 
-def reparse_as_core_record(thing: Thing) -> typing.Dict:
+def reparse_as_core_record(thing: Thing) -> typing.List[typing.Dict]:
     _validate_resolved_content(thing)
     try:
         transformer = isamples_metadata.SmithsonianTransformer.SmithsonianTransformer(
             thing.resolved_content
         )
-        return isb_lib.core.coreRecordAsSolrDoc(transformer)
+        return [isb_lib.core.coreRecordAsSolrDoc(transformer)]
     except Exception as e:
         logging.fatal(
             "Failed trying to run transformer on %s", str(thing.resolved_content)

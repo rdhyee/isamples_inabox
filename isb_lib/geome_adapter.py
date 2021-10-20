@@ -152,7 +152,7 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
                             L.debug("recordsInProject Record id: %s", record.get("bcid", None))
                             # When we yield here, yield both the record and the expedition modify date, since
                             # we'll compare the modify date of the expedition when we go to fetch again.
-                            yield (record, expedition_modified_datetime)
+                            yield record, expedition_modified_datetime
                         if len(expeditions_json.get("content", {}).get(record_type, [])) < _page_size:
                             more_work = False
                         params["page"] = params["page"] + 1
@@ -360,18 +360,14 @@ def reloadThing(thing):
     identifier = igsn_lib.normalize(thing.id)
     return loadThing(identifier, thing.tcreated)
 
-def _set_source_on_core_record(core_record: typing.Dict):
-    core_record["source"] = "GEOME"
 
 def reparseAsCoreRecord(thing: Thing) -> typing.List[typing.Dict]:
     _validateResolvedContent(thing)
     core_records = []
-    transformer = isamples_metadata.GEOMETransformer.GEOMETransformer(thing.resolved_content)
+    transformer = isamples_metadata.GEOMETransformer.GEOMETransformer(thing.resolved_content, thing.tcreated)
     parent_core_record = isb_lib.core.coreRecordAsSolrDoc(transformer)
-    _set_source_on_core_record(parent_core_record)
     core_records.append(parent_core_record)
     for child_transfomer in transformer.child_transformers:
         child_core_record = isb_lib.core.coreRecordAsSolrDoc(child_transfomer)
-        _set_source_on_core_record(child_core_record)
         core_records.append(child_core_record)
     return core_records
