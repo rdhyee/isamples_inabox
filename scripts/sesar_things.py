@@ -1,7 +1,5 @@
 import logging
-import os
 import time
-import json
 import requests
 import sqlalchemy
 import sqlalchemy.orm
@@ -10,38 +8,27 @@ import igsn_lib
 import isb_lib.core
 import isb_lib.sesar_adapter
 import igsn_lib.time
-import igsn_lib.models
-import igsn_lib.models.thing
 import asyncio
 import concurrent.futures
 import click
 import click_config_file
-import heartrate
+
+from isb_lib.models.thing import Thing
+from isb_web import sqlmodel_database
+from isb_web.sqlmodel_database import SQLModelDAO
 
 CONCURRENT_DOWNLOADS = 10
 BACKLOG_SIZE = 40
-
-LOG_LEVELS = {
-    "DEBUG": logging.DEBUG,
-    "INFO": logging.INFO,
-    "WARNING": logging.WARNING,
-    "WARN": logging.WARNING,
-    "ERROR": logging.ERROR,
-    "FATAL": logging.CRITICAL,
-    "CRITICAL": logging.CRITICAL,
-}
-LOG_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
-LOG_FORMAT = "%(asctime)s %(name)s:%(levelname)s: %(message)s"
 
 
 def getLogger():
     return logging.getLogger("main")
 
 
-def wrapLoadThing(igsn, tc):
+def wrapLoadThing(igsn, tc, existing_thing: Thing = None):
     """Return request information to assist future management"""
     try:
-        return igsn, tc, isb_lib.sesar_adapter.loadThing(igsn, tc)
+        return igsn, tc, isb_lib.sesar_adapter.loadThing(igsn, tc, existing_thing)
     except:
         pass
     return igsn, tc, None
@@ -49,7 +36,7 @@ def wrapLoadThing(igsn, tc):
 
 def countThings(session):
     """Return number of things already collected in database"""
-    cnt = session.query(igsn_lib.models.thing.Thing).count()
+    cnt = session.query(Thing).count()
     return cnt
 
 
@@ -78,18 +65,15 @@ async def _loadSesarEntries(session, max_count, start_from=None):
                 try:
                     _id = next(ids)
                     igsn = igsn_lib.normalize(_id[0])
-                    try:
-                        res = (
-                            session.query(igsn_lib.models.thing.Thing.id)
-                            .filter_by(id=isb_lib.sesar_adapter.fullIgsn(igsn))
-                            .one()
-                        )
-                        logging.info("Already have %s at %s", igsn, _id[1])
-                    except sqlalchemy.orm.exc.NoResultFound:
+                    existing_thing = sqlmodel_database.get_thing_with_id(session, isb_lib.sesar_adapter.fullIgsn(igsn))
+                    if existing_thing is not None:
+                        logging.info("Already have %s at %s", igsn, existing_thing)
+                        future = executor.submit(wrapLoadThing, igsn, _id[1], existing_thing)
+                    else:
                         future = executor.submit(wrapLoadThing, igsn, _id[1])
-                        futures.append(future)
-                        working[igsn] = 0
-                        total_requested += 1
+                    futures.append(future)
+                    working[igsn] = 0
+                    total_requested += 1
                 except StopIteration as e:
                     L.info("Reached end of identifier iteration.")
                     num_prepared = 0
@@ -152,16 +136,12 @@ def loadSesarEntries(session, max_count, start_from=None):
     loop.run_until_complete(future)
 
 
-def getDBSession(db_url):
-    engine = igsn_lib.models.getEngine(db_url)
-    igsn_lib.models.createAll(engine)
-    session = igsn_lib.models.getSession(engine)
-    return session
-
-
 @click.group()
 @click.option(
     "-d", "--db_url", default=None, help="SQLAlchemy database URL for storage"
+)
+@click.option(
+    "-s", "--solr_url", default=None, help="Solr index URL"
 )
 @click.option(
     "-v", "--verbosity", default="INFO", help="Specify logging level", show_default=True
@@ -171,22 +151,8 @@ def getDBSession(db_url):
 )
 @click_config_file.configuration_option(config_file_name="sesar.cfg")
 @click.pass_context
-def main(ctx, db_url, verbosity, heart_rate):
-    ctx.ensure_object(dict)
-    verbosity = verbosity.upper()
-    logging.basicConfig(
-        level=LOG_LEVELS.get(verbosity, logging.INFO),
-        format=LOG_FORMAT,
-        datefmt=LOG_DATE_FORMAT,
-    )
-    L = getLogger()
-    if verbosity not in LOG_LEVELS.keys():
-        L.warning("%s is not a log level, set to INFO", verbosity)
-
-    L.info("Using database at: %s", db_url)
-    ctx.obj["db_url"] = db_url
-    if heart_rate:
-        heartrate.trace(browser=True)
+def main(ctx, db_url, solr_url, verbosity, heart_rate):
+    isb_lib.core.things_main(ctx, db_url, solr_url, verbosity, heart_rate)
 
 
 @main.command("load")
@@ -203,16 +169,11 @@ def loadRecords(ctx, max_records):
     L.info("loadRecords, max = %s", max_records)
     if max_records == -1:
         max_records = 999999999
-    session = getDBSession(ctx.obj["db_url"])
+    session = SQLModelDAO(ctx.obj["db_url"]).get_session()
     try:
-        oldest_record = None
-        res = (
-            session.query(igsn_lib.models.thing.Thing)
-            .order_by(igsn_lib.models.thing.Thing.tcreated.desc())
-            .first()
+        oldest_record = sqlmodel_database.last_time_thing_created(
+            session, isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID
         )
-        if not res is None:
-            oldest_record = res.tcreated
         logging.info("Oldest = %s", oldest_record)
         time.sleep(1)
         loadSesarEntries(session, max_records, start_from=oldest_record)
@@ -241,11 +202,11 @@ def reparseRecords(ctx):
     L = getLogger()
     batch_size = 50
     L.info("reparseRecords with batch size: %s", batch_size)
-    session = getDBSession(ctx.obj["db_url"])
+    session = SQLModelDAO(ctx.obj["db_url"]).get_session()
     try:
         i = 0
-        qry = session.query(igsn_lib.models.thing.Thing)
-        pk = igsn_lib.models.thing.Thing.id
+        qry = session.query(Thing)
+        pk = Thing.id
         for thing in _yieldRecordsByPage(qry, pk):
             itype = thing.item_type
             isb_lib.sesar_adapter.reparseThing(thing)
@@ -262,62 +223,23 @@ def reparseRecords(ctx):
 @main.command("relations")
 @click.pass_context
 def reparseRelations(ctx):
-    def _yieldRecordsByPage(session, authority_id="SESAR", status=200, page_size=5000):
-        offset = 0
-        while True:
-            n = 0
-            sql = "SELECT * FROM thing WHERE resolved_status=:status"
-            params = {
-                "status": status,
-            }
-            if authority_id is not None:
-                sql = sql + " AND authority_id=:authority_id"
-                params["authority_id"] = authority_id
-            sql = sql + " ORDER BY _id OFFSET :offset FETCH NEXT :limit ROWS ONLY"
-            params["offset"] = offset
-            params["limit"] = page_size
-            qry = session.execute(sql, params)
-            for rec in qry:
-                n += 1
-                yield rec
-            if n == 0:
-                break
-            offset += page_size
-
-    # This method is retained for reference to adding relations to the relations database table
-    def _commit(session, relations):
-        L = getLogger()
-        try:
-            session.bulk_save_objects(relations, preserve_order=False)
-            session.commit()
-            return
-        except sqlalchemy.exc.IntegrityError as e:
-            session.rollback()
-        if len(relations) < 2:
-            return
-        for relation in relations:
-            try:
-                session.add(relation)
-                session.commit()
-            except sqlalchemy.exc.IntegrityError as e:
-                session.rollback()
-                L.debug("relation already committed: %s", relation.source)
-
     L = getLogger()
     rsession = requests.session()
     batch_size = 5000
     L.info("reparseRecords with batch size: %s", batch_size)
-    session = getDBSession(ctx.obj["db_url"])
+    session = SQLModelDAO(ctx.obj["db_url"]).get_session()
     allkeys = set()
     try:
         i = 0
         n = 0
         relations = []
-        for thing in _yieldRecordsByPage(
+        thing_iterator = isb_lib.core.ThingRecordIterator(
             session,
             authority_id=isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID,
             page_size=batch_size,
-        ):
+            offset=0,
+        )
+        for thing in thing_iterator.yieldRecordsByPage():
             batch = isb_lib.sesar_adapter.reparseRelations(thing, as_solr=True)
             relations = relations + batch
             for r in relations:
@@ -329,11 +251,15 @@ def reparseRelations(ctx):
                     "%s: relations id:%s num_rel:%s, total:%s", i, thing.id, _rel_len, n
                 )
             if _rel_len > batch_size:
-                isb_lib.core.solrAddRecords(rsession, relations)
+                isb_lib.core.solrAddRecords(
+                    rsession, relations, "http://localhost:8983/solr/isb_rel/"
+                )
                 relations = []
             i += 1
-        isb_lib.core.solrAddRecords(rsession, relations)
-        isb_lib.core.solrCommit(rsession)
+        isb_lib.core.solrAddRecords(
+            rsession, relations, "http://localhost:8983/solr/isb_rel/"
+        )
+        isb_lib.core.solrCommit(rsession, "http://localhost:8983/solr/isb_rel/")
         print(f"Total keys= {len(allkeys)}")
         # verify records
         # for verifying that all records were added to solr
@@ -363,12 +289,35 @@ def reloadRecords(ctx, status_code):
     L = getLogger()
     L.info("reloadRecords, status_code = %s", status_code)
     raise NotImplementedError("reloadRecords")
-    session = getDBSession(ctx.obj["db_url"])
+    session = SQLModelDAO(ctx.obj["db_url"]).get_session()
     try:
         pass
 
     finally:
         session.close()
+
+
+@main.command("populate_isb_core_solr")
+@click.pass_context
+def populateIsbCoreSolr(ctx):
+    L = getLogger()
+    db_url = ctx.obj["db_url"]
+    solr_url = ctx.obj["solr_url"]
+    max_solr_updated_date = isb_lib.core.solr_max_source_updated_time(
+        url=solr_url,
+        authority_id=isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID,
+    )
+    L.info(f"Going to index Things with tcreated > {max_solr_updated_date}")
+    solr_importer = isb_lib.core.CoreSolrImporter(
+        db_url=db_url,
+        authority_id=isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID,
+        db_batch_size=1000,
+        solr_batch_size=1000,
+        solr_url=solr_url,
+        min_time_created=max_solr_updated_date
+    )
+    allkeys = solr_importer.run_solr_import(isb_lib.sesar_adapter.reparseAsCoreRecord)
+    L.info(f"Total keys= {len(allkeys)}")
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     web_root: str = "/"
     client_id: str = ""
     client_secret: str = ""
+    solr_url: str = "UNSET"
 
     class Config:
         env_file = "isb_web_config.env"

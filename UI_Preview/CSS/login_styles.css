@@ -1,59 +1,355 @@
 html,
 body {
-    font-family: 'Courier New', Courier, monospace;
     margin: 0;
     height: 100%;
-    padding: 0px 5px;
     position: relative;
+    background-image: url("../img/earth.jpg");
+    background-repeat: no-repeat;
+    background-size: cover;
 }
 
-input {
-    height: 20px;
+
+/*
+For main login html
+*/
+
+.container {
+    position: absolute;
+    top: 33px;
+    left: 42.5px;
+    width: 581px;
+    height: 705px;
 }
 
 .about {
     position: absolute;
-    top: 10px;
-    left: 20px;
+    top: 33px;
+    left: 41px;
+    color: #FFF;
+    font-family: Avenir;
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    line-height: 27px;
+    text-align: center;
 }
 
 .title {
-    font-size: 50px;
+    position: absolute;
+    top: 271px;
+    left: 193px;
+    color: #FFF;
+    font-family: Arial;
+    font-size: 80px;
+    letter-spacing: 6px;
+    line-height: 89px;
     text-align: center;
-    padding-bottom: 20px;
 }
 
-.Users {
+.username {
+    position: absolute;
+    left: 49px;
+    top: 449px;
+    font-size: 30px;
+    color: #FFF;
+    font-family: Avenir;
+    font-size: 30px;
+    font-weight: 300;
+    letter-spacing: 2.25px;
+    line-height: 41px;
+}
+
+.password {
+    position: absolute;
+    left: 49px;
+    top: 550px;
+    color: #FFF;
+    font-family: Avenir;
+    font-size: 30px;
+    font-weight: 300;
+    letter-spacing: 2.25px;
+    line-height: 41px;
+}
+
+.inputText1 {
+    position: absolute;
+    left: 226px;
+    top: 449px;
+    height: 44.39px;
+    width: 373px;
+    border-radius: 8px;
+    background-color: rgba(69, 72, 71, 0.39);
+    color: #FFF;
     font-size: 25px;
-    margin: 5px 0px;
 }
 
-.NF_users {
-    font-size: 15px;
-    text-align: right;
-    padding-right: 10px;
-    margin-bottom: 20px;
+.inputText2 {
+    position: absolute;
+    top: 545px;
+    left: 226px;
+    height: 44.39px;
+    width: 373px;
+    border-radius: 8px;
+    background-color: rgba(69, 72, 71, 0.39);
+    color: #FFF;
+    font-size: 25px;
 }
 
-.NF {
-    padding-right: 35px;
+.locker {
+    position: absolute;
+    top: 562px;
+    left: 572px;
+    box-sizing: border-box;
+    height: 14.99px;
+    width: 18.22px;
+}
+
+.SignUp {
+    position: absolute;
+    top: 606px;
+    left: 226px;
+    height: 25px;
+    width: 236px;
+    color: #FFF;
+    font-family: "Apple LiGothic";
+    font-size: 25px;
+    font-weight: 500;
+    letter-spacing: 1.88px;
+    line-height: 25px;
+}
+
+.fgPass {
+    position: absolute;
+    top: 606px;
+    left: 389px;
+    height: 25px;
+    width: 236px;
+    color: #FFF;
+    font-family: "Apple LiGothic";
+    font-size: 25px;
+    font-weight: 500;
+    letter-spacing: 1.88px;
+    line-height: 25px;
+    text-align: center;
 }
 
 .bt_enter {
-    font-size: 20px;
-    width: 255px;
-    margin-top: 20px;
-    background-color: white;
+    position: absolute;
+    top: 693px;
+    left: 226px;
+    height: 44.39px;
+    width: 380px;
+    border-radius: 8px;
+    background-color: #FFF;
+    border: 3px solid #C8BBBB;
+    font-family: "Apple LiGothic";
+    font-size: 39px;
+    letter-spacing: 2.93px;
+    line-height: 39px;
+}
+
+.bt_enter:hover {
+    box-shadow: 4px 8px #606060;
 }
 
 .otherLogin {
+    position: absolute;
+    top: 760px;
+    left: 380px;
+}
+
+.otherLogin:hover {
+    box-shadow: 2px 2px #606060;
+}
+
+
+/*
+For about html
+*/
+
+.aboutContainer {
+    position: absolute;
+    top: 89.25px;
+    left: 90.2px;
+    height: 374px;
+    width: 478px;
+}
+
+.aboutLinks {
+    color: #FFF;
+    font-family: Avenir;
+    font-size: 25px;
+    font-weight: 500;
+    letter-spacing: 1.88px;
+    line-height: 34px;
+}
+
+.home {
+    position: absolute;
+    top: 89px;
+    left: 524px;
+    height: 21.23px;
+    width: 32.44px;
+}
+
+
+/*
+    For sign up page
+*/
+
+.spConBackground {
+    position: absolute;
+    top: 180px;
+    left: 0;
+    right: 0;
+    margin: auto;
+    height: 754px;
+    width: 633px;
+    opacity: 0.47;
+    border-radius: 15px;
+    background-color: #2B2626;
+    border: 1px solid white;
+}
+
+.signUpContainer {
+    position: absolute;
+    top: 180px;
+    left: 0;
+    right: 0;
+    margin: auto;
+    height: 754px;
+    width: 633px;
+    border-radius: 15px;
+    border: 1px solid white;
+}
+
+.signUpTitle {
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    margin: auto;
+    color: #FFF;
+    font-family: Avenir;
+    font-size: 40px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    line-height: 55px;
     text-align: center;
 }
 
-#loginForm {
-    width: 395px;
+.email {
     position: absolute;
-    top: 30%;
-    border: 1px solid;
-    margin-left: 200px;
+    top: 209px;
+    left: 104px;
+    color: #FFF;
+    font-family: Avenir;
+    font-size: 25px;
+    font-weight: 500;
+    letter-spacing: 1.88px;
+    line-height: 34px;
+}
+
+.emailText {
+    position: absolute;
+    top: 200px;
+    left: 206px;
+    height: 44.39px;
+    width: 350px;
+    border-radius: 8px;
+    color: #FFF;
+    font-size: 20px;
+    background-color: rgba(0, 0, 0, 0.39)
+}
+
+.name {
+    position: absolute;
+    top: 314px;
+    left: 104px;
+    color: #FFF;
+    font-family: Avenir;
+    font-size: 25px;
+    font-weight: 500;
+    letter-spacing: 1.88px;
+    line-height: 34px;
+}
+
+.nameText {
+    position: absolute;
+    top: 305px;
+    left: 206px;
+    height: 44.39px;
+    width: 350px;
+    border-radius: 8px;
+    color: #FFF;
+    font-size: 20px;
+    background-color: rgba(0, 0, 0, 0.39)
+}
+
+.signUppw {
+    position: absolute;
+    top: 414px;
+    left: 60px;
+    color: #FFF;
+    font-family: Avenir;
+    font-size: 25px;
+    font-weight: 500;
+    letter-spacing: 1.88px;
+    line-height: 34px;
+}
+
+.pwText {
+    position: absolute;
+    top: 410px;
+    left: 206px;
+    height: 44.39px;
+    width: 350px;
+    border-radius: 8px;
+    color: #FFF;
+    font-size: 20px;
+    background-color: rgba(0, 0, 0, 0.39)
+}
+
+.signBt1 {
+    position: absolute;
+    top: 500px;
+    left: 206px;
+    box-sizing: border-box;
+    height: 50px;
+    width: 152px;
+    border-radius: 15px;
+    background-color: rgba(253, 249, 249, 0.82);
+    border: 3px solid #000;
+    color: #000;
+    font-family: Avenir;
+    font-size: 25px;
+    font-weight: 500;
+    letter-spacing: 1.88px;
+    line-height: 34px;
+}
+
+.signBt1:hover {
+    box-shadow: 4px 8px #606060;
+}
+
+.signBt2 {
+    position: absolute;
+    top: 500px;
+    left: 415px;
+    box-sizing: border-box;
+    height: 50px;
+    width: 152px;
+    border-radius: 15px;
+    background-color: rgba(253, 249, 249, 0.82);
+    border: 3px solid #000;
+    color: #000;
+    font-family: Avenir;
+    font-size: 25px;
+    font-weight: 500;
+    letter-spacing: 1.88px;
+    line-height: 34px;
+}
+
+.signBt2:hover {
+    box-shadow: 4px 8px #606060;
 }

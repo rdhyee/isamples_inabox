@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raw Record Preview</title>
+    <!-- link css file-->
+    <link rel=stylesheet type="text/css" href="CSS/Preview_styles.css" />
+    <!-- js library tabulator -->
+    <link href="https://unpkg.com/tabulator-tables@4.9.3/dist/css/tabulator.min.css" rel="stylesheet">
+    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.9.3/dist/js/tabulator.min.js"></script>
+    <!-- js library pretty print json -->
+    <link rel=stylesheet href=https://cdn.jsdelivr.net/npm/pretty-print-json@1.0/dist/pretty-print-json.css>
+    <script src=https://cdn.jsdelivr.net/npm/pretty-print-json@1.0/dist/pretty-print-json.min.js></script>
+    <!-- js library split.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/split.js/1.6.0/split.min.js"></script>
+</head>
+
+<body>
+    <!-- Web header -->
+    <div class="header">
+        <img src="./img/logo-partial.png" alt="iSamples partial logo" class="logo">
+        <input id="id_filter" class="headerChild" placeholder="Search for id only">
+        <button id="bt_filter" class="headerChild" onclick="doIdFilter('id_filter')" title="Search">
+            <img src="./img/search.png" alt="submit" width="25" height="25">
+        </button>
+        <span class="headerChild">
+            Records Load: <i><span id="records_loaded" style="margin-right:50px;">0</span></i>
+        </span>
+        <span class="headerChild">
+            Total Reocrds: <i><span id="total_records">0</span></i>
+        </span>
+        <div class="headerChild header_right">
+            <button class="bts_right" id="bt_types">Specimen Types</button>
+            <button class="bts_right" id="bt_field" title="Select fields"><img src="img/hide.png" width="50" height="50"></button>
+            <button class="bts_right" id="bt_sorter" title="Filter"><img src="img/sorting.png" width="50" height="50"></button>
+            <button class="bts_right" id="bt_logout" title="Logout"><img src="img/logout.png" width="50" height="50"></button>
+        </div>
+    </div>
+
+    <!-- Web content -->
+    <div class="content">
+        <!-- records table -->
+        <div id="records_table">table</div>
+        <!-- records content-->
+        <div id="info">
+            <div class="ctheader">
+                <button class="bt_report"> Report Issues</button>
+                <div class="changePanes">
+                    <input id="horiPanels" type="radio" name="dir" onchange="changePanes('h')" title="horizontal" checked>
+                    <label for="horiPanels"><img class="radioImg" src="./img/row.png" alt="horizontal" title="horizontal"></label> 
+                    <input id="veriPanels" type="radio" name="dir" onchange="changePanes('v')" title="vertical">
+                    <label for="veriPanels"><img class="radioImg" src="./img/col.png" alt="vertical" title="vertical"></label>
+                </div>
+            </div>
+            <div class="infoContainer">
+                <div class="infoChild" id="InfoLeft">
+                    <span class="label">Original</span>
+                    <pre id="orginal_show"></pre>
+                </div>
+                <div class="infoChild" id="InfoRight">
+                    <span class="label">Core</span>
+                    <pre id="core_show">iSamples transformed record</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Popup Types Panels-->
+    <div class="types">
+        <div class="typesModel">
+            <div class="TypesHeader">
+                <span class="typeTitle"><b><i>Specimen Types</i></b></span>
+                <span class="closeBt">&times;</span>
+            </div>
+            <div id="types_table"></div>
+        </div>
+    </div>
+    <!-- Popup field selection-->
+    <div id="fields">
+        <div class="fieldContainer">
+            <label for="id"><input type="checkbox" id='id' name='id' value="id" checked>id</label>
+            <label for="Authority Id"><input type="checkbox" id='Authority Id' name='Authority Id' value="Authority Id" checked>Authority Id</label>
+            <label for="Time Created"><input type="checkbox" id='Time Created' name='Time Created' value="Time Created" checked>Time Created</label>
+            <label for="status"><input type="checkbox" id='status' name='status' value="status" checked>status</label>
+            <label for="url"><input type="checkbox" id='url' name='url' value="url" checked>url</label>
+            <label for="elapsed"><input type="checkbox" id='elapsed' name='elapsed' value="elapsed" checked>elapsed</label>
+        </div>
+
+        <button id="apply_field" class="apply">apply</button>
+    </div>
+    <!-- Popup fiider -->
+    <div id="filter">
+        <div class="filterContainer">
+            <label>Time</label>
+
+            <hr>
+            <div>
+                <input type="text" placeholder="2017" size="4" height="10px"> to
+                <input type="text" placeholder="2018" size="4" height="10px">
+            </div>
+            <label>Elapsed</label>
+            <hr>
+            <div>
+                <input type="text" size="4" height="10px"> to
+                <input type="text" size="4" height="10px">
+            </div>
+        </div>
+        <button id="apply_filter" class="apply">apply</button>
+    </div>
+    <!-- Popup Report-->
+    <div class="report">
+        <div class="reportModel">
+            <div class="reHeader">
+                <div class="reTitle">
+                    Report Issues
+                    <span class="closeBt" id="repClose">&times;</span>
+                </div>
+            </div>
+            <div class="relabel">ID: <label id="currentID">None</label></div><br>
+            <div class="relabel">last_review: <label id="last_review">0</label></div><br>
+            <div class="textIssues"><textarea id="reportBody" class="retext" placeholder="Please enter bug"></textarea></div>
+            <button id="bt_issue" class="apply">apply</button>
+        </div>
+        <div class="feedback">
+            We will look into the issues you reported. Thank you!
+            <button id="bt_feedback" class="apply">OK</button>
+        </div>
+    </div>
+
+    <!-- Popup not accessible-->
+    <div class="hasBug">
+        <div class="BugContainer">
+            <label><b>This record is being corrected and not accessible at this time.</b></label>
+            <button id="apply_bug" class="apply">OK</button>
+        </div>
+    </div>
+    <script type="text/javascript" src="./js/Preview_script.js"></script>
+</body>
+
+</html>

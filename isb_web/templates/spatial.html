@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Records Heatmap</title>
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+    <style >
+        body {
+            font-family: "Cousine", "Monaco", monospace;
+            font-size: 14px;
+            max-width: 95%;
+        }
+    </style>
+    <!-- using alpine.JS for UI interaction -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+        <!-- Leaflet as usual -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+      integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+      crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+      integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+      crossorigin=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js" integrity="sha512-yocoLferfPbcwpCMr8v/B0AB4SWpJlouBwgE0D3ZHaiP1nuu5djZclFEIj9znuqghaZ3tdCMRrreLoM8km+jIQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.0/MarkerCluster.min.css" integrity="sha512-ENrTWqddXrLJsQS2A86QmvA17PkJ0GVm1bqj5aTgpeMAfDKN2+SIOLpKG8R/6KkimnhTb+VW5qqUHB/r1zaRgg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.0/MarkerCluster.Default.css" integrity="sha512-6ZCLMiYwTeli2rVh3XAPxy3YoR5fVxGdH/pz+KMCzRY2M65Emgkw00Yqmhh8qLGeYQ3LbVZGdmOX9KUjSKr0TA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.0/leaflet.markercluster.js" integrity="sha512-pWPELjRaw2ZdoT0PDi7iRpRlk1XX3rtnfejJ/HwskyojpHei+9hKpwdphC4yssNt4FM0TjMQOmMrk6ZYSn274w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/spatial.js"></script>
+
+    <!-- enough styling to make a full-page map -->
+    <style>
+    #map {
+        height: 600px;
+    }
+    #query {
+        width: 100%;
+    }
+    </style>
+    <script type="text/javascript">
+    const FIELD = "producedBy_samplingSite_location_rpt";
+    const PT_FIELD = "producedBy_samplingSite_location_ll";
+    const MAX_ROWS = 5000;
+    const DEFAULT_FACETS = [
+        "source",
+        "hasMaterialCategory",
+        "hasSpecimenCategory",
+        "hasContextCategory",
+    ]
+
+    var map = null;
+    var _debounce;
+    var collection_metadata = {
+        total_docs: 0,
+        match_docs: 0,
+        show_docs: 0,
+        last_modified: "",
+        field_name: []
+    };
+    var facet_info = {};
+
+    function updateUiMeta() {
+        document.getElementById("total_docs").innerText = collection_metadata.total_docs;
+    }
+
+    function updateCurrentMeta() {
+        document.getElementById("match_docs").innerText = collection_metadata.match_docs;
+        document.getElementById("show_docs").innerText = collection_metadata.show_docs;
+    }
+
+
+    function getCollectionMetadata(){
+        var url = "/thing/select/info";
+        fetch(url).then(response => response.json()).then(data => {
+            collection_metadata.total_docs = data.index.numDocs;
+            collection_metadata.last_modified = data.index.lastModified;
+            var fields = [];
+            for (const [key, value] of Object.entries(data.schema.fields)){
+                fields.push(key);
+            }
+            collection_metadata.field_names = fields;
+            updateUiMeta();
+        });
+    }
+
+    function removeLayer(tag_name) {
+        map.eachLayer(function(layer){
+            if (layer._tag && layer._tag === tag_name) {
+                map.removeLayer(layer);
+            }
+        })
+    }
+
+    function recordDetail(_id) {
+        const params = {
+            "q":"id:" + escapeLucene(_id),
+            "fl":"*",
+            "wt":"json"
+        }
+        let _url = "/thing/select?" + new URLSearchParams(params);
+        return "<a href='"+_url+"'>" + _id + "</a>";
+    }
+
+    function updateFacetsUI() {
+        let event = new CustomEvent("facet-load", {
+            detail: {
+                facet_info: facet_info
+            }
+        });
+        window.dispatchEvent(event);
+    }
+
+    function solrFacets(query="*:*", facets=DEFAULT_FACETS) {
+        var _url = new URL("/thing/select", document.location);
+        let params = _url.searchParams;
+        params.append("q", query);
+        params.append("facet","on");
+        params.append("facet.method", "enum");
+        params.append("wt","json");
+        for (var i=0; i < facets.length; i++) {
+            params.append("facet.field", facets[i]);
+        }
+        fetch(_url).then(response => response.json()).then(data => {
+            for (const f in data.facet_counts.facet_fields) {
+                let entry = [];
+                for (var i=0; i<data.facet_counts.facet_fields[f].length; i+=2){
+                    entry.push({
+                        k: data.facet_counts.facet_fields[f][i],
+                        v: data.facet_counts.facet_fields[f][i+1]
+                    });
+                }
+                facet_info[f] = entry;
+            }
+            updateFacetsUI();
+        })
+    }
+
+    function updatePointsLayer(q, fq) {
+        var bb = map.getBounds();
+        var pts_url = new URL("/thing/select", document.location);
+        let params = pts_url.searchParams;
+        params.append("q", q);
+        params.append("fq", fq);
+        params.append("fq",PT_FIELD + ":["+bb.getSouth()+","+bb.getWest()+" TO "+bb.getNorth()+","+bb.getEast()+"]");
+        params.append("rows", MAX_ROWS);
+        params.append("fl", "id,"+PT_FIELD);
+        params.append("wt", "json");
+        //var pts_url = "/thing/select?" + new URLSearchParams(params);
+        fetch(pts_url)
+            .then(response =>response.json())
+            .then(data => {
+                var cluster = L.markerClusterGroup({ chunkedLoading: true });
+                for (var i=0; i<data.response.docs.length; i++) {
+                    var _doc = data.response.docs[i];
+                    var pt = _doc[PT_FIELD].split(",");
+                    pt[0] = parseFloat(pt[0]);
+                    pt[1] = parseFloat(pt[1]);
+                    var m = L.marker(new L.LatLng(pt[0], pt[1]), {title:_doc["id"]});
+                    m.bindPopup(_doc["id"]).openPopup();
+                    m.bindPopup(recordDetail(_doc["id"])).openPopup();
+                    cluster.addLayer(m);
+                }
+                removeLayer("hmcluster");
+                cluster._tag = "hmcluster";
+                map.addLayer(cluster);
+            })
+
+    }
+
+    function onEachFeature(feature, layer) {
+      var count = feature.properties.count.toLocaleString();
+      layer.bindPopup(count);
+    }
+
+
+    function updateHeatmapLayer(q, fq) {
+        var bb = map.getBounds();
+        var params = {
+            query: q,
+            min_lat: bb.getSouth(),
+            min_lon: bb.getWest(),
+            max_lat: bb.getNorth(),
+            max_lon: bb.getEast()
+        }
+        if (fq !== undefined && fq !== '') {
+            params.fq = fq;
+        }
+
+        var hm_url = "/things_geojson_heatmap?" + new URLSearchParams(params);
+        fetch(hm_url)
+            .then(response => response.json())
+            .then(data => {
+                var count_max = Math.log10(data.max_count+1);
+                var cscale = chroma.scale(["blue","yellow","red"]).domain([0,count_max]);
+                heatmap_layer = L.geoJson(
+                    data,
+                    {style: function(feature) {
+                        return {
+                            color: "black",
+                            opacity: 0.3,
+                            weight: 1,
+                            fillColor: cscale(Math.log10(feature.properties.count+1)),
+                            fillOpacity: 0.3
+                        }
+                        },
+                    onEachFeature: onEachFeature
+                    }
+                );
+                removeLayer("heatmap");
+                removeLayer("hmcluster");
+                heatmap_layer._tag = "heatmap"
+                heatmap_layer.addTo(map);
+                collection_metadata.match_docs = data.num_docs;
+                collection_metadata.show_docs = data.total;
+                updateCurrentMeta();
+                if (data.total < MAX_ROWS) {
+                    updatePointsLayer(q, fq);
+                }
+            });
+    }
+
+
+    function initMap() {
+        const map_opts = {
+            preferCanvas: true,
+            updateWhenZooming: false,
+            updateWhenIdle: true,
+            updateInterval: 1000,
+        }
+        map = L.map('map', map_opts).setView([0, 0], 2);
+
+        L.tileLayer('http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="http://cartodb.com/attributions">CartoDB</a>'
+            }).addTo(map);
+
+        doZoom = function(e) {
+            clearTimeout(_debounce);
+            _debounce = setTimeout(function() {
+                const q = document.getElementById("query").value;
+                const fq =  document.getElementById("fquery").value;
+                updateHeatmapLayer(q, fq);
+            }, 300);
+        }
+        //map.on("zoomend", doZoom);
+        map.on("moveend", doZoom);
+        var ele = document.getElementById("query");
+        ele.addEventListener('keydown', function(e) {
+            if (e.code === "Enter") {
+                doZoom();
+            }
+        });
+        doZoom();
+        getCollectionMetadata();
+    }
+
+    </script>
+</head>
+<body onLoad="initMap();">
+    <header x-data="{}">
+        <p>Displayng <span id="show_docs"></span> / <span id="match_docs"></span> / <span id="total_docs"></span> records</p>
+    </header>
+    <main>
+        <section id="query_display" x-data="queryParams()" x-on:query-changed.window="update($event);">
+            <input  id="query" :value="q"></input>
+            <input  id="fquery" :value="fq"></input>
+        </section>
+        <section id="map_display">
+            <div id="map"></div>
+        </section>
+    </main>
+    <footer x-data="siteInfo()">
+        <p x-text="_info"></p>
+    </footer>
+</body>
+</html>
