@@ -22,6 +22,9 @@ from isamples_metadata.GEOMETransformer import GEOMETransformer
 from isamples_metadata.OpenContextTransformer import OpenContextTransformer
 from isamples_metadata.SmithsonianTransformer import SmithsonianTransformer
 
+from starlette.responses import RedirectResponse
+
+import urllib.parse
 import httpx_oauth.integrations.fastapi
 import httpx_oauth.oauth2
 import httpx_oauth.clients.github
@@ -36,8 +39,11 @@ WEB_ROOT = config.Settings().web_root
 MEDIA_JSON = "application/json"
 MEDIA_NQUADS = "application/n-quads"
 MEDIA_GEO_JSON = "application/geo+json"
-LIENT_ID = config.Settings().client_id
+
+CLIENT_ID = config.Settings().client_id
 CLIENT_SECRET = config.Settings().client_secret
+AUTHORIZE_ENDPOINT = config.Settings().authorize_endpoint
+ACCESS_TOKEN_ENDPOINT = config.Settings().access_token_endpoint
 
 tags_metadata = [
     {
@@ -45,6 +51,10 @@ tags_metadata = [
         "description": "Heatmap representations of Things, suitable for consumption by mapping APIs",
     }
 ]
+
+oauth2_client = httpx_oauth.oauth2.OAuth2(CLIENT_ID, CLIENT_SECRET, AUTHORIZE_ENDPOINT, ACCESS_TOKEN_ENDPOINT)
+#oauth2_authorize_callback = httpx_oauth.integrations.fastapi.OAuth2AuthorizeCallback(oauth2_client, "oauth-callback")
+
 app = fastapi.FastAPI(root_path=WEB_ROOT, openapi_tags=tags_metadata)
 dao = SQLModelDAO(None)
 
@@ -91,25 +101,18 @@ def predicateToURI(p: str):
     return f"https://isamples.org/def/predicates/{p}"
 
 @app.get("/oauth-callback", name="oauth-callback")
-async def oauth_callback(access_token_state=fastapi.Depends(oauth2_authorize_callback)):
-#async def oauth_callback(access_token_state):
-    L = getLogger()
+#async def oauth_callback(access_token_state=fastapi.Depends(oauth2_authorize_callback)):
+async def oauth_callback(access_token_state):
     atoken, state = access_token_state
-    L.info("TOKEN = %s", atoken)
-    L.info("STATE = %s", state)
-    token = await oauth_client.get_access_token(atoken, "http://localhost:8000/")
+    logging.info("TOKEN = %s", atoken)
+    logging.info("STATE = %s", state)
+    token = await oauth2_client.get_access_token(atoken, "http://localhost:8000/")
     return token
 
 @app.get("/login", include_in_schema=False)
-async def root(request: fastapi.Request)-> schemas.Url:
-    L = getLogger()
-    L.info("Login")
-    params = {
-        "client_id": config.Settings().client_id,
-        "redirect_url": "http://localhost:8000/oauth-callback",
-        "state": "hello",
-    }
-    return schemas.Url(url=f"https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}")
+async def login():
+    url = await oauth2_client.get_authorization_url("http://localhost:8000/oauth-callback")
+    return RedirectResponse(url)
 
 
 @app.get("/thing", response_model=schemas.ThingListMeta)
