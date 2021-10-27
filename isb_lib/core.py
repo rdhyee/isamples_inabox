@@ -311,6 +311,15 @@ def solrAddRecords(rsession, records, url):
     Returns: nothing
 
     """
+
+    # Need to strip previous generated fields to avoid solr inconsistency errors
+    for record in records:
+        record.pop("_version_", None)
+        record.pop("producedBy_samplingSite_location_bb__minY", None)
+        record.pop("producedBy_samplingSite_location_bb__minX", None)
+        record.pop("producedBy_samplingSite_location_bb__maxY", None)
+        record.pop("producedBy_samplingSite_location_bb__maxX", None)
+
     L = getLogger()
     headers = {"Content-Type": "application/json"}
     data = json.dumps(records).encode("utf-8")

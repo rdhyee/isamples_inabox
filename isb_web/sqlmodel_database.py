@@ -6,6 +6,7 @@ from typing import Optional, List
 from sqlalchemy import Index
 from sqlalchemy.exc import ProgrammingError
 from sqlmodel import SQLModel, create_engine, Session, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 import isb_lib
 from isb_lib.models.thing import Thing, ThingIdentifier
@@ -138,15 +139,13 @@ def last_time_thing_created(
     return result
 
 
-def paged_things_with_ids(
-    session: Session,
+def _base_thing_select(
     authority: Optional[str] = None,
     status: int = 200,
     limit: int = 100,
     offset: int = 0,
-    min_time_created: datetime.datetime = None,
-    min_id: int = 0,
-) -> List[Thing]:
+    min_id: int = 0
+) -> SelectOfScalar[Thing]:
     thing_select = select(Thing).filter(Thing.resolved_status == status)
     if authority is not None:
         thing_select = thing_select.filter(Thing.authority_id == authority)
@@ -156,9 +155,43 @@ def paged_things_with_ids(
         thing_select = thing_select.limit(limit)
     if min_id > 0:
         thing_select = thing_select.filter(Thing.primary_key > min_id)
+    return thing_select
+
+
+def paged_things_with_ids(
+    session: Session,
+    authority: Optional[str] = None,
+    status: int = 200,
+    limit: int = 100,
+    offset: int = 0,
+    min_time_created: datetime.datetime = None,
+    min_id: int = 0,
+) -> List[Thing]:
+    thing_select = _base_thing_select(authority, status, limit, offset, min_id)
+
     if min_time_created is not None:
         thing_select = thing_select.filter(Thing.tcreated >= min_time_created)
     thing_select = thing_select.order_by(Thing.primary_key.asc())
+    return session.exec(thing_select).all()
+
+
+def things_for_sitemap(
+    session: Session,
+    authority: Optional[str] = None,
+    status: int = 200,
+    limit: int = 100,
+    offset: int = 0,
+    min_tstamp: datetime.datetime = None,
+    min_id: int = 0,
+) -> List[Thing]:
+    """Returns a list of Things suitable for generating a sitemap.
+
+    In order to allow older unchanged records to not be refetched, order by the timestamp to support automatic diffing
+    """
+    thing_select = _base_thing_select(authority, status, limit, offset, min_id)
+    if min_tstamp is not None:
+        thing_select = thing_select.filter(Thing.tstamp >= min_tstamp)
+    thing_select = thing_select.order_by(Thing.tstamp.asc(), Thing.primary_key.asc())
     return session.exec(thing_select).all()
 
 
