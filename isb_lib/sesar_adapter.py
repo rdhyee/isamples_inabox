@@ -171,10 +171,10 @@ def reparseThing(thing: Thing) -> Thing:
     thing.tstamp = igsn_lib.time.dtnow()
     return thing
 
-def reparseAsCoreRecord(thing: Thing) -> typing.Dict:
+def reparseAsCoreRecord(thing: Thing) -> typing.List[typing.Dict]:
     _validateResolvedContent(thing)
     transformer = isamples_metadata.SESARTransformer.SESARTransformer(thing.resolved_content)
-    return isb_lib.core.coreRecordAsSolrDoc(transformer)
+    return [isb_lib.core.coreRecordAsSolrDoc(transformer)]
 
 def _sesar_last_updated(dict: typing.Dict) -> typing.Optional[datetime.datetime]:
     description = dict.get("description")

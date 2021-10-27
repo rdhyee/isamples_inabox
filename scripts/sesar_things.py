@@ -15,7 +15,7 @@ import click_config_file
 
 from isb_lib.models.thing import Thing
 from isb_web import sqlmodel_database
-from isb_web.sqlmodel_database import SQLModelDAO
+from isb_web.sqlmodel_database import SQLModelDAO, save_thing
 
 CONCURRENT_DOWNLOADS = 10
 BACKLOG_SIZE = 40
@@ -86,8 +86,7 @@ async def _loadSesarEntries(session, max_count, start_from=None):
                     futures.remove(fut)
                     if not _thing is None:
                         try:
-                            session.add(_thing)
-                            session.commit()
+                            save_thing(session, _thing)
                         except sqlalchemy.exc.IntegrityError as e:
                             session.rollback()
                             logging.error("Item already exists: %s", _id[0])

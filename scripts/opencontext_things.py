@@ -12,7 +12,7 @@ import sqlalchemy.orm
 import sqlalchemy.exc
 
 from isb_web import sqlmodel_database
-from isb_web.sqlmodel_database import SQLModelDAO
+from isb_web.sqlmodel_database import SQLModelDAO, save_thing
 
 BACKLOG_SIZE = 40
 
@@ -47,7 +47,7 @@ async def _load_open_context_entries(session, max_count, start_from):
             isb_lib.opencontext_adapter.update_thing(
                 existing_thing, record, datetime.datetime.now(), records.last_url_str()
             )
-            session.commit()
+            save_thing(session, existing_thing)
             logging.info("Just saved existing thing")
         else:
             logging.debug("Don't have %s", id)
@@ -55,11 +55,7 @@ async def _load_open_context_entries(session, max_count, start_from):
                 record, datetime.datetime.now(), records.last_url_str()
             )
             try:
-                logging.debug("Going to add thing to session")
-                session.add(thing)
-                logging.debug("Added thing to session")
-                session.commit()
-                logging.debug("committed session")
+                save_thing(session, thing)
             except sqlalchemy.exc.IntegrityError as e:
                 session.rollback()
                 logging.error("Item already exists: %s", record)
@@ -95,9 +91,7 @@ def load_open_context_entries(session, max_count, start_from=None):
 @click.option(
     "-d", "--db_url", default=None, help="SQLAlchemy database URL for storage"
 )
-@click.option(
-    "-s", "--solr_url", default=None, help="Solr index URL"
-)
+@click.option("-s", "--solr_url", default=None, help="Solr index URL")
 @click.option(
     "-v",
     "--verbosity",
@@ -135,15 +129,21 @@ def load_records(ctx, max_records):
 
 
 @main.command("populate_isb_core_solr")
+@click.option(
+    "-I", "--ignore_last_modified", is_flag=True, help="Whether to ignore the last modified date and do a full rebuild"
+)
 @click.pass_context
-def populate_isb_core_solr(ctx):
+def populate_isb_core_solr(ctx, ignore_last_modified: bool):
     L = get_logger()
     db_url = ctx.obj["db_url"]
     solr_url = ctx.obj["solr_url"]
-    max_solr_updated_date = isb_lib.core.solr_max_source_updated_time(
-        url=solr_url,
-        authority_id=isb_lib.opencontext_adapter.OpenContextItem.AUTHORITY_ID,
-    )
+    if ignore_last_modified:
+        max_solr_updated_date = None
+    else:
+        max_solr_updated_date = isb_lib.core.solr_max_source_updated_time(
+            url=solr_url,
+            authority_id=isb_lib.opencontext_adapter.OpenContextItem.AUTHORITY_ID,
+        )
     L.info(f"Going to index Things with tcreated > {max_solr_updated_date}")
     solr_importer = isb_lib.core.CoreSolrImporter(
         db_url=db_url,
@@ -151,10 +151,13 @@ def populate_isb_core_solr(ctx):
         db_batch_size=1000,
         solr_batch_size=1000,
         solr_url=solr_url,
-        min_time_created=max_solr_updated_date
+        min_time_created=max_solr_updated_date,
     )
-    allkeys = solr_importer.run_solr_import(isb_lib.opencontext_adapter.reparse_as_core_record)
+    allkeys = solr_importer.run_solr_import(
+        isb_lib.opencontext_adapter.reparse_as_core_record
+    )
     L.info(f"Total keys= {len(allkeys)}")
+
 
 if __name__ == "__main__":
     main()
