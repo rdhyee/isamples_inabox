@@ -4,6 +4,9 @@ import datetime
 import fastapi
 from sqlmodel import SQLModel
 
+class Url(pydantic.BaseModel):
+    url: str
+
 @pydantic.dataclasses.dataclass
 class ThingListRequest:
     offset: int=0

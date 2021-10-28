@@ -32,6 +32,8 @@ aiofile = "^3.7.2"
 pandas = "1.2.5"
 
 sqlmodel = "^0.0.4"
+Authlib = "^0.15.5"
+httpx = "^0.20.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.3"

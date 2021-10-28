@@ -257,7 +257,7 @@ def solr_leaflet_heatmap(q, bb, fq=None, grid_level=None):
     }
 
 
-def solr_query(params):
+def solr_query(params, query=None):
     """
     Issue a request against the solr select endpoint.
 
@@ -272,6 +272,7 @@ def solr_query(params):
     """
     url = get_solr_url("select")
     headers = {"Accept": "application/json"}
+    content_type = "application/json"
     wt_map = {
         "csv": "text/plain",
         "xml": "application/xml",
@@ -282,7 +283,10 @@ def solr_query(params):
     for k, v in params:
         if k == "wt":
             content_type = wt_map.get(v.lower(), "json")
-    response = requests.get(url, headers=headers, params=params, stream=True)
+    if query is None:
+        response = requests.get(url, headers=headers, params=params, stream=True)
+    else:
+        response = requests.post(url, headers=headers, params=params, json=query, stream=True)
     return fastapi.responses.StreamingResponse(
         response.iter_content(chunk_size=2048), media_type=content_type
     )
