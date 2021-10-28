@@ -26,6 +26,7 @@ shapely = "^1.7.1"
 geojson = "^2.5.0"
 Jinja2 = "^3.0.1"
 heartrate = "^0.2.1"
+aiofile = "^3.7.2"
 
 # shouldn't be needed but poetry is having difficulty here
 pandas = "1.2.5"

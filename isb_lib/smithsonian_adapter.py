@@ -94,7 +94,10 @@ def reparse_as_core_record(thing: Thing) -> typing.List[typing.Dict]:
         transformer = isamples_metadata.SmithsonianTransformer.SmithsonianTransformer(
             thing.resolved_content
         )
-        return [isb_lib.core.coreRecordAsSolrDoc(transformer)]
+        solr_doc = isb_lib.core.coreRecordAsSolrDoc(transformer)
+        # This isn't present in Smithsonian data.  Fall back to the value on Thing
+        solr_doc["sourceUpdatedTime"] = isb_lib.core.datetimeToSolrStr(thing.tstamp)
+        return [solr_doc]
     except Exception as e:
         logging.fatal(
             "Failed trying to run transformer on %s", str(thing.resolved_content)

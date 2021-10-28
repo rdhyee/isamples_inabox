@@ -54,6 +54,11 @@ app.mount(
     fastapi.staticfiles.StaticFiles(directory=os.path.join(THIS_PATH, "static")),
     name="static",
 )
+app.mount(
+    "/sitemaps",
+    fastapi.staticfiles.StaticFiles(directory=os.path.join(THIS_PATH, "sitemaps"), check_dir=False),
+    name="sitemaps",
+)
 templates = fastapi.templating.Jinja2Templates(
     directory=os.path.join(THIS_PATH, "templates")
 )
