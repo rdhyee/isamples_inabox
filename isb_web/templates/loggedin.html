@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iSample Login</title>
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+</head>
+
+<body>
+<header>
+    <p>iSamples</p>
+</header>
+<main>
+    <section>
+        <p>Successfully authenticated as {{username}}</p>
+        <p>This window will close shortly, <a href="#" onclick="window.close()"> or close now.</a></p>
+    </section>
+</main>
+<footer></footer>
+<script>
+    window.setTimeout(() => {
+        window.close();
+    }, 1);
+</script>
+</body>
+</html>
