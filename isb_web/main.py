@@ -2,6 +2,7 @@ import os
 import uvicorn
 import typing
 import requests
+import fastapi
 from fastapi.logger import logger as fastapi_logger
 import fastapi.staticfiles
 import fastapi.templating
@@ -22,12 +23,11 @@ from isamples_metadata.GEOMETransformer import GEOMETransformer
 from isamples_metadata.OpenContextTransformer import OpenContextTransformer
 from isamples_metadata.SmithsonianTransformer import SmithsonianTransformer
 
-from starlette.responses import RedirectResponse
-
-import urllib.parse
-import httpx_oauth.integrations.fastapi
-import httpx_oauth.oauth2
-import httpx_oauth.clients.github
+import time
+import json
+import hashlib
+import authlib.integrations.starlette_client
+from starlette.middleware.sessions import SessionMiddleware
 
 import logging
 
@@ -40,10 +40,33 @@ MEDIA_JSON = "application/json"
 MEDIA_NQUADS = "application/n-quads"
 MEDIA_GEO_JSON = "application/geo+json"
 
+# OAuth2 application client id
 CLIENT_ID = config.Settings().client_id
+
+# OAuth2 application client secret
 CLIENT_SECRET = config.Settings().client_secret
+
+# OAuth2 endpoint for client authorization
 AUTHORIZE_ENDPOINT = config.Settings().authorize_endpoint
+
+# OAuth2 endpoint for retrieving a token after successful auth
 ACCESS_TOKEN_ENDPOINT = config.Settings().access_token_endpoint
+
+# An OAuth instance for generating the requests
+oauth_client = authlib.integrations.starlette_client.OAuth()
+
+# Register the GITHUB OAuth2 urls
+oauth_client.register(
+    name="github",
+    client_id=CLIENT_ID,
+    client_secret=CLIENT_SECRET,
+    access_token_url=ACCESS_TOKEN_ENDPOINT,
+    access_token_params=None,
+    authorize_url=AUTHORIZE_ENDPOINT,
+    authorize_params=None,
+    api_base_url="https://api.github.com/",
+    client_kwargs={"scope": "user:email"},
+)
 
 tags_metadata = [
     {
@@ -51,9 +74,6 @@ tags_metadata = [
         "description": "Heatmap representations of Things, suitable for consumption by mapping APIs",
     }
 ]
-
-oauth2_client = httpx_oauth.oauth2.OAuth2(CLIENT_ID, CLIENT_SECRET, AUTHORIZE_ENDPOINT, ACCESS_TOKEN_ENDPOINT)
-#oauth2_authorize_callback = httpx_oauth.integrations.fastapi.OAuth2AuthorizeCallback(oauth2_client, "oauth-callback")
 
 app = fastapi.FastAPI(root_path=WEB_ROOT, openapi_tags=tags_metadata)
 dao = SQLModelDAO(None)
@@ -64,6 +84,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SessionMiddleware, secret_key="some-random-string")
 
 app.mount(
     "/static",
@@ -73,6 +94,121 @@ app.mount(
 templates = fastapi.templating.Jinja2Templates(
     directory=os.path.join(THIS_PATH, "templates")
 )
+
+
+class SocketConnectionManager:
+    """
+    Maintain state of connected websocket clients.
+
+    This is used to support authentication since clients may be operating from
+    a different host. The WS is not restricted by origin, and hence can be
+    used to communicate with the application. The application is still
+    responsible for presenting authentication UI to the user for authentication.
+    """
+
+    def __init__(self):
+        self.active_connections = {}
+
+    async def connect(self, client: str, websocket: fastapi.WebSocket):
+        await websocket.accept()
+        self.active_connections[client] = websocket
+
+    def disconnect(self, client: str):
+        self.active_connections.pop(client)
+
+    async def sendData(self, client: str, data):
+        await self.active_connections[client].send_text(json.dumps(data))
+
+
+socket_manager = SocketConnectionManager()
+
+
+@app.get("/githubauth")
+async def authorize(request: fastapi.Request):
+    """
+    Client is redirected here after authenticating.
+
+    The redirect includes parameters that are used to request a
+    token from the authentication provider.
+
+    Args:
+        request: Starlette request instance
+
+    Returns:
+        Opens page notifying outcome, sends data over WS
+
+    """
+    state = request.query_params.get("state", None)
+    _cli = oauth_client.github
+    token = await _cli.authorize_access_token(request)
+    user = await _cli.get("user", token=token)
+    data = user.json()
+    data["token"] = token
+    # Return the authentication data to the client
+    await socket_manager.sendData(
+        state,
+        {
+            "action": "token",
+            "token": data,
+        },
+    )
+    return templates.TemplateResponse(
+        "loggedin.html", {"request": request, "username": data["login"]}
+    )
+
+
+@app.get("/login")
+async def login(request: fastapi.Request):
+    """
+    Called by a browser when requesting to authenticate.
+
+    Args:
+        request: starlette request instance.
+
+    Returns:
+        Redirect to the authentication provider
+    """
+    state = request.query_params.get("state", None)
+    _cli = oauth_client.github
+    redirect_url = request.url_for("authorize")
+    return await _cli.authorize_redirect(request, redirect_url, state=state)
+
+
+@app.websocket("/ws/{smoke}")
+async def websocket_endpoint(websocket: fastapi.WebSocket, smoke: str):
+    """
+    Provides a websocket endpoint to support cross origin client authentication.
+
+    Args:
+        websocket: A Websocket instance
+        smoke: Client provided string to help create a unique value for state
+
+    Returns:
+        Sends login url to the websocket client.
+    """
+    hostname = websocket.url.hostname
+    port = websocket.url.port
+    protocol = "http"
+    if websocket.url.is_secure:
+        protocol = "https"
+    data = str(time.time_ns()) + smoke
+    client_id = hashlib.sha256(data.encode("utf-8")).hexdigest()
+    await socket_manager.connect(client_id, websocket)
+    try:
+        # Tell the connected client how to login
+        await socket_manager.sendData(
+            client_id,
+            {
+                "action": "login",
+                "client_id": client_id,
+                "redirect_url": f"{protocol}://{hostname}:{port}{app.url_path_for('login')}",
+            },
+        )
+        # Keep the socket alive until killed by the client
+        while True:
+            data = await websocket.receive_text()
+    except fastapi.WebSocketDisconnect:
+        socket_manager.disconnect(client_id)
 
 
 @app.on_event("startup")
@@ -100,19 +236,23 @@ def predicateToURI(p: str):
         return p
     return f"https://isamples.org/def/predicates/{p}"
 
+
+"""
 @app.get("/oauth-callback", name="oauth-callback")
-#async def oauth_callback(access_token_state=fastapi.Depends(oauth2_authorize_callback)):
-async def oauth_callback(access_token_state):
+async def oauth_callback(access_token_state=fastapi.Depends(oauth2_authorize_callback)):
+#async def oauth_callback(access_token_state):
     atoken, state = access_token_state
-    logging.info("TOKEN = %s", atoken)
-    logging.info("STATE = %s", state)
+    print(f"TOKEN = {atoken}")
+    print(f"STATE = {state}")
     token = await oauth2_client.get_access_token(atoken, "http://localhost:8000/")
     return token
 
 @app.get("/login", include_in_schema=False)
 async def login():
-    url = await oauth2_client.get_authorization_url("http://localhost:8000/oauth-callback")
+    url = await oauth2_client.get_authorization_url("http://localhost:8000/oauth-callback?state=%2ftest")
+    print(url)
     return RedirectResponse(url)
+"""
 
 
 @app.get("/thing", response_model=schemas.ThingListMeta)
@@ -232,8 +372,11 @@ async def get_solr_select(request: fastapi.Request):
     # response.
     return isb_solr_query.solr_query(params)
 
+
 @app.post("/thing/select", response_model=typing.Any)
-async def get_solr_query(request: fastapi.Request, query:typing.Any=fastapi.Body(...)):
+async def get_solr_query(
+    request: fastapi.Request, query: typing.Any = fastapi.Body(...)
+):
     logging.warning(query)
     return isb_solr_query.solr_query(request.query_params, query=query)
 
@@ -512,6 +655,13 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(logging.NOTSET)
     fastapi_logger.addHandler(handler)
     handler.setFormatter(formatter)
+
+    # gunicorn_error_logger = logging.getLogger("gunicorn.error")
+    # gunicorn_logger = logging.getLogger("gunicorn")
+    # uvicorn_access_logger = logging.getLogger("uvicorn.access")
+    # uvicorn_access_logger.handlers = gunicorn_error_logger.handlers
+
+    # fastapi_logger.handlers = gunicorn_error_logger.handlers
 
     fastapi_logger.info("****************** Starting Server *****************")
     main()
