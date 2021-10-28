@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 import time
@@ -14,7 +15,8 @@ import concurrent.futures
 import click
 import click_config_file
 from isb_lib.models.thing import Thing
-from isb_web.sqlmodel_database import SQLModelDAO, get_thing_with_id
+from isb_web import sqlmodel_database
+from isb_web.sqlmodel_database import SQLModelDAO, get_thing_with_id, save_thing
 
 CONCURRENT_DOWNLOADS = 10
 BACKLOG_SIZE = 40
@@ -22,10 +24,11 @@ BACKLOG_SIZE = 40
 def getLogger():
     return logging.getLogger("main")
 
-def wrapLoadThing(ark, tc):
+
+def wrapLoadThing(ark: str, tc: datetime.datetime, existing_thing: Thing = None):
     """Return request information to assist future management"""
     try:
-        return ark, tc, isb_lib.geome_adapter.loadThing(ark, tc)
+        return ark, tc, isb_lib.geome_adapter.loadThing(ark, tc, existing_thing)
     except:
         pass
     return ark, tc, None
@@ -74,11 +77,12 @@ async def _loadGEOMEEntries(session, max_count, start_from=None):
                     existing_thing = get_thing_with_id(session, identifier)
                     if existing_thing is not None:
                         logging.debug("Already have %s at %s", identifier, _id[1])
+                        future = executor.submit(wrapLoadThing, identifier, _id[1], existing_thing)
                     else:
                         future = executor.submit(wrapLoadThing, identifier, _id[1])
-                        futures.append(future)
-                        working[identifier] = 0
-                        total_requested += 1
+                    futures.append(future)
+                    working[identifier] = 0
+                    total_requested += 1
                 except StopIteration as e:
                     L.info("Reached end of identifier iteration.")
                     num_prepared = 0
@@ -91,8 +95,7 @@ async def _loadGEOMEEntries(session, max_count, start_from=None):
                     futures.remove(fut)
                     if not _thing is None:
                         try:
-                            session.add(_thing)
-                            session.commit()
+                            save_thing(session, _thing)
                         except sqlalchemy.exc.IntegrityError as e:
                             session.rollback()
                             logging.error("Item already exists: %s", _id[0])
@@ -179,17 +182,12 @@ def loadRecords(ctx, max_records):
 
     session = SQLModelDAO((ctx.obj["db_url"])).get_session()
     try:
-        oldest_record = None
-        res = (
-            session.query(Thing)
-            .order_by(Thing.tcreated.desc())
-            .first()
+        max_created = sqlmodel_database.last_time_thing_created(
+            session, isb_lib.geome_adapter.GEOMEItem.AUTHORITY_ID
         )
-        if not res is None:
-            oldest_record = res.tcreated
-        logging.info("Oldest = %s", oldest_record)
+        logging.info("Oldest = %s", max_created)
         time.sleep(1)
-        loadGEOMEEntries(session, max_records, start_from=oldest_record)
+        loadGEOMEEntries(session, max_records, start_from=max_created)
     finally:
         session.close()
 
@@ -313,52 +311,29 @@ def reloadRecords(ctx, status_code):
     finally:
         session.close()
 
+
 @main.command("populate_isb_core_solr")
 @click.pass_context
 def populateIsbCoreSolr(ctx):
-    L = getLogger()
-    rsession = requests.session()
-    db_batch_size = 1000
-    solr_batch_size = 20
-    L.info("reparseRecords with batch size: %s", db_batch_size)
-    session = SQLModelDAO(ctx.obj["db_url"]).get_session()
+    logger = getLogger()
+    db_url = ctx.obj["db_url"]
     solr_url = ctx.obj["solr_url"]
-    allkeys = set()
-    try:
-        offset = 0
-        all_core_records = []
-        thing_iterator = isb_lib.core.ThingRecordIterator(
-            session,
-            authority_id=isb_lib.geome_adapter.GEOMEItem.AUTHORITY_ID,
-            page_size=db_batch_size,
-            offset=offset,
-        )
-        for thing in thing_iterator.yieldRecordsByPage():
-            core_records = isb_lib.geome_adapter.reparseAsCoreRecord(thing)
-            print("Just added core_records: %s", str(core_records))
-            all_core_records.extend(core_records)
-            for r in all_core_records:
-                allkeys.add(r["id"])
-            batch_size = len(all_core_records)
-            if batch_size > solr_batch_size:
-                isb_lib.core.solrAddRecords(rsession, all_core_records, url=solr_url)
-                all_core_records = []
-        if len(all_core_records) > 0:
-            isb_lib.core.solrAddRecords(rsession, all_core_records, url=solr_url)
-        isb_lib.core.solrCommit(rsession, url=solr_url)
-        print(f"Total keys= {len(allkeys)}")
-        # verify records
-        # for verifying that all records were added to solr
-        # found = 0
-        # for _id in allkeys:
-        #    res = rsession.get(f"http://localhost:8983/solr/isb_rel/get?id={_id}").json()
-        #    if res.get("doc",{}).get("id") == _id:
-        #        found = found +1
-        #    else:
-        #        print(f"Missed: {_id}")
-        # print(f"Found = {found}")
-    finally:
-        session.close()
+    max_solr_updated_date = isb_lib.core.solr_max_source_updated_time(
+        url=solr_url,
+        authority_id=isb_lib.geome_adapter.GEOMEItem.AUTHORITY_ID,
+    )
+    logger.info(f"Going to index Things with tcreated > {max_solr_updated_date}")
+    solr_importer = isb_lib.core.CoreSolrImporter(
+        db_url=db_url,
+        authority_id=isb_lib.geome_adapter.GEOMEItem.AUTHORITY_ID,
+        db_batch_size=1000,
+        solr_batch_size=1000,
+        solr_url=solr_url,
+        min_time_created=max_solr_updated_date
+    )
+    allkeys = solr_importer.run_solr_import(isb_lib.geome_adapter.reparseAsCoreRecord)
+    logger.info(f"Total keys= {len(allkeys)}")
+
 
 if __name__ == "__main__":
     main()

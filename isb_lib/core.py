@@ -63,6 +63,10 @@ def initialize_logging(verbosity: typing.AnyStr):
     if verbosity not in LOG_LEVELS.keys():
         L.warning("%s is not a log level, set to INFO", verbosity)
 
+
+
+
+
 def things_main(ctx, db_url, solr_url, verbosity, heart_rate):
     ctx.ensure_object(dict)
     initialize_logging(verbosity)
@@ -307,6 +311,15 @@ def solrAddRecords(rsession, records, url):
     Returns: nothing
 
     """
+
+    # Need to strip previous generated fields to avoid solr inconsistency errors
+    for record in records:
+        record.pop("_version_", None)
+        record.pop("producedBy_samplingSite_location_bb__minY", None)
+        record.pop("producedBy_samplingSite_location_bb__minX", None)
+        record.pop("producedBy_samplingSite_location_bb__maxY", None)
+        record.pop("producedBy_samplingSite_location_bb__maxX", None)
+
     L = getLogger()
     headers = {"Content-Type": "application/json"}
     data = json.dumps(records).encode("utf-8")
@@ -367,6 +380,21 @@ def sesar_fetch_lowercase_igsn_records(
     dict = res.json()
     docs = dict["response"]["docs"]
     return docs
+
+def opencontext_fetch_broken_id_records(
+    url: typing.AnyStr, rows: int, rsession=requests.session()
+) -> typing.List[typing.Dict]:
+    headers = {"Content-Type": "application/json"}
+    params = {
+        "q": f"source:OPENCONTEXT AND id:http*",
+        "rows": rows,
+    }
+    _url = f"{url}select"
+    res = rsession.get(_url, headers=headers, params=params)
+    dict = res.json()
+    docs = dict["response"]["docs"]
+    return docs
+
 
 class IdentifierIterator:
     def __init__(
@@ -560,13 +588,14 @@ class CoreSolrImporter:
             core_records = []
             for thing in self._thing_iterator.yieldRecordsByPage():
                 try:
-                    core_record = core_record_function(thing)
+                    core_records_from_thing = core_record_function(thing)
                 except Exception as e:
                     getLogger().error("Failed trying to run transformer, skipping record %s", str(thing.resolved_content))
                     continue
 
-                core_record["source"] = self._authority_id
-                core_records.append(core_record)
+                for core_record in core_records_from_thing:
+                    core_record["source"] = self._authority_id
+                    core_records.append(core_record)
                 for r in core_records:
                     allkeys.add(r["id"])
                 batch_size = len(core_records)

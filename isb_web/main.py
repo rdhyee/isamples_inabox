@@ -12,6 +12,7 @@ from fastapi.params import Query, Depends
 from sqlmodel import Session
 
 import isb_web
+import isamples_metadata.GEOMETransformer
 from isb_web import sqlmodel_database
 from isb_web import schemas
 from isb_web import crud
@@ -19,7 +20,6 @@ from isb_web import config
 from isb_web import isb_format
 from isb_web import isb_solr_query
 from isamples_metadata.SESARTransformer import SESARTransformer
-from isamples_metadata.GEOMETransformer import GEOMETransformer
 from isamples_metadata.OpenContextTransformer import OpenContextTransformer
 from isamples_metadata.SmithsonianTransformer import SmithsonianTransformer
 
@@ -90,6 +90,11 @@ app.mount(
     "/static",
     fastapi.staticfiles.StaticFiles(directory=os.path.join(THIS_PATH, "static")),
     name="static",
+)
+app.mount(
+    "/sitemaps",
+    fastapi.staticfiles.StaticFiles(directory=os.path.join(THIS_PATH, "sitemaps"), check_dir=False),
+    name="sitemaps",
 )
 templates = fastapi.templating.Jinja2Templates(
     directory=os.path.join(THIS_PATH, "templates")
@@ -410,7 +415,7 @@ async def get_thing(
         if authority_id == "SESAR":
             content = SESARTransformer(item.resolved_content).transform()
         elif authority_id == "GEOME":
-            content = GEOMETransformer(item.resolved_content).transform()
+            content = isamples_metadata.GEOMETransformer.geome_transformer_for_identifier(identifier, item.resolved_content).transform()
         elif authority_id == "OPENCONTEXT":
             content = OpenContextTransformer(item.resolved_content).transform()
         elif authority_id == "SMITHSONIAN":

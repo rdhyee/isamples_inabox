@@ -7,7 +7,7 @@ import isb_lib.smithsonian_adapter
 import logging
 import sqlalchemy
 import datetime
-from isb_web.sqlmodel_database import get_thing_with_id, SQLModelDAO
+from isb_web.sqlmodel_database import get_thing_with_id, SQLModelDAO, save_thing
 
 
 def _save_record_to_db(session, file_path, record):
@@ -22,11 +22,7 @@ def _save_record_to_db(session, file_path, record):
             record, datetime.datetime.now(), file_path
         )
         try:
-            logging.debug("Going to add thing to session")
-            session.add(thing)
-            logging.debug("Added thing to session")
-            session.commit()
-            logging.debug("committed session")
+            save_thing(session, thing)
         except sqlalchemy.exc.IntegrityError as e:
             session.rollback()
             logging.error("Item already exists: %s", record)
@@ -61,9 +57,7 @@ def load_smithsonian_entries(session, max_count, file_path, start_from=None):
 @click.option(
     "-d", "--db_url", default=None, help="SQLAlchemy database URL for storage"
 )
-@click.option(
-    "-s", "--solr_url", default=None, help="Solr index URL"
-)
+@click.option("-s", "--solr_url", default=None, help="Solr index URL")
 @click.option(
     "-v",
     "--verbosity",
