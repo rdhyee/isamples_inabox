@@ -14,9 +14,6 @@ class SitemapIndexEntry:
         self.sitemap_filename = sitemap_filename
         self.last_mod_str = last_mod
 
-    def gzipped_sitemap_filename(self) -> str:
-        return f"{self.sitemap_filename}.gz"
-
 
 class UrlSetEntry:
     """Individual url entry in an urlset"""
@@ -52,9 +49,7 @@ class UrlSetIterator:
         # Dont read past the bounds
         if self._thing_index == len(self._things):
             raise StopIteration
-        # Safe to check the length by creating the urlset entries to see if we're past the end
         next_thing = self._things[self._thing_index]
-        # Some records don't have sourceUpdatedTime, so try a couple fallbacks:
         timestamp_str = next_thing.get("sourceUpdatedTime")
         next_url_set_entry = UrlSetEntry(next_thing["id"], timestamp_str)
         # Update the necessary state
