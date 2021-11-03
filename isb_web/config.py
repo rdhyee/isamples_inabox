@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     client_secret: str = ""
     authorize_endpoint: str = "https://github.com/login/oauth/authorize"
     access_token_endpoint: str = "https://github.com/login/oauth/access_token"
+    oauth_redirect_url: str = "https://mars.cyverse.org/githubauth"
 
     class Config:
         env_file = "isb_web_config.env"

@@ -53,6 +53,11 @@ AUTHORIZE_ENDPOINT = config.Settings().authorize_endpoint
 # OAuth2 endpoint for retrieving a token after successful auth
 ACCESS_TOKEN_ENDPOINT = config.Settings().access_token_endpoint
 
+# OAuth redirect URL. This is set manually because of a
+# disparity between nginx protocol and the gunicorn protocol
+# advertised to fastAPI resulting in http instead of https
+OAUTH_REDIRECT_URL = config.Settings().oauth_redirect_url
+
 # An OAuth instance for generating the requests
 oauth_client = authlib.integrations.starlette_client.OAuth()
 
@@ -182,8 +187,9 @@ async def login(request: fastapi.Request):
     """
     state = request.query_params.get("state", None)
     _cli = oauth_client.github
-    redirect_url = request.url_for("authorize")
-    return await _cli.authorize_redirect(request, redirect_url, state=state)
+    # url_for is returning http instead of https, it's a gunicorn issue
+    # redirect_url = request.url_for("authorize")
+    return await _cli.authorize_redirect(request, OAUTH_REDIRECT_URL, state=state)
 
 
 @app.websocket("/ws/{smoke}")
