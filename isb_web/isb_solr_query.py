@@ -314,6 +314,7 @@ def solr_records_for_sitemap(
     authority_id: typing.Optional[str] = None,
     start_index: int = 0,
     batch_size: int = 50000,
+    field: str = None
 ) -> typing.List[typing.Dict]:
     """
 
@@ -324,7 +325,7 @@ def solr_records_for_sitemap(
         batch_size: Number of documents for this particular sitemap document
 
     Returns:
-        A list of dictionaries with two keys: id, and sourceUpdatedtime
+        A list of dictionaries of solr documents with the specified fields, or all fields if not specified
     """
     headers = {"Content-Type": "application/json"}
     if authority_id is None:
@@ -336,8 +337,9 @@ def solr_records_for_sitemap(
         "sort": "sourceUpdatedTime asc",
         "rows": batch_size,
         "start": start_index,
-        "fl": "id,sourceUpdatedTime",
     }
+    if field is not None:
+        params["fl"] = field
     _url = get_solr_url("select")
     res = rsession.get(_url, headers=headers, params=params)
     json = res.json()

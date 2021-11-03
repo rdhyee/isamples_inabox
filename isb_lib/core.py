@@ -215,6 +215,8 @@ def shapely_to_solr(shape: shapely.geometry.shape):
 
 def lat_lon_to_solr(coreMetadata: typing.Dict, latitude: typing.SupportsFloat, longitude: typing.SupportsFloat):
     coreMetadata.update(shapely_to_solr(shapely.geometry.Point(longitude, latitude)))
+    coreMetadata["producedBy_samplingSite_location_latitude"] = latitude
+    coreMetadata["producedBy_samplingSite_location_longitude"] = longitude
 
 def handle_produced_by_fields(coreMetadata: typing.Dict, doc: typing.Dict):
     # The solr index flattens subdictionaries, so check the keys explicitly in the subdictionary to see if they should be added to the index

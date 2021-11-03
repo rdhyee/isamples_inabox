@@ -70,7 +70,7 @@ https://www.sitemaps.org/schemas/sitemap/0.9/siteindex.xsd">\n"""
         for sitemap_index_entry in sitemap_index_entries:
 
             loc_str = xmlesc(
-                os.path.join(host, "sitemaps", sitemap_index_entry.gzipped_sitemap_filename())
+                os.path.join(host, "sitemaps", sitemap_index_entry.sitemap_filename)
             )
             lastmod_str = xmlesc(sitemap_index_entry.last_mod_str)
             await writer(
@@ -122,12 +122,6 @@ async def _build_sitemap(base_path: str, host: str):
         sitemap_index_entries.append(sitemap_index_entry)
         urlset_dest_path = os.path.join(base_path, sitemap_index_entry.sitemap_filename)
         await write_urlset_file(urlset_dest_path, host, entries_for_urlset)
-        gzipped_urlset_dest_path = os.path.join(
-            base_path, sitemap_index_entry.gzipped_sitemap_filename()
-        )
-        with open(urlset_dest_path, "rb") as f_in:
-            with gzip.open(gzipped_urlset_dest_path, "wb") as f_out:
-                shutil.copyfileobj(f_in, f_out)
         logging.info(
             "Done with urlset_iterator, wrote "
             + str(urlset_iterator.num_urls)

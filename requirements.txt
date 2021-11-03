@@ -33,7 +33,6 @@ httptools==0.1.2; sys_platform != "win32" and sys_platform != "cygwin" and platf
 idna==3.2; python_version >= "3.8" and python_full_version < "3.0.0" and python_version < "4.0" or python_version >= "3.8" and python_version < "4.0" and python_full_version >= "3.6.0"
 igsn-lib @ git+https://github.com/isamplesorg/igsn_lib.git@main ; python_version >= "3.8" and python_version < "4.0"
 iniconfig==1.1.1; python_version >= "3.8" and python_version < "4.0"
-isamples-metadata @ git+https://github.com/isamplesorg/metadata.git@develop ; python_full_version >= "3.8.3" and python_full_version < "4.0.0"
 itsdangerous==2.0.1; python_version >= "3.6"
 jinja2==3.0.1; python_version >= "3.6"
 lxml==4.6.3; python_version >= "3.8" and python_full_version < "3.0.0" and python_version < "4.0" or python_version >= "3.8" and python_version < "4.0" and python_full_version >= "3.5.0"
