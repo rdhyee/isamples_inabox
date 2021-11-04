@@ -1,6 +1,7 @@
 import os
 import uvicorn
 import typing
+import re
 import requests
 import fastapi
 from fastapi.logger import logger as fastapi_logger
@@ -36,10 +37,17 @@ from isb_web.schemas import ThingPage
 from isb_web.sqlmodel_database import SQLModelDAO
 
 THIS_PATH = os.path.dirname(os.path.abspath(__file__))
+
 WEB_ROOT = config.Settings().web_root
 MEDIA_JSON = "application/json"
 MEDIA_NQUADS = "application/n-quads"
 MEDIA_GEO_JSON = "application/geo+json"
+
+logging.config.fileConfig(config.Settings().logging_config, disable_existing_loggers=False)
+L = logging.getLogger("ISB")
+
+#Cookie chaff
+COOKIE_SECRET = config.Settings().cookie_secret
 
 # OAuth2 application client id
 CLIENT_ID = config.Settings().client_id
@@ -90,7 +98,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(SessionMiddleware, secret_key="some-random-string")
+app.add_middleware(SessionMiddleware, secret_key=COOKIE_SECRET)
 
 app.mount(
     "/static",
@@ -108,35 +116,25 @@ templates = fastapi.templating.Jinja2Templates(
     directory=os.path.join(THIS_PATH, "templates")
 )
 
-
-class SocketConnectionManager:
+def isAllowedReferer(referer):
     """
-    Maintain state of connected websocket clients.
+    Checks referer against oauth_allowed_origins patterns
 
-    This is used to support authentication since clients may be operating from
-    a different host. The WS is not restricted by origin, and hence can be
-    used to communicate with the application. The application is still
-    responsible for presenting authentication UI to the user for authentication.
+    Args:
+        referer: String from request referer header
+
+    Returns:
+        boolean, True if allowed, False otherwise
+
     """
+    for allowed in config.Settings().oauth_allowed_origins:
+        m = re.match(allowed, referer)
+        if m is not None:
+            L.debug("Referer allowed: %s", referer)
+            return True
+    L.info("Login blocked for referer: %s", referer)
+    return False
 
-    def __init__(self):
-        self.active_connections = {}
-
-    def isRegistered(self, client: str):
-        return client in self.active_connections.keys()
-
-    async def connect(self, client: str, websocket: fastapi.WebSocket):
-        await websocket.accept()
-        self.active_connections[client] = websocket
-
-    def disconnect(self, client: str):
-        self.active_connections.pop(client)
-
-    async def sendData(self, client: str, data):
-        await self.active_connections[client].send_text(json.dumps(data))
-
-
-socket_manager = SocketConnectionManager()
 
 
 @app.get("/githubauth", include_in_schema=False)
@@ -151,7 +149,7 @@ async def authorize(request: fastapi.Request):
         request: Starlette request instance
 
     Returns:
-        Opens page notifying outcome, sends data over WS
+        Opens page notifying outcome
 
     """
     state = request.query_params.get("state", None)
@@ -159,18 +157,16 @@ async def authorize(request: fastapi.Request):
     token = await _cli.authorize_access_token(request)
     user = await _cli.get("user", token=token)
     data = user.json()
-    data["token"] = token
-    # Return the authentication data to the client
-    if socket_manager.isRegistered(state):
-        await socket_manager.sendData(
-            state,
-            {
-                "action": "token",
-                "token": data,
-            },
-        )
+    data["origin"] = state
+    data["token"] = token["access_token"]
     return templates.TemplateResponse(
-        "loggedin.html", {"request": request, "username": data["login"]}
+        "loggedin.html", {
+            "request": request,
+            "username": data["login"],
+            "name": data["name"],
+            "avatar_url": data["avatar_url"],
+            "info": data,
+        }
     )
 
 
@@ -185,58 +181,17 @@ async def login(request: fastapi.Request):
     Returns:
         Redirect to the authentication provider
     """
-    state = request.query_params.get("state", None)
+    referer = request.headers.get("referer", None)
+    if referer is None or not isAllowedReferer(referer):
+        raise fastapi.HTTPException(
+            status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
+            detail="Please login from an authorized source."
+        )
+    state = referer
     _cli = oauth_client.github
     # url_for is returning http instead of https, it's a gunicorn issue
     # redirect_url = request.url_for("authorize")
     return await _cli.authorize_redirect(request, OAUTH_REDIRECT_URL, state=state)
-
-
-@app.websocket("/ws/{smoke}")
-async def websocket_endpoint(websocket: fastapi.WebSocket, smoke: str):
-    """
-    Provides a websocket endpoint to support cross origin client authentication.
-
-    Args:
-        websocket: A Websocket instance
-        smoke: Client provided string to help create a unique value for state
-
-    Returns:
-        Sends login url to the websocket client.
-    """
-    """if not isValidSmoke(smoke):
-        # The smoke value must be generated by getSmoke to
-        # prevent connections from unexpected clients
-        return
-    """
-    hostname = websocket.url.hostname
-    port = websocket.url.port
-    if port is None:
-        port = 443
-    protocol = "http"
-    if websocket.url.is_secure:
-        protocol = "https"
-    elif hostname.lower() not in ["localhost", "127.0.0.1"]:
-        # Only allow insecure socket connections with localhost
-        return
-    data = str(time.time_ns()) + smoke
-    client_id = hashlib.sha256(data.encode("utf-8")).hexdigest()
-    await socket_manager.connect(client_id, websocket)
-    try:
-        # Tell the connected client how to login
-        await socket_manager.sendData(
-            client_id,
-            {
-                "action": "login",
-                "client_id": client_id,
-                "redirect_url": f"{protocol}://{hostname}:{port}{app.url_path_for('login')}",
-            },
-        )
-        # Keep the socket alive until killed by the client
-        while True:
-            data = await websocket.receive_text()
-    except fastapi.WebSocketDisconnect:
-        socket_manager.disconnect(client_id)
 
 
 @app.on_event("startup")
@@ -673,7 +628,7 @@ async def root(request: fastapi.Request):
 
 @app.get("/", include_in_schema=False)
 async def root(request: fastapi.Request):
-    return fastapi.responses.RedirectResponse(url='/docs')
+    return fastapi.responses.RedirectResponse(url="/docs")
 
 
 def main():
@@ -690,8 +645,8 @@ if __name__ == "__main__":
         logging.StreamHandler()
     )  # RotatingFileHandler('/log/abc.log', backupCount=0)
     logging.getLogger().setLevel(logging.NOTSET)
-    fastapi_logger.addHandler(handler)
-    handler.setFormatter(formatter)
+    #fastapi_logger.addHandler(handler)
+    #handler.setFormatter(formatter)
 
     # gunicorn_error_logger = logging.getLogger("gunicorn.error")
     # gunicorn_logger = logging.getLogger("gunicorn")
