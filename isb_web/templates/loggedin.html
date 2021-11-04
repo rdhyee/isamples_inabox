@@ -14,15 +14,21 @@
 </header>
 <main>
     <section>
-        <p>Successfully authenticated as {{username}}</p>
+        <p>Successfully authenticated as <code>{{username}}</code> ({{name}})
+            <img src="{{avatar_url}}" width="50"></img></p>
         <p>This window will close shortly, <a href="#" onclick="window.close()"> or close now.</a></p>
     </section>
 </main>
 <footer></footer>
 <script>
+    const message = {
+        name: "auth-info",
+        info: {{info | tojson() }},
+    }
+    window.opener.postMessage(message, "{{info.origin}}");
     window.setTimeout(() => {
         window.close();
-    }, 1);
+    }, 1500);
 </script>
 </body>
 </html>
