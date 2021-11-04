@@ -43,7 +43,13 @@ MEDIA_JSON = "application/json"
 MEDIA_NQUADS = "application/n-quads"
 MEDIA_GEO_JSON = "application/geo+json"
 
-logging.config.fileConfig(config.Settings().logging_config, disable_existing_loggers=False)
+# Setup logging from the config, but don't
+# blowup if the logging config can't be found
+try:
+    logging.config.fileConfig(config.Settings().logging_config, disable_existing_loggers=False)
+except KeyError as e:
+    logging.warning("Could not load logging configuration")
+    pass
 L = logging.getLogger("ISB")
 
 #Cookie chaff
