@@ -3,6 +3,7 @@ import requests
 import geojson
 import fastapi
 import os.path
+import logging
 
 import isb_web.config
 
@@ -309,12 +310,40 @@ def solr_luke():
     )
 
 
+def _fetch_solr_records(
+    rsession=requests.session(),
+    authority_id: typing.Optional[str] = None,
+    start_index: int = 0,
+    batch_size: int = 50000,
+    field: typing.Optional[str] = None,
+    sort: typing.Optional[str] = None
+):
+    headers = {"Content-Type": "application/json"}
+    if authority_id is None:
+        query = "*:*"
+    else:
+        query = f"source:{authority_id}"
+    params = {
+        "q": query,
+        "rows": batch_size,
+        "start": start_index,
+    }
+    if field is not None:
+        params["fl"] = field
+    if sort is not None:
+        params["sort"] = sort
+    _url = get_solr_url("select")
+    res = rsession.get(_url, headers=headers, params=params)
+    json = res.json()
+    docs = json["response"]["docs"]
+    return docs
+
+
 def solr_records_for_sitemap(
     rsession=requests.session(),
     authority_id: typing.Optional[str] = None,
     start_index: int = 0,
     batch_size: int = 50000,
-    field: str = None
 ) -> typing.List[typing.Dict]:
     """
 
@@ -325,23 +354,57 @@ def solr_records_for_sitemap(
         batch_size: Number of documents for this particular sitemap document
 
     Returns:
-        A list of dictionaries of solr documents with the specified fields, or all fields if not specified
+        A list of dictionaries of solr documents with id and sourceUpdatedTime fields
     """
-    headers = {"Content-Type": "application/json"}
-    if authority_id is None:
-        query = "*:*"
-    else:
-        query = f"source:{authority_id}"
-    params = {
-        "q": query,
-        "sort": "sourceUpdatedTime asc",
-        "rows": batch_size,
-        "start": start_index,
-    }
-    if field is not None:
-        params["fl"] = field
-    _url = get_solr_url("select")
-    res = rsession.get(_url, headers=headers, params=params)
-    json = res.json()
-    docs = json["response"]["docs"]
-    return docs
+    return _fetch_solr_records(rsession, authority_id, start_index, batch_size, "id,sourceUpdatedTime", "sourceUpdatedTime asc")
+
+
+
+class ISBCoreSolrRecordIterator:
+    """
+    Iterator class for looping over all the Solr records in the ISB core Solr schema
+    """
+
+    def __init__(
+        self,
+        rsession = requests.session(),
+        authority: str = None,
+        batch_size: int = 50000,
+        offset: int = 0,
+        sort: str = None
+    ):
+        """
+
+        Args:
+            rsession: The requests.session object to use for sending the solr request
+            authority_id: The authority_id to use when querying SOLR, defaults to all
+            batch_size: Number of documents to fetch at a time
+            offset: The offset into the records to begin iterating
+            sort: The solr sort parameter to use
+        """
+        self.rsession = rsession
+        self.authority = authority
+        self.batch_size = batch_size
+        self.offset = offset
+        self.sort = sort
+        self._current_batch = []
+        self._current_batch_index = -1
+
+
+    def __iter__(self):
+        return self
+
+
+    def __next__(self) -> typing.Dict:
+        if len(self._current_batch) == 0 or self._current_batch_index == len(self._current_batch):
+            self._current_batch = _fetch_solr_records(self.rsession, self.authority, self.offset, self.batch_size, None, self.sort)
+            if len(self._current_batch) == 0:
+                # reached the end of the records
+                raise StopIteration
+            logging.info(f"Just fetched {len(self._current_batch)} ISB Core solr records at offset {self.offset}")
+            self.offset += self.batch_size
+            self._current_batch_index = 0
+        # return the next one in the list and increment our index
+        next_record = self._current_batch[self._current_batch_index]
+        self._current_batch_index = self._current_batch_index + 1
+        return next_record

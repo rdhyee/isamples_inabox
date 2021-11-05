@@ -314,13 +314,20 @@ def solrAddRecords(rsession, records, url):
 
     """
 
-    # Need to strip previous generated fields to avoid solr inconsistency errors
+    # Need to strip previously generated fields to avoid solr inconsistency errors
     for record in records:
         record.pop("_version_", None)
         record.pop("producedBy_samplingSite_location_bb__minY", None)
         record.pop("producedBy_samplingSite_location_bb__minX", None)
         record.pop("producedBy_samplingSite_location_bb__maxY", None)
         record.pop("producedBy_samplingSite_location_bb__maxX", None)
+
+        # If we don't nuke all the copy fields, they'll end up copying over multiple times
+        record.pop("searchText", None)
+        record.pop("description_text", None)
+        record.pop("producedBy_description_text", None)
+        record.pop("producedBy_samplingSite_description_text", None)
+        record.pop("curation_description_text", None)
 
     L = getLogger()
     headers = {"Content-Type": "application/json"}
