@@ -76,6 +76,7 @@ class OpenContextRecordIterator(isb_lib.core.IdentifierIterator):
             date_end=date_end,
             page_size=page_size,
         )
+        self._past_date_start = False
         self.url = OPENCONTEXT_API
 
     def records_in_page(self):
@@ -88,7 +89,7 @@ class OpenContextRecordIterator(isb_lib.core.IdentifierIterator):
         }
         more_work = True
         num_records = 0
-        while more_work and self.url is not None:
+        while more_work and self.url is not None and not self._past_date_start:
             L.info("trying to hit %s", self.url)
             response = requests.get(
                 self.url, params=params, headers=headers, timeout=HTTP_TIMEOUT
@@ -103,6 +104,7 @@ class OpenContextRecordIterator(isb_lib.core.IdentifierIterator):
                 break
             # L.debug("recordsInProject data: %s", response.text[:256])
             data = response.json()
+            next_url = data.get("next-json")
             for record in data.get("oc-api:has-results", {}):
                 L.info("records_in_page Record id: %s", record.get("uri", None))
                 record_updated = dateparser.parse(record["updated"])
@@ -113,21 +115,23 @@ class OpenContextRecordIterator(isb_lib.core.IdentifierIterator):
                         self._date_start
                     )
                     data = {}
+                    self._past_date_start = True
                     break
                 # print(json.dumps(record, indent=2))
                 # raise NotImplementedError
                 yield record
                 num_records += 1
-            self.url = data.get("next-json")
-            if len(data.get("oc-api:has-results", {})) < _page_size:
+
+            if (
+                len(data.get("oc-api:has-results", {})) < _page_size
+                or self.url is None
+                or 0 < self._max_entries <= num_records
+                or num_records == self._page_size
+                or self._past_date_start
+            ):
                 more_work = False
-            elif self.url is None:
-                # If we hit the last page, there won't be a 'next-json' key
-                more_work = False
-            elif 0 < self._max_entries <= num_records:
-                more_work = False
-            elif num_records == self._page_size:
-                more_work = False
+            if more_work:
+                self.url = next_url
 
     def loadEntries(self):
         self._cpage = []
