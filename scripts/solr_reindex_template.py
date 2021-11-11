@@ -31,9 +31,11 @@ def main(ctx):
         if mutated_record is not None:
             current_mutated_batch.append(mutated_record)
         if len(current_mutated_batch) == batch_size:
+            logging.info(f"Going to save {len(current_mutated_batch)} records")
             isb_lib.core.solrAddRecords(rsession, current_mutated_batch, solr_url)
             isb_lib.core.solrCommit(rsession, solr_url)
             logging.info(f"Just saved {len(current_mutated_batch)} records")
+            current_mutated_batch = []
         total_records += 1
     logging.info(f"Finished iterating, visited {total_records} records")
 
