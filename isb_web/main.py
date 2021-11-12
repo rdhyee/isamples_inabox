@@ -369,6 +369,12 @@ async def get_solr_query(
     logging.warning(query)
     return isb_solr_query.solr_query(request.query_params, query=query)
 
+@app.get("/thing/stream", response_model=typing.Any)
+async def get_solr_stream(request: fastapi.Request):
+    logging.warning("Query params: ", request.query_params)
+    return isb_solr_query.solr_searchStream(request.query_params)
+
+
 
 @app.get("/thing/select/info", response_model=typing.Any)
 async def get_solr_luke_info():
