@@ -94,7 +94,7 @@ class SitemapIndexIterator:
             self._last_timestamp_str = self._last_url_set_iterator.last_tstamp_str
             self._last_primary_key = self._last_url_set_iterator.last_identifier
         things = isb_solr_query.solr_records_for_sitemap(
-            self._rsession, self._authority, self._offset, self._num_things_per_file, "id,sourceUpdatedTime"
+            self._rsession, self._authority, self._offset, self._num_things_per_file
         )
         if len(things) == 0:
             raise StopIteration
