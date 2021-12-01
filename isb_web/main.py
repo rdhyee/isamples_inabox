@@ -38,7 +38,6 @@ from isb_web.sqlmodel_database import SQLModelDAO
 
 THIS_PATH = os.path.dirname(os.path.abspath(__file__))
 
-WEB_ROOT = config.Settings().web_root
 MEDIA_JSON = "application/json"
 MEDIA_NQUADS = "application/n-quads"
 MEDIA_GEO_JSON = "application/geo+json"
@@ -95,7 +94,7 @@ tags_metadata = [
     }
 ]
 
-app = fastapi.FastAPI(root_path=WEB_ROOT, openapi_tags=tags_metadata)
+app = fastapi.FastAPI(openapi_tags=tags_metadata)
 dao = SQLModelDAO(None)
 
 app.add_middleware(
@@ -655,7 +654,7 @@ async def root(request: fastapi.Request):
 
 @app.get("/", include_in_schema=False)
 async def root(request: fastapi.Request):
-    return fastapi.responses.RedirectResponse(url="/docs")
+    return fastapi.responses.RedirectResponse(url=f"{request.scope.get('root_path')}/docs")
 
 
 def main():
