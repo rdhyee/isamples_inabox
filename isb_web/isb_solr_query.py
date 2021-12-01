@@ -2,9 +2,9 @@ import typing
 import requests
 import geojson
 import fastapi
-import os.path
 import logging
-
+import os.path
+import urllib.parse
 import isb_web.config
 
 BASE_URL = isb_web.config.Settings().solr_url
@@ -24,6 +24,38 @@ _GEOJSON_ERR_PCT = 0.2
 # 0.1 for the leaflet heatmap tends to generate more cells for the heatmap “blob” generation
 _LEAFLET_ERR_PCT = 0.1
 
+# Maximum rows to return in a streaming request.
+MAX_STREAMING_ROWS = 500000
+
+RESERVED_CHAR_LIST = [
+    "+",
+    "-",
+    "&",
+    "|",
+    "!",
+    "(",
+    ")",
+    "{",
+    "}",
+    "[",
+    "]",
+    "^",
+    '"',
+    "~",
+    "*",
+    "?",
+    ":",
+]
+
+
+def escape_solr_query_term(term):
+    """Escape a query term for inclusion in a query.
+    """
+    term = term.replace("\\", "\\\\")
+    for c in RESERVED_CHAR_LIST:
+        term = term.replace(c, r"\{}".format(c))
+    return term
+
 
 def clip_float(v, min_v, max_v):
     if v < min_v:
@@ -34,7 +66,7 @@ def clip_float(v, min_v, max_v):
 
 
 def get_solr_url(path_component: str):
-    return os.path.join(BASE_URL, path_component)
+    return urllib.parse.urljoin(BASE_URL, path_component)
 
 
 def _get_heatmap(
@@ -292,6 +324,100 @@ def solr_query(params, query=None):
         response.iter_content(chunk_size=2048), media_type=content_type
     )
 
+def solr_get_record(identifier):
+    """
+    Retrieve the solr document for the specified identifier.
+
+    The select endpoint is used instead of get because get does
+    not return fields populated by copyField operations.
+
+    Args:
+        identifier: string, the record identifier
+
+    Returns: status_code, object
+    """
+    params = {
+        "wt": "json",
+        "q": f"id:{escape_solr_query_term(identifier)}",
+        "fl": "*",
+        "rows": 1,
+        "start": 0,
+    }
+    url = get_solr_url("select")
+    headers = {"Accept": "application/json"}
+    response = requests.get(url, headers=headers, params=params)
+    if response.status_code != 200:
+        return response.status_code, None
+    docs = response.json()
+    if docs['response']['numFound'] == 0:
+        return 404, None
+    return 200, docs['response']['docs'][0]
+
+
+
+def solr_searchStream(params, collection="isb_core_records"):
+    """
+    Requests a streaming search response from solr.
+
+    This is experimental, with the ultimate goal of supporting rendering of
+    a large (100k or so) points to the Cesium display for arbitrary queries.
+
+    Example with curl:
+    curl --data-urlencode 'expr=search(isb_core_records,q="source:SESAR",fq="searchText:sample",fq="hasMaterialCategory:Mineral",fl="id,producedBy_samplingSite_location_latitude,producedBy_samplingSite_location_longitude",sort="id asc",qt="/export")' "http://localhost:8985/solr/isb_core_records/stream"
+
+    Args:
+        params: parameters for the search expression
+        collection: name of collection to search
+
+    Returns:
+
+    """
+    #TODO: Test coverage
+
+    url = get_solr_url("stream")
+    headers = {"Accept": "application/json"}
+    qparams = {}
+    _params = []
+    _has_rows = False
+    _has_q = False
+    _has_sort = False
+    _has_fl = False
+    for k,v in params.items():
+        if k == "rows":
+            _has_rows = True
+            if int(v) > MAX_STREAMING_ROWS:
+                v = MAX_STREAMING_ROWS
+        if k == "sort":
+            _has_sort = True
+        if k == "fl":
+           _fields = v.split(",")
+           _fields.append("x:producedBy_samplingSite_location_longitude")
+           _fields.append("y:producedBy_samplingSite_location_latitude")
+           v = ",".join(_fields)
+        _params.append(f'{k}="{v}"')
+    if not _has_rows:
+        _params.append(f'rows={MAX_STREAMING_ROWS}')
+    if not _has_sort:
+        _params.append('sort="id asc"')
+    if not _has_q:
+        _params.append('q="*:*"')
+    if not _has_fl:
+        _params.append('fl="id,x:producedBy_samplingSite_location_longitude,y:producedBy_samplingSite_location_latitude"')
+    _params.append(('fq="producedBy_samplingSite_location_longitude:*'
+                    ' AND producedBy_samplingSite_location_latitude:*"'))
+    content_type = "application/json"
+    request = {
+        "expr":
+            (f'select(rollup(search({collection},{",".join(_params)},qt="/select")'
+             ',over="x,y",count(*)),x,y,count(*) as n)')
+    }
+    logging.info("Expression = %s", request["expr"])
+    response = requests.post(url, headers=headers, params=qparams, data=request, stream=True)
+    logging.info("Returning response")
+    return fastapi.responses.StreamingResponse(
+        response.iter_content(chunk_size=4096), media_type=content_type
+    )
+
 
 def solr_luke():
     """
@@ -301,7 +427,7 @@ def solr_luke():
     Returns:
         JSON document iterator
     """
-    url = get_solr_url("/admin/luke")
+    url = get_solr_url("admin/luke")
     params = {"show": "schema", "wt": "json"}
     headers = {"Accept": "application/json"}
     response = requests.get(url, headers=headers, params=params, stream=True)
