@@ -14,9 +14,6 @@ class Settings(BaseSettings):
     # e.g.: postgresql+psycopg2://DBUSER:DBPASS@localhost/isb_1
     database_url: str = "UNSET"
 
-    # Everything is relative to this location
-    web_root: str = "/"
-
     # The Solr service URL, must end in "/"
     # e.g. http://localhost:8983/solr/isb_core_records/
     solr_url: str = "UNSET"
