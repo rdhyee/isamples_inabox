@@ -27,6 +27,35 @@ _LEAFLET_ERR_PCT = 0.1
 # Maximum rows to return in a streaming request.
 MAX_STREAMING_ROWS = 500000
 
+RESERVED_CHAR_LIST = [
+    "+",
+    "-",
+    "&",
+    "|",
+    "!",
+    "(",
+    ")",
+    "{",
+    "}",
+    "[",
+    "]",
+    "^",
+    '"',
+    "~",
+    "*",
+    "?",
+    ":",
+]
+
+
+def escape_solr_query_term(term):
+    """Escape a query term for inclusion in a query.
+    """
+    term = term.replace("\\", "\\\\")
+    for c in RESERVED_CHAR_LIST:
+        term = term.replace(c, r"\{}".format(c))
+    return term
+
 
 def clip_float(v, min_v, max_v):
     if v < min_v:
@@ -294,6 +323,36 @@ def solr_query(params, query=None):
     return fastapi.responses.StreamingResponse(
         response.iter_content(chunk_size=2048), media_type=content_type
     )
+
+def solr_get_record(identifier):
+    """
+    Retrieve the solr document for the specified identifier.
+
+    The select endpoint is used instead of get because get does
+    not return fields populated by copyField operations.
+
+    Args:
+        identifier: string, the record identifier
+
+    Returns: status_code, object
+    """
+    params = {
+        "wt": "json",
+        "q": f"id:{escape_solr_query_term(identifier)}",
+        "fl": "*",
+        "rows": 1,
+        "start": 0,
+    }
+    url = get_solr_url("select")
+    headers = {"Accept": "application/json"}
+    response = requests.get(url, headers=headers, params=params)
+    if response.status_code != 200:
+        return response.status_code, None
+    docs = response.json()
+    if docs['response']['numFound'] == 0:
+        return 404, None
+    return 200, docs['response']['docs'][0]
+
 
 
 def solr_searchStream(params, collection="isb_core_records"):

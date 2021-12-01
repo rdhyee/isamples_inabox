@@ -14,3 +14,4 @@ class ISBFormat(_NoValue):
     ORIGINAL = "original"
     CORE = "core"
     FULL = "full"
+    SOLR = "solr"

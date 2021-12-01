@@ -366,12 +366,12 @@ async def get_solr_select(request: fastapi.Request):
 async def get_solr_query(
     request: fastapi.Request, query: typing.Any = fastapi.Body(...)
 ):
-    logging.warning(query)
+    #logging.warning(query)
     return isb_solr_query.solr_query(request.query_params, query=query)
 
 @app.get("/thing/stream", response_model=typing.Any)
 async def get_solr_stream(request: fastapi.Request):
-    logging.warning("Query params: ", request.query_params)
+    #logging.warning("Query params: ", request.query_params)
     return isb_solr_query.solr_searchStream(request.query_params)
 
 
@@ -393,6 +393,21 @@ async def get_thing(
     session: Session = Depends(get_session),
 ):
     """Record for the specified identifier"""
+    if format == isb_format.ISBFormat.SOLR:
+        # Return solr representation of the record
+        # Get the solr response, and return the doc portion or
+        # and appropriate error condition
+        status, doc = isb_solr_query.solr_get_record(identifier)
+        if status == 200:
+            return fastapi.responses.JSONResponse(
+                content=doc, media_type="application/json"
+            )
+        raise fastapi.HTTPException(
+            status_code=status,
+            detail=f"Unable to retrieve solr record for identifier: {identifier}"
+        )
+
+    # Retrieve record from the database
     item = sqlmodel_database.get_thing_with_id(session, identifier)
     if item is None:
         raise fastapi.HTTPException(
