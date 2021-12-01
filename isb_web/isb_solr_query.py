@@ -49,8 +49,7 @@ RESERVED_CHAR_LIST = [
 
 
 def escape_solr_query_term(term):
-    """Escape a query term for inclusion in a query.
-    """
+    """Escape a query term for inclusion in a query."""
     term = term.replace("\\", "\\\\")
     for c in RESERVED_CHAR_LIST:
         term = term.replace(c, r"\{}".format(c))
@@ -319,10 +318,13 @@ def solr_query(params, query=None):
     if query is None:
         response = requests.get(url, headers=headers, params=params, stream=True)
     else:
-        response = requests.post(url, headers=headers, params=params, json=query, stream=True)
+        response = requests.post(
+            url, headers=headers, params=params, json=query, stream=True
+        )
     return fastapi.responses.StreamingResponse(
         response.iter_content(chunk_size=2048), media_type=content_type
     )
+
 
 def solr_get_record(identifier):
     """
@@ -349,10 +351,9 @@ def solr_get_record(identifier):
     if response.status_code != 200:
         return response.status_code, None
     docs = response.json()
-    if docs['response']['numFound'] == 0:
+    if docs["response"]["numFound"] == 0:
         return 404, None
-    return 200, docs['response']['docs'][0]
-
+    return 200, docs["response"]["docs"][0]
 
 
 def solr_searchStream(params, collection="isb_core_records"):
@@ -372,7 +373,7 @@ def solr_searchStream(params, collection="isb_core_records"):
     Returns:
 
     """
-    #TODO: Test coverage
+    # TODO: Test coverage
 
     url = get_solr_url("stream")
     headers = {"Accept": "application/json"}
@@ -382,7 +383,7 @@ def solr_searchStream(params, collection="isb_core_records"):
     _has_q = False
     _has_sort = False
     _has_fl = False
-    for k,v in params.items():
+    for k, v in params.items():
         if k == "rows":
             _has_rows = True
             if int(v) > MAX_STREAMING_ROWS:
@@ -390,29 +391,38 @@ def solr_searchStream(params, collection="isb_core_records"):
         if k == "sort":
             _has_sort = True
         if k == "fl":
-           _fields = v.split(",")
-           _fields.append("x:producedBy_samplingSite_location_longitude")
-           _fields.append("y:producedBy_samplingSite_location_latitude")
-           v = ",".join(_fields)
+            _fields = v.split(",")
+            _fields.append("x:producedBy_samplingSite_location_longitude")
+            _fields.append("y:producedBy_samplingSite_location_latitude")
+            v = ",".join(_fields)
         _params.append(f'{k}="{v}"')
     if not _has_rows:
-        _params.append(f'rows={MAX_STREAMING_ROWS}')
+        _params.append(f"rows={MAX_STREAMING_ROWS}")
     if not _has_sort:
         _params.append('sort="id asc"')
     if not _has_q:
         _params.append('q="*:*"')
     if not _has_fl:
-        _params.append('fl="id,x:producedBy_samplingSite_location_longitude,y:producedBy_samplingSite_location_latitude"')
-    _params.append(('fq="producedBy_samplingSite_location_longitude:*'
-                    ' AND producedBy_samplingSite_location_latitude:*"'))
+        _params.append(
+            'fl="id,x:producedBy_samplingSite_location_longitude,y:producedBy_samplingSite_location_latitude"'
+        )
+    _params.append(
+        (
+            'fq="producedBy_samplingSite_location_longitude:*'
+            ' AND producedBy_samplingSite_location_latitude:*"'
+        )
+    )
     content_type = "application/json"
     request = {
-        "expr":
-            (f'select(rollup(search({collection},{",".join(_params)},qt="/select")'
-             ',over="x,y",count(*)),x,y,count(*) as n)')
+        "expr": (
+            f'select(rollup(search({collection},{",".join(_params)},qt="/select")'
+            ',over="x,y",count(*)),x,y,count(*) as n)'
+        )
     }
     logging.info("Expression = %s", request["expr"])
-    response = requests.post(url, headers=headers, params=qparams, data=request, stream=True)
+    response = requests.post(
+        url, headers=headers, params=qparams, data=request, stream=True
+    )
     logging.info("Returning response")
     return fastapi.responses.StreamingResponse(
         response.iter_content(chunk_size=4096), media_type=content_type
@@ -442,7 +452,7 @@ def _fetch_solr_records(
     start_index: int = 0,
     batch_size: int = 50000,
     field: typing.Optional[str] = None,
-    sort: typing.Optional[str] = None
+    sort: typing.Optional[str] = None,
 ):
     headers = {"Content-Type": "application/json"}
     if authority_id is None:
@@ -482,8 +492,14 @@ def solr_records_for_sitemap(
     Returns:
         A list of dictionaries of solr documents with id and sourceUpdatedTime fields
     """
-    return _fetch_solr_records(rsession, authority_id, start_index, batch_size, "id,sourceUpdatedTime", "sourceUpdatedTime asc")
-
+    return _fetch_solr_records(
+        rsession,
+        authority_id,
+        start_index,
+        batch_size,
+        "id,sourceUpdatedTime",
+        "sourceUpdatedTime asc",
+    )
 
 
 class ISBCoreSolrRecordIterator:
@@ -493,11 +509,11 @@ class ISBCoreSolrRecordIterator:
 
     def __init__(
         self,
-        rsession = requests.session(),
+        rsession=requests.session(),
         authority: str = None,
         batch_size: int = 50000,
         offset: int = 0,
-        sort: str = None
+        sort: str = None,
     ):
         """
 
@@ -516,18 +532,27 @@ class ISBCoreSolrRecordIterator:
         self._current_batch = []
         self._current_batch_index = -1
 
-
     def __iter__(self):
         return self
 
-
     def __next__(self) -> typing.Dict:
-        if len(self._current_batch) == 0 or self._current_batch_index == len(self._current_batch):
-            self._current_batch = _fetch_solr_records(self.rsession, self.authority, self.offset, self.batch_size, None, self.sort)
+        if len(self._current_batch) == 0 or self._current_batch_index == len(
+            self._current_batch
+        ):
+            self._current_batch = _fetch_solr_records(
+                self.rsession,
+                self.authority,
+                self.offset,
+                self.batch_size,
+                None,
+                self.sort,
+            )
             if len(self._current_batch) == 0:
                 # reached the end of the records
                 raise StopIteration
-            logging.info(f"Just fetched {len(self._current_batch)} ISB Core solr records at offset {self.offset}")
+            logging.info(
+                f"Just fetched {len(self._current_batch)} ISB Core solr records at offset {self.offset}"
+            )
             self.offset += self.batch_size
             self._current_batch_index = 0
         # return the next one in the list and increment our index
