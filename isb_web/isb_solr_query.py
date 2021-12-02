@@ -360,52 +360,74 @@ def solr_searchStream(params, collection="isb_core_records"):
     """
     Requests a streaming search response from solr.
 
-    This is experimental, with the ultimate goal of supporting rendering of
-    a large (100k or so) points to the Cesium display for arbitrary queries.
+    The usual q, fq, fl, sort and other standard parameters are accepted.
+
+    Only records that have longitude and latitude are returned.
+
+    The response always includes at least the fields except if
+    "xycount" is true (below):
+      id: the record id
+      x: longitude
+      y: latitude
+
+    If "xycount" is provided as a truthy value, then the results include only
+    the fields "x,y,n" where n is the number of records at x,y.
 
     Example with curl:
-    curl --data-urlencode 'expr=search(isb_core_records,q="source:SESAR",fq="searchText:sample",fq="hasMaterialCategory:Mineral",fl="id,producedBy_samplingSite_location_latitude,producedBy_samplingSite_location_longitude",sort="id asc",qt="/export")' "http://localhost:8985/solr/isb_core_records/stream"
+    curl --data-urlencode \
+      'expr=search(isb_core_records,q="source:SESAR",fq="searchText:sample",fq="hasMaterialCategory:Mineral",fl="id,producedBy_samplingSite_location_latitude,producedBy_samplingSite_location_longitude",sort="id asc",qt="/export")'\
+      "http://localhost:8983/solr/isb_core_records/stream"
 
     Args:
         params: parameters for the search expression
         collection: name of collection to search
 
     Returns:
-
+        Stream of records from solr
     """
-    # TODO: Test coverage
+    # TODO: Test coverage, need to mock solr?
 
+    point_rollup = False
+    default_params = {
+        "q": "*:*",
+        "rows": MAX_STREAMING_ROWS,
+    }
+    default_params.update(params)
     url = get_solr_url("stream")
     headers = {"Accept": "application/json"}
     qparams = {}
     _params = []
-    _has_rows = False
-    _has_q = False
     _has_sort = False
     _has_fl = False
-    for k, v in params.items():
+    _field_list = [
+        "id",
+        "x:producedBy_samplingSite_location_longitude",
+        "y:producedBy_samplingSite_location_latitude",
+    ]
+    for k, v in default_params.items():
+        if k == "xycount":
+            v = str(v).lower()
+            if v in ["1", "true", "yes", "y"]:
+                point_rollup = True
+            k = None
         if k == "rows":
-            _has_rows = True
             if int(v) > MAX_STREAMING_ROWS:
                 v = MAX_STREAMING_ROWS
         if k == "sort":
             _has_sort = True
         if k == "fl":
+            _has_fl = True
             _fields = v.split(",")
-            _fields.append("x:producedBy_samplingSite_location_longitude")
-            _fields.append("y:producedBy_samplingSite_location_latitude")
-            v = ",".join(_fields)
-        _params.append(f'{k}="{v}"')
-    if not _has_rows:
-        _params.append(f"rows={MAX_STREAMING_ROWS}")
-    if not _has_sort:
-        _params.append('sort="id asc"')
-    if not _has_q:
-        _params.append('q="*:*"')
+            for f in _fields:
+                if f not in _field_list:
+                    _field_list.append(f)
+            v = ",".join(_field_list)
+        if not k is None:
+            _params.append(f'{k}="{v}"')
     if not _has_fl:
-        _params.append(
-            'fl="id,x:producedBy_samplingSite_location_longitude,y:producedBy_samplingSite_location_latitude"'
-        )
+        _params.append(f'fl="{",".join(_field_list)}"')
+    #if not _has_sort:
+    #    _params.append('sort="id asc"')
     _params.append(
         (
             'fq="producedBy_samplingSite_location_longitude:*'
@@ -413,12 +435,14 @@ def solr_searchStream(params, collection="isb_core_records"):
         )
     )
     content_type = "application/json"
-    request = {
-        "expr": (
-            f'select(rollup(search({collection},{",".join(_params)},qt="/select")'
-            ',over="x,y",count(*)),x,y,count(*) as n)'
-        )
-    }
+    request = {"expr": f'search({collection},{",".join(_params)},qt="/select")'}
+    if point_rollup:
+        request = {
+            "expr": (
+                f'select(rollup(search({collection},{",".join(_params)},qt="/select")'
+                ',over="x,y",count(*)),x,y,count(*) as n)'
+            )
+        }
     logging.info("Expression = %s", request["expr"])
     response = requests.post(
         url, headers=headers, params=qparams, data=request, stream=True
