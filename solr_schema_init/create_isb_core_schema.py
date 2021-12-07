@@ -108,7 +108,7 @@ print("Going to create fields in create_isb_core_schema")
 createField("isb_core_id", "string", True, True, None)
 # Catch-all search field that all text should copy to
 createField("searchText", "text_en", True, True, None, True)
-# createField("source", "string", True, True, None)
+createField("source", "string", True, True, None)
 createCopyField("source", "searchText")
 # The time the record was last updated in the source db
 createField("sourceUpdatedTime", "pdate", True, True, None)
