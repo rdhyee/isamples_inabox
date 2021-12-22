@@ -13,7 +13,11 @@ from isb_web.sqlmodel_database import (
     last_time_thing_created,
     paged_things_with_ids,
     insert_identifiers,
-    save_thing, things_for_sitemap,
+    save_thing,
+    things_for_sitemap,
+    mark_thing_not_found,
+    save_or_update_thing,
+    get_thing_identifiers_for_thing,
 )
 from test_utils import _add_some_things
 
@@ -75,13 +79,20 @@ def test_read_things_with_things(session: Session):
     assert len(data) > 0
 
 
-def test_last_time_thing_created(session: Session):
-    test_authority = "test"
-    created = last_time_thing_created(session, test_authority)
+last_time_thing_created_values = [("test", "test"), (None, "test")]
+
+
+@pytest.mark.parametrize(
+    "authority_id_for_fetch,authority_id_for_create", last_time_thing_created_values
+)
+def test_last_time_thing_created(
+    session: Session, authority_id_for_fetch: str, authority_id_for_create: str
+):
+    created = last_time_thing_created(session, authority_id_for_fetch)
     assert created is None
     new_thing = Thing(
         id="123456",
-        authority_id=test_authority,
+        authority_id=authority_id_for_create,
         resolved_url="http://foo.bar",
         resolved_status=200,
         resolved_content={"foo": "bar"},
@@ -89,7 +100,7 @@ def test_last_time_thing_created(session: Session):
     )
     session.add(new_thing)
     session.commit()
-    new_created = last_time_thing_created(session, test_authority)
+    new_created = last_time_thing_created(session, authority_id_for_fetch)
     assert new_created is not None
 
 
@@ -188,7 +199,7 @@ def _test_insert_identifiers(
 ) -> typing.List[ThingIdentifier]:
     session.add(thing)
     session.commit()
-    insert_identifiers(session, thing)
+    insert_identifiers(thing)
     session.commit()
     # should have two ids for specified thing
     ids = _fetch_thing_identifiers(session)
@@ -225,6 +236,12 @@ def test_insert_identifiers_opencontext(session: Session):
 
 def test_insert_identifiers_sesar(session: Session):
     thing_id = "7890"
+    sesar_thing = _test_sesar_thing(thing_id)
+    identifiers = _test_insert_identifiers(session, sesar_thing)
+    assert 1 == len(identifiers)
+
+
+def _test_sesar_thing(thing_id):
     sesar_thing = Thing(
         id=thing_id,
         authority_id="SESAR",
@@ -232,8 +249,18 @@ def test_insert_identifiers_sesar(session: Session):
         resolved_status=200,
         resolved_content={},
     )
-    identifiers = _test_insert_identifiers(session, sesar_thing)
-    assert 1 == len(identifiers)
+    return sesar_thing
+
+
+def test_get_thing_identifiers_for_thing(session: Session):
+    thing_id = "5678"
+    sesar_thing = _test_sesar_thing(thing_id)
+    _test_insert_identifiers(session, sesar_thing)
+    refetched_identifiers = get_thing_identifiers_for_thing(
+        session, sesar_thing.primary_key
+    )
+    assert 1 == len(refetched_identifiers)
+    assert sesar_thing.primary_key == refetched_identifiers[0].thing_id
 
 
 def test_save_thing(session: Session) -> Thing:
@@ -257,5 +284,102 @@ def test_save_existing_thing(session: Session):
     existing_thing.tstamp = datetime.datetime.now()
     save_thing(session, existing_thing)
     ids = _fetch_thing_identifiers(session)
-    # should still have 1 id since we whacked the old ones during the save
+    # should still have 1 id since we didn't recreate existing ones during the save
     assert 1 == len(ids)
+
+
+def test_save_or_update_thing_existing_thing(session: Session):
+    existing_thing = test_save_thing(session)
+    not_from_session_thing = Thing()
+    not_from_session_thing.take_values_from_other_thing(existing_thing)
+    updated_tstamp = datetime.datetime.now()
+    not_from_session_thing.tstamp = updated_tstamp
+    save_or_update_thing(session, not_from_session_thing)
+    session.commit()
+    # fetch it again, verify it has the proper tstamp
+    refetched_thing = get_thing_with_id(session, not_from_session_thing.id)
+    assert updated_tstamp == refetched_thing.tstamp
+
+
+def test_mark_existing_thing_not_found(session: Session):
+    existing_thing = test_save_thing(session)
+    # make sure status is 200
+    assert 200 == existing_thing.resolved_status
+    resolved_url = "http://foo.bar.baz"
+    mark_thing_not_found(session, existing_thing.id, resolved_url)
+    # fetch it again to read out the db, should be 404
+    refetched_thing = get_thing_with_id(session, existing_thing.id)
+    assert 404 == refetched_thing.resolved_status
+    assert resolved_url == refetched_thing.resolved_url
+
+
+def test_mark_nonexistent_thing_not_found(session: Session):
+    id = "ark:/123456"
+    existing_thing_with_id = get_thing_with_id(session, id)
+    assert None == existing_thing_with_id
+    resolved_url = "http://foo.bar.baz.beg"
+    mark_thing_not_found(session, id, resolved_url)
+    not_found_thing = get_thing_with_id(session, id)
+    assert not_found_thing is not None
+    assert id == not_found_thing.id
+    assert resolved_url == not_found_thing.resolved_url
+    assert 404 == not_found_thing.resolved_status
+
+
+def test_thing_identifier_not_semantically_equals():
+    thing_identifier1 = ThingIdentifier(guid="12345", thing_id=1)
+    thing_identifier2 = ThingIdentifier(guid="56789", thing_id=2)
+    assert thing_identifier1.semantically_equals(thing_identifier2) is False
+
+
+def test_thing_identifier_semantically_equals():
+    thing_identifier1 = ThingIdentifier(guid="12345", thing_id=1)
+    thing_identifier2 = ThingIdentifier(guid="12345", thing_id=1)
+    assert thing_identifier1.semantically_equals(thing_identifier2) is True
+
+
+def test_insert_thing_identifier_if_not_present():
+    thing = Thing(primary_key=1)
+    thing_identifier = ThingIdentifier(guid="12345", thing_id=1)
+    thing.insert_thing_identifier_if_not_present(thing_identifier)
+    assert 1 == len(thing.identifiers)
+
+    # insert the same one again, should be no-op
+    thing.insert_thing_identifier_if_not_present(thing_identifier)
+    assert 1 == len(thing.identifiers)
+
+    # create a new instance that is semantically equal, should be no-op
+    thing_identifier2 = ThingIdentifier(guid="12345", thing_id=1)
+    thing.insert_thing_identifier_if_not_present(thing_identifier2)
+    assert 1 == len(thing.identifiers)
+
+
+def test_take_values_from_other_thing():
+    thing1 = Thing(
+        id="123456",
+        resolved_content={},
+        resolved_url="http://foo.bar",
+        resolved_status=200,
+        tresolved=datetime.datetime.now(),
+        resolve_elapsed=1,
+        tcreated=datetime.datetime.now(),
+        tstamp=datetime.datetime.now(),
+    )
+    thing2 = Thing(
+        id="78910",
+        resolved_content={"howdy": "ho"},
+        resolved_url="http://foo.bar.baz",
+        resolved_status=404,
+        tresolved=datetime.datetime.now(),
+        resolve_elapsed=10,
+        tcreated=datetime.datetime.now(),
+        tstamp=datetime.datetime.now(),
+    )
+    thing1.take_values_from_other_thing(thing2)
+    assert thing1.id == thing2.id
+    assert thing1.resolved_content == thing2.resolved_content
+    assert thing1.resolved_url == thing2.resolved_url
+    assert thing1.resolved_status == thing2.resolved_status
+    assert thing1.tresolved == thing2.tresolved
+    assert thing1.tcreated == thing2.tcreated
+    assert thing1.tstamp == thing2.tstamp

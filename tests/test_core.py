@@ -161,3 +161,14 @@ def test_date_with_time():
     assert datetime.minute == 54
     assert datetime.second == 0
     assert datetime.tzinfo.zone == 'UTC'
+
+
+def test_isamples_date():
+    datetime = isb_lib.core.parsed_date_from_isamples_format("2020-07-16T11:25:16Z")
+    assert datetime is not None
+    assert datetime.year == 2020
+    assert datetime.month == 7
+    assert datetime.day == 16
+    assert datetime.hour == 11
+    assert datetime.minute == 25
+    assert datetime.second == 16
