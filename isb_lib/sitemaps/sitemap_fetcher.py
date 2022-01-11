@@ -93,7 +93,7 @@ class SitemapFetcher(ABC):
                 .__next__()
                 .text
             )
-            lastmod_date = isb_lib.core.parsed_date_from_isamples_format(lastmod)
+            lastmod_date = isb_lib.core.parsed_datetime_from_isamples_format(lastmod)
             if (
                 self._last_modified is None
                 or lastmod_date.timestamp() >= self._last_modified.timestamp()

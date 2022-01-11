@@ -15,6 +15,7 @@ from sqlmodel import Session
 
 import isb_web
 import isamples_metadata.GEOMETransformer
+from isb_lib.core import MEDIA_GEO_JSON, MEDIA_JSON, MEDIA_NQUADS
 from isb_web import sqlmodel_database
 from isb_web import schemas
 from isb_web import crud
@@ -30,17 +31,15 @@ import json
 import hashlib
 import authlib.integrations.starlette_client
 from starlette.middleware.sessions import SessionMiddleware
+import geojson
 
 import logging
 
 from isb_web.schemas import ThingPage
 from isb_web.sqlmodel_database import SQLModelDAO
+import isb_lib.stac
 
 THIS_PATH = os.path.dirname(os.path.abspath(__file__))
-
-MEDIA_JSON = "application/json"
-MEDIA_NQUADS = "application/n-quads"
-MEDIA_GEO_JSON = "application/geo+json"
 
 # Setup logging from the config, but don't
 # blowup if the logging config can't be found
@@ -93,6 +92,10 @@ tags_metadata = [
         "description": "Heatmap representations of Things, suitable for consumption by mapping APIs",
     }
 ]
+
+THING_URL_PATH = config.Settings().thing_url_path
+STAC_ITEM_URL_PATH = config.Settings().stac_item_url_path
+STAC_COLLECTION_URL_PATH = config.Settings().stac_collection_url_path
 
 app = fastapi.FastAPI(openapi_tags=tags_metadata)
 dao = SQLModelDAO(None)
@@ -243,7 +246,7 @@ async def login():
 """
 
 
-@app.get("/thing", response_model=schemas.ThingListMeta)
+@app.get(f"/{THING_URL_PATH}", response_model=schemas.ThingListMeta)
 async def thing_list_metadata(
     session: Session = Depends(get_session),
 ):
@@ -252,7 +255,7 @@ async def thing_list_metadata(
     return meta
 
 
-@app.get("/thing/", response_model=ThingPage)
+@app.get(f"/{THING_URL_PATH}/", response_model=ThingPage)
 def thing_list(
     offset: int = fastapi.Query(0, ge=0),
     limit: int = fastapi.Query(1000, lt=10000, gt=0),
@@ -278,7 +281,7 @@ def thing_list(
     }
 
 
-@app.get("/thing/types", response_model=typing.List[schemas.ThingType])
+@app.get(f"/{THING_URL_PATH}/types", response_model=typing.List[schemas.ThingType])
 async def thing_list_types(
     session: Session = Depends(get_session),
 ):
@@ -299,7 +302,7 @@ def set_default_params(params, defs):
 
 
 # TODO: Don't blindly accept user input!
-@app.get("/thing/select", response_model=typing.Any)
+@app.get(f"/{THING_URL_PATH}/select", response_model=typing.Any)
 async def get_solr_select(request: fastapi.Request):
     """Send select request to the Solr isb_core_records collection.
 
@@ -326,7 +329,7 @@ async def get_solr_select(request: fastapi.Request):
     return isb_solr_query.solr_query(params)
 
 
-@app.get("/thing/select/info", response_model=typing.Any)
+@app.get(f"/{THING_URL_PATH}/select/info", response_model=typing.Any)
 async def get_solr_luke_info():
     """Retrieve information about the record schema.
 
@@ -336,7 +339,7 @@ async def get_solr_luke_info():
 
 
 # TODO: Don't blindly accept user input!
-@app.get("/thing/select", response_model=typing.Any)
+@app.get(f"/{THING_URL_PATH}/select", response_model=typing.Any)
 async def get_solr_select(request: fastapi.Request):
     """Send select request to the Solr isb_core_records collection.
 
@@ -361,21 +364,21 @@ async def get_solr_select(request: fastapi.Request):
     return isb_solr_query.solr_query(params)
 
 
-@app.post("/thing/select", response_model=typing.Any)
+@app.post(f"/{THING_URL_PATH}/select", response_model=typing.Any)
 async def get_solr_query(
     request: fastapi.Request, query: typing.Any = fastapi.Body(...)
 ):
     #logging.warning(query)
     return isb_solr_query.solr_query(request.query_params, query=query)
 
-@app.get("/thing/stream", response_model=typing.Any)
+@app.get(f"/{THING_URL_PATH}/stream", response_model=typing.Any)
 async def get_solr_stream(request: fastapi.Request):
     #logging.warning("Query params: ", request.query_params)
     return isb_solr_query.solr_searchStream(request.query_params)
 
 
 
-@app.get("/thing/select/info", response_model=typing.Any)
+@app.get(f"/{THING_URL_PATH}/select/info", response_model=typing.Any)
 async def get_solr_luke_info():
     """Retrieve information about the record schema.
 
@@ -384,7 +387,7 @@ async def get_solr_luke_info():
     return isb_solr_query.solr_luke()
 
 
-@app.get("/thing/{identifier:path}", response_model=typing.Any)
+@app.get(f"/{THING_URL_PATH}/{{identifier:path}}", response_model=typing.Any)
 async def get_thing(
     identifier: str,
     full: bool = False,
@@ -438,6 +441,47 @@ async def get_thing(
     return fastapi.responses.JSONResponse(
         content=content, media_type=item.resolved_media_type
     )
+
+
+@app.get(f"/{STAC_ITEM_URL_PATH}/{{identifier:path}}", response_model=typing.Any)
+async def get_stac_item(
+    identifier: str,
+    session: Session = Depends(get_session),
+):
+    # stac wants things to have filenames, so let these requests work, too.
+    if identifier.endswith(".json"):
+        identifier = identifier.removesuffix(".json")
+    status, doc = isb_solr_query.solr_get_record(identifier)
+    if status == 200:
+        stac_item = isb_lib.stac.stac_item_from_solr_dict(
+            doc, "http://isamples.org/stac/", "http://isamples.org/thing/"
+        )
+        if stac_item is not None:
+            return fastapi.responses.JSONResponse(
+                content=stac_item, media_type=MEDIA_GEO_JSON
+            )
+        else:
+            # We don't have location data to make a stac item, return a 404
+            status = 404
+
+    raise fastapi.HTTPException(
+        status_code=status,
+        detail=f"Unable to retrieve stac item for identifier: {identifier}"
+    )
+
+@app.get(f"/{STAC_COLLECTION_URL_PATH}/{{filename:path}}", response_model=typing.Any)
+def get_stac_collection(
+    offset: int = fastapi.Query(0, ge=0),
+    limit: int = fastapi.Query(1000, lt=10000, gt=0),
+    authority: str = fastapi.Query(None),
+    filename: str = None
+):
+    solr_docs, has_next = isb_solr_query.solr_records_for_stac_collection(authority, offset, limit)
+    stac_collection = isb_lib.stac.stac_collection_from_solr_dicts(solr_docs, has_next, offset, limit, authority)
+    return fastapi.responses.JSONResponse(
+        content=stac_collection, media_type=MEDIA_JSON
+    )
+
 
 
 @app.get(
@@ -573,7 +617,7 @@ async def get_related(
     name: str = None,
     offset: int = 0,
     limit: int = 1000,
-    accept: typing.Optional[str] = fastapi.Header("application/json"),
+    accept: typing.Optional[str] = fastapi.Header(MEDIA_JSON),
 ):
     """Relations that match provided s, p, o, source, name.
 
@@ -619,7 +663,7 @@ async def get_related_solr(
     name: str = None,
     offset: int = 0,
     limit: int = 1000,
-    accept: typing.Optional[str] = fastapi.Header("application/json"),
+    accept: typing.Optional[str] = fastapi.Header(MEDIA_JSON),
 ):
     """Relations that match provided s, p, o, source, name.
 

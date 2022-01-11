@@ -1,0 +1,54 @@
+{
+    "id": "ark:/21547/BHP2CFR_368",
+    "isb_core_id": "metadata/21547/BHP2CFR_368",
+    "indexUpdatedTime": "2021-10-19T21:40:09.629Z",
+    "sourceUpdatedTime": "2007-01-01T00:00:00Z",
+    "label": "CFR_368",
+    "searchText": [
+        "CFR_368",
+        "Chordata",
+        "Chaetodon",
+        "fremblii",
+        "genomic analysis",
+        "tissue subsample from CFR_368",
+        "Midway",
+        "Midway",
+        "GEOME"
+    ],
+    "hasMaterialCategory": [
+        "Organic material"
+    ],
+    "hasSpecimenCategory": [
+        "Organism part"
+    ],
+    "keywords": [
+        "Chordata"
+    ],
+    "informalClassification": [
+        "Chaetodon",
+        "fremblii"
+    ],
+    "samplingPurpose": [
+        "genomic analysis"
+    ],
+    "producedBy_label": "tissue subsample from CFR_368",
+    "producedBy_isb_core_id": "ark:/21547/BHN284ee3468cd90473a2aa68a550da115b8",
+    "producedBy_samplingSite_label": "Midway",
+    "producedBy_samplingSite_placeName": [
+        "Midway"
+    ],
+    "producedBy_samplingSite_location_ll": "28.208119,-177.400642",
+    "producedBy_samplingSite_location_bb": "ENVELOPE(-177.400642, -177.400642, 28.208119, 28.208119)",
+    "producedBy_samplingSite_location_rpt": "POINT (-177.400642 28.208119)",
+    "relatedResource_isb_core_id": [
+        "ark:/21547/mj2CFR_368"
+    ],
+    "source": "GEOME",
+    "producedBy_samplingSite_location_latitude": 28.208118,
+    "producedBy_samplingSite_location_longitude": -177.40063,
+    "producedBy_samplingSite_location_bb__minY": 28.208119,
+    "producedBy_samplingSite_location_bb__maxX": -177.400642,
+    "_version_": 1715997178043826176,
+    "producedBy_samplingSite_location_bb__minX": -177.400642,
+    "producedBy_samplingSite_location_bb__maxY": 28.208119
+}

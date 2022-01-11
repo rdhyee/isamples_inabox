@@ -48,5 +48,11 @@ class Settings(BaseSettings):
         r"https?://localhost(:\d{2,5})/",
     ]
 
+    thing_url_path: str = "thing"
+
+    stac_item_url_path: str = "stac_item"
+
+    stac_collection_url_path: str = "stac_collection"
+
     class Config:
         env_file = "isb_web_config.env"

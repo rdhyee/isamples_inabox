@@ -164,7 +164,7 @@ def test_date_with_time():
 
 
 def test_isamples_date():
-    datetime = isb_lib.core.parsed_date_from_isamples_format("2020-07-16T11:25:16Z")
+    datetime = isb_lib.core.parsed_datetime_from_isamples_format("2020-07-16T11:25:16Z")
     assert datetime is not None
     assert datetime.year == 2020
     assert datetime.month == 7
