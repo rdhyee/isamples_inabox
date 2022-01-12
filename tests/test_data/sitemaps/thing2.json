@@ -1,0 +1,187 @@
+{
+    "tstamp": "2021-05-13T10:36:44.273089-07:00",
+    "resolved_content": {
+        "@id": "https://data.geosamples.org/sample/igsn/ODP0111CS",
+        "igsn": "ODP0111CS",
+        "@context": "https://raw.githubusercontent.com/IGSN/igsn-json/master/schema.igsn.org/json/registration/v0.1/context.jsonld",
+        "registrant": {
+            "name": "IEDA",
+            "identifiers": {
+                "id": "https://www.geosamples.org",
+                "kind": "uri"
+            }
+        },
+        "description": {
+            "log": [
+                {
+                    "type": "registered",
+                    "timestamp": "2006-03-24 12:00:00"
+                },
+                {
+                    "type": "published",
+                    "timestamp": "2010-12-10 07:10:31"
+                },
+                {
+                    "type": "lastUpdated",
+                    "timestamp": "2006-03-24 12:00:00"
+                }
+            ],
+            "collector": "Curator",
+            "publisher": {
+                "@id": "https://www.geosamples.org",
+                "url": "https://www.geosamples.org",
+                "name": "EarthChem",
+                "@type": "Organization",
+                "contactPoint": {
+                    "url": "https://www.geosamples.org/contact/",
+                    "name": "Information Desk",
+                    "@type": "ContactPoint",
+                    "email": "info@geosamples.org",
+                    "contactType": "Customer Service"
+                }
+            },
+            "igsnPrefix": "ODP",
+            "sampleName": "Core 207-1260B-26R",
+            "sampleType": "Core",
+            "geoLocation": {
+                "geo": [
+                    {
+                        "@type": "GeoCoordinates",
+                        "latitude": "9.2655",
+                        "longitude": "-54.5442"
+                    }
+                ],
+                "@type": "Place"
+            },
+            "contributors": [
+                {
+                    "@type": "Role",
+                    "roleName": "Sample Owner",
+                    "contributor": [
+                        {
+                            "name": "Curator Integrated Ocean Drilling Program (TAMU)",
+                            "@type": "Person",
+                            "givenName": "Curator",
+                            "familyName": "Integrated Ocean Drilling Program (TAMU)"
+                        }
+                    ]
+                },
+                {
+                    "@type": "Role",
+                    "roleName": "Sample Registrant",
+                    "contributor": [
+                        {
+                            "name": "Curator Integrated Ocean Drilling Program (TAMU)",
+                            "@type": "Person",
+                            "givenName": "Curator",
+                            "familyName": "Integrated Ocean Drilling Program (TAMU)"
+                        }
+                    ]
+                },
+                {
+                    "@type": "Role",
+                    "roleName": "Sample Archive Contact",
+                    "contributor": [
+                        {
+                            "name": "Curator",
+                            "@type": "Person"
+                        }
+                    ]
+                }
+            ],
+            "collectorDetail": "Texas A&M University, Integrated Ocean Drilling Program, College Station, TX, 77845, USA",
+            "collectionMethod": "Coring",
+            "parentIdentifier": "ODP0111C0",
+            "supplementMetadata": {
+                "document": [
+
+                ],
+                "sampleId": 142873,
+                "childIGSN": [
+                    "ODP01PC8X",
+                    "ODP01PC9D",
+                    "ODP01PC9L",
+                    "ODP01PC99",
+                    "ODP01PC91",
+                    "ODP01PC8T",
+                    "ODP01PC95",
+                    "ODP01PC9H"
+                ],
+                "elevation": -2548.8,
+                "otherName": [
+
+                ],
+                "siblingIGSN": [
+                    "ODP0111C1",
+                    "ODP0111CB",
+                    "ODP0111CN",
+                    "ODP0111CQ",
+                    "ODP0111CX",
+                    "ODP0111CY",
+                    "ODP0111C9",
+                    "ODP0111C6",
+                    "ODP0111C2",
+                    "ODP0111C5",
+                    "ODP0111C7",
+                    "ODP0111CF",
+                    "ODP0111CH",
+                    "ODP0111C8",
+                    "ODP0111CK",
+                    "ODP0111CE",
+                    "ODP0111CG",
+                    "ODP0111CP",
+                    "ODP0111D7",
+                    "ODP0111D5",
+                    "ODP0111DC",
+                    "ODP0111DB",
+                    "ODP0111D3",
+                    "ODP0111C4",
+                    "ODP0111C3",
+                    "ODP0111CC",
+                    "ODP0111CD",
+                    "ODP0111CL",
+                    "ODP0111CA",
+                    "ODP0111CO",
+                    "ODP0111CM",
+                    "ODP0111CI",
+                    "ODP0111CR",
+                    "ODP0111CV",
+                    "ODP0111CW",
+                    "ODP0111CZ",
+                    "ODP0111CU",
+                    "ODP0111D0",
+                    "ODP0111D1",
+                    "ODP0111D2",
+                    "ODP0111D4",
+                    "ODP0111D6",
+                    "ODP0111D8",
+                    "ODP0111DA",
+                    "ODP0111D9",
+                    "ODP0111CT",
+                    "ODP0111CJ"
+                ],
+                "platformType": "Ship",
+                "elevationUnit": "meters",
+                "currentArchive": "Integrated Ocean Drilling Program (IODP)",
+                "publicationUrl": [
+
+                ],
+                "originalArchive": "Texas A&M University, Integrated Ocean Drilling Program, College Station, TX, 77845, USA",
+                "cruiseFieldPrgrm": "ODP Leg 207",
+                "externalSampleId": "Core 207-1260B-26R",
+                "currentArchiveContact": "Curator"
+            },
+            "collectionMethodDescr": "R: The RCB is designed to recover core samples from medium to hard formations.  The RCB relies on rotation of the drill string to advance the hole and cut the core.  The core bit trims the sample."
+        }
+    },
+    "item_type": "Core",
+    "resolved_url": "https://api.geosamples.org/v1/sample/igsn-ev-json-ld/igsn/ODP0111CS",
+    "tresolved": "2021-05-12T20:52:05.315560-07:00",
+    "resolved_media_type": "application/ld+json",
+    "tcreated": "2006-03-23T17:00:00-07:00",
+    "primary_key": 1466954,
+    "id": "IGSN:ODP0111CS",
+    "authority_id": "SESAR",
+    "resolved_status": 200,
+    "resolve_elapsed": 0.342728
+}

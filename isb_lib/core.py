@@ -37,6 +37,10 @@ SOLR_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 ELEVATION_PATTERN = re.compile(r"\s*(-?\d+\.?\d*)\s*m?", re.IGNORECASE)
 
 
+MEDIA_JSON = "application/json"
+MEDIA_NQUADS = "application/n-quads"
+MEDIA_GEO_JSON = "application/geo+json"
+
 def getLogger():
     return logging.getLogger("isb_lib.core")
 
@@ -274,6 +278,22 @@ def parsed_date(raw_date_str):
         raw_date_str, date_formats=RECOGNIZED_DATE_FORMATS, settings=DATEPARSER_SETTINGS
     )
     return date_time
+
+
+def parsed_datetime_from_isamples_format(raw_date_str) -> datetime.datetime:
+    """dateparser was very slow on dates like this: 2006-03-22T12:00:00Z, so roll our own"""
+    components = raw_date_str.split("T")
+    date = components[0]
+    time = components[1]
+    # ts looks like this: 2018-03-27, shockingly dateparser.parse was very slow on these
+    date_pieces = date.split("-")
+    # chop off the TZ string
+    time = time.replace("Z", "")
+    time_pieces = time.split(":")
+    lastmod_date = datetime.datetime(year=int(date_pieces[0]), month=int(date_pieces[1]), day=int(date_pieces[2]),
+                                     hour=int(time_pieces[0]), minute=int(time_pieces[1]), second=int(time_pieces[2]),
+                                     tzinfo=None)
+    return lastmod_date
 
 
 def solr_delete_records(rsession, ids_to_delete: typing.List[typing.AnyStr], url):

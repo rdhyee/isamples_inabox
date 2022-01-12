@@ -431,7 +431,7 @@ def solr_searchStream(params, collection="isb_core_records"):
             _params.append(f'{k}="{v}"')
     if not _has_fl:
         _params.append(f'fl="{",".join(_field_list)}"')
-    #if not _has_sort:
+    # if not _has_sort:
     #    _params.append('sort="id asc"')
     _params.append(
         (
@@ -482,9 +482,15 @@ def _fetch_solr_records(
     batch_size: int = 50000,
     field: typing.Optional[str] = None,
     sort: typing.Optional[str] = None,
+    additional_query: typing.Optional[str] = None,
 ):
     headers = {"Content-Type": "application/json"}
-    if authority_id is None:
+    if additional_query is not None:
+        if authority_id is not None:
+            query = f"{additional_query} AND source:{authority_id}"
+        else:
+            query = additional_query
+    elif authority_id is None:
         query = "*:*"
     else:
         query = f"source:{authority_id}"
@@ -501,7 +507,9 @@ def _fetch_solr_records(
     res = rsession.get(_url, headers=headers, params=params)
     json = res.json()
     docs = json["response"]["docs"]
-    return docs
+    num_found = json["response"]["numFound"]
+    has_next = start_index + len(docs) < num_found
+    return docs, has_next
 
 
 def solr_records_for_sitemap(
@@ -528,6 +536,32 @@ def solr_records_for_sitemap(
         batch_size,
         "id,sourceUpdatedTime",
         "sourceUpdatedTime asc",
+    )[0]
+
+
+def solr_records_for_stac_collection(
+    authority_id: typing.Optional[str] = None,
+    start_index: int = 0,
+    batch_size: int = 1000,
+) -> (typing.List[typing.Dict], bool):
+    """
+
+    Args:
+        authority_id: The authority_id to use when querying SOLR, defaults to all
+        start_index: The offset for the records to return
+        batch_size: Number of documents for this particular sitemap document
+
+    Returns:
+        A tuple of the dictionaries of solr documents with id and lat/lon fields, and whether there are more records
+    """
+    return _fetch_solr_records(
+        requests.session(),
+        authority_id,
+        start_index,
+        batch_size,
+        "id,producedBy_samplingSite_location_longitude,producedBy_samplingSite_location_latitude,producedBy_resultTime,sourceUpdatedTime",
+        "sourceUpdatedTime asc",
+        "producedBy_samplingSite_location_longitude:* AND producedBy_samplingSite_location_latitude:*",
     )
 
 
@@ -575,7 +609,7 @@ class ISBCoreSolrRecordIterator:
                 self.batch_size,
                 None,
                 self.sort,
-            )
+            )[0]
             if len(self._current_batch) == 0:
                 # reached the end of the records
                 raise StopIteration

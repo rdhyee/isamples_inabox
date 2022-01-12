@@ -1,9 +1,12 @@
 import datetime
+import typing
+from datetime import timedelta
+
 import sqlalchemy
 import logging
 from typing import Optional, List
 
-from sqlalchemy import Index
+from sqlalchemy import Index, update
 from sqlalchemy.exc import ProgrammingError
 from sqlmodel import SQLModel, create_engine, Session, select
 from sqlmodel.sql.expression import SelectOfScalar
@@ -107,7 +110,7 @@ def read_things_summary(
 
 
 def get_thing_with_id(session: Session, identifier: str) -> Optional[Thing]:
-    statement = select(Thing).filter(Thing.id == identifier)
+    statement = select(Thing).filter(Thing.id == identifier).order_by(Thing.primary_key.asc())
     result = session.exec(statement).first()
     if result is None:
         # Fall back to querying the Identifiers table
@@ -120,6 +123,11 @@ def get_thing_with_id(session: Session, identifier: str) -> Optional[Thing]:
     return result
 
 
+def get_thing_identifiers_for_thing(session: Session, thing_id: int) -> typing.List[ThingIdentifier]:
+    statement = select(ThingIdentifier).filter(ThingIdentifier.thing_id == thing_id)
+    return session.exec(statement).all()
+
+
 def last_time_thing_created(
     session: Session, authority_id: str
 ) -> Optional[datetime.datetime]:
@@ -130,11 +138,10 @@ def last_time_thing_created(
     )
     created_select = (
         select(Thing.tcreated)
-        .filter(Thing.authority_id == authority_id)
-        .filter(Thing.tcreated >= one_year_ago)
-        .limit(1)
-        .order_by(Thing.tcreated.desc())
     )
+    if authority_id is not None:
+        created_select = created_select.filter(Thing.authority_id == authority_id)
+    created_select = created_select.filter(Thing.tcreated >= one_year_ago).limit(1).order_by(Thing.tcreated.desc())
     result = session.exec(created_select).first()
     return result
 
@@ -144,7 +151,7 @@ def _base_thing_select(
     status: int = 200,
     limit: int = 100,
     offset: int = 0,
-    min_id: int = 0
+    min_id: int = 0,
 ) -> SelectOfScalar[Thing]:
     thing_select = select(Thing).filter(Thing.resolved_status == status)
     if authority is not None:
@@ -221,7 +228,7 @@ def get_sample_types(session: Session):
     return dbq.all()
 
 
-def _insert_geome_identifiers(session: Session, thing: Thing):
+def _insert_geome_identifiers(thing: Thing):
     # For now, we will fail all requests for parent IDs, because events appear in multiple samples
     # and would violate referential integrity if we made pointers to children from the event ID
     # parent = thing.resolved_content.get("parent")
@@ -238,55 +245,82 @@ def _insert_geome_identifiers(session: Session, thing: Thing):
             child_identifier = ThingIdentifier(
                 guid=child_ark, thing_id=thing.primary_key
             )
-            session.add(child_identifier)
+            thing.insert_thing_identifier_if_not_present(child_identifier)
 
 
-def _insert_open_context_identifiers(session: Session, thing: Thing):
+def _insert_open_context_identifiers(thing: Thing):
     citation_uri = thing.resolved_content["citation uri"]
     if citation_uri is not None and type(citation_uri) is str:
         open_context_uri = isb_lib.normalized_id(citation_uri)
         open_context_identifier = ThingIdentifier(
             guid=open_context_uri, thing_id=thing.primary_key
         )
-        session.add(open_context_identifier)
+        thing.insert_thing_identifier_if_not_present(open_context_identifier)
 
 
-def _insert_standard_identifier(session: Session, thing: Thing):
+def _insert_standard_identifier(thing: Thing):
     thing_identifier = ThingIdentifier(guid=thing.id, thing_id=thing.primary_key)
-    session.add(thing_identifier)
+    thing.insert_thing_identifier_if_not_present(thing_identifier)
 
 
-def insert_identifiers(session: Session, thing: Thing):
+def insert_identifiers(thing: Thing):
     if thing.authority_id == "GEOME":
-        _insert_geome_identifiers(session, thing)
+        _insert_geome_identifiers(thing)
     elif thing.authority_id == "OPENCONTEXT":
-        _insert_open_context_identifiers(session, thing)
-    _insert_standard_identifier(session, thing)
-
-
-def delete_identifiers(session: Session, thing: Thing) -> bool:
-    if thing.primary_key is None:
-        # No pk, hasn't been saved
-        return False
-    else:
-        identifier_select = select(ThingIdentifier).where(
-            ThingIdentifier.thing_id == thing.primary_key
-        )
-        thing_identifiers = session.exec(identifier_select).all()
-        for identifier in thing_identifiers:
-            session.delete(identifier)
-        session.commit()
-        return True
+        _insert_open_context_identifiers(thing)
+    _insert_standard_identifier(thing)
 
 
 def save_thing(session: Session, thing: Thing):
-    logging.debug("Going to delete existing identifiers (if any)")
-    delete_identifiers(session, thing)
     logging.debug("Going to add thing to session")
     session.add(thing)
     logging.debug("Added thing to session")
     session.commit()
     logging.debug("committed session")
-    insert_identifiers(session, thing)
+    insert_identifiers(thing)
     logging.debug("going to insert identifiers")
     session.commit()
+
+
+def save_or_update_thing(session: Session, thing: Thing):
+    try:
+        save_thing(session, thing)
+    except sqlalchemy.exc.IntegrityError as e:
+        session.rollback()
+        logging.info(f"Thing already exists {thing.id}, will recreate record")
+        logging.info(f"Thing already exists with primary key {thing.primary_key}, will update record")
+        existing_thing = get_thing_with_id(session, thing.id)
+        thing_identifiers = get_thing_identifiers_for_thing(session, existing_thing.primary_key)
+        existing_thing.identifiers = thing_identifiers
+        if existing_thing is None:
+            logging.error(
+                f"Error attempting to save existing thing that doesn't exist: {thing.id}, exception: {e}"
+            )
+        else:
+            existing_thing.take_values_from_other_thing(thing)
+            try:
+                save_thing(session, existing_thing)
+            except sqlalchemy.exc.IntegrityError as integrity_error:
+                session.rollback()
+                logging.error(
+                    f"Got error attempting to save existing thing {thing.id}, exception: {integrity_error}"
+                )
+
+
+def mark_thing_not_found(session: Session, thing_id: str, resolved_url: str):
+    """In case we get an error fetching a thing, mark it as not found in the database"""
+    existing_thing = get_thing_with_id(session, thing_id)
+    if existing_thing is None:
+        thing = Thing()
+        thing.id = thing_id
+        thing.resolved_status = 404
+        thing.tresolved = datetime.datetime.now()
+        thing.resolved_url = resolved_url
+        save_thing(session, thing)
+    else:
+        session.execute(
+            update(isb_lib.models.thing.Thing)
+            .where(isb_lib.models.thing.Thing.id == thing_id)
+            .values(resolved_status=404)
+            .values(resolved_url=resolved_url)
+        )

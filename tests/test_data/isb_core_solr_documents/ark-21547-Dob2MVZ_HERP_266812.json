@@ -1,0 +1,76 @@
+{
+    "id": "ark:/21547/Dob2MVZ_HERP_266812",
+    "isb_core_id": "metadata/21547/Dob2MVZ_HERP_266812",
+    "indexUpdatedTime": "2021-10-19T22:02:32.268Z",
+    "sourceUpdatedTime": "2021-04-09T09:59:42Z",
+    "label": "MVZ_HERP_266812",
+    "searchText": [
+        "MVZ_HERP_266812",
+        "basisOfRecord: PreservedSpecimen | individualCount: 1 | occurrenceRemarks: Swabbing date 11/07/2014 | Tail length 4.02 cm | tc? | lengthUnits: millimeters | length: 33.6",
+        "Monterey County",
+        "California",
+        "USA",
+        "Batrachoseps",
+        "luciae",
+        "61cf95a00ac73c3ed8a7d1b0bea2778d Aneides_Batrachoseps_museumdata",
+        "expeditionCode: Aneides_Batrachoseps_museumdata | projectId: 251",
+        "collector: Elizabeth L. Jockusch",
+        "collector: Inigo Martinez-Solano",
+        "principalInvestigator: Vance Vredenburg",
+        "Nacimiento-Fergusson Rd., 4.3 mi (by road) W Ponderosa Campground and 2.2 mi (by road) E summit",
+        "Nacimiento-Fergusson Rd., 4.3 mi (by road) W Ponderosa Campground and 2.2 mi (by road) E summit",
+        "Monterey County",
+        "California",
+        "USA",
+        "GEOME"
+    ],
+    "description": "basisOfRecord: PreservedSpecimen | individualCount: 1 | occurrenceRemarks: Swabbing date 11/07/2014 | Tail length 4.02 cm | tc? | lengthUnits: millimeters | length: 33.6",
+    "description_text": "basisOfRecord: PreservedSpecimen | individualCount: 1 | occurrenceRemarks: Swabbing date 11/07/2014 | Tail length 4.02 cm | tc? | lengthUnits: millimeters | length: 33.6",
+    "hasMaterialCategory": [
+        "Organic material"
+    ],
+    "hasSpecimenCategory": [
+        "Whole organism"
+    ],
+    "keywords": [
+        "Monterey County",
+        "California",
+        "USA"
+    ],
+    "informalClassification": [
+        "Batrachoseps",
+        "luciae"
+    ],
+    "producedBy_label": "61cf95a00ac73c3ed8a7d1b0bea2778d Aneides_Batrachoseps_museumdata",
+    "producedBy_description": "expeditionCode: Aneides_Batrachoseps_museumdata | projectId: 251",
+    "producedBy_description_text": "expeditionCode: Aneides_Batrachoseps_museumdata | projectId: 251",
+    "producedBy_responsibility": [
+        "collector: Elizabeth L. Jockusch",
+        "collector: Inigo Martinez-Solano",
+        "principalInvestigator: Vance Vredenburg"
+    ],
+    "producedBy_resultTime": "2008-03-13T00:00:00Z",
+    "producedBy_isb_core_id": "ark:/21547/Doa261cf95a00ac73c3ed8a7d1b0bea2778d",
+    "producedBy_samplingSite_label": "Nacimiento-Fergusson Rd., 4.3 mi (by road) W Ponderosa Campground and 2.2 mi (by road) E summit",
+    "producedBy_samplingSite_placeName": [
+        "Nacimiento-Fergusson Rd., 4.3 mi (by road) W Ponderosa Campground and 2.2 mi (by road) E summit",
+        "Monterey County",
+        "California",
+        "USA"
+    ],
+    "producedBy_samplingSite_location_ll": "36.01284,-121.43145",
+    "producedBy_samplingSite_location_bb": "ENVELOPE(-121.43145, -121.43145, 36.01284, 36.01284)",
+    "producedBy_samplingSite_location_rpt": "POINT (-121.43145 36.01284)",
+    "curation_responsibility": "curator:MVZ",
+    "relatedResource_isb_core_id": [
+        "ark:/21547/Dod2MVZ_HERP_266812.1"
+    ],
+    "source": "GEOME",
+    "producedBy_samplingSite_location_latitude": 36.01284,
+    "producedBy_samplingSite_location_longitude": -121.43145,
+    "producedBy_samplingSite_location_bb__minY": 36.01284,
+    "producedBy_samplingSite_location_bb__maxX": -121.43145,
+    "_version_": 1715998130993889280,
+    "producedBy_samplingSite_location_bb__minX": -121.43145,
+    "producedBy_samplingSite_location_bb__maxY": 36.01284
+}

@@ -1,0 +1,81 @@
+{
+    "tstamp": "2021-10-26T04:15:03.115876-07:00",
+    "resolved_content": {
+        "parent": {
+            "bcid": "ark:/21547/DxH21d8706ab9d38817ea239be8505f50b38",
+            "county": "Alameda",
+            "entity": "Event",
+            "country": "USA",
+            "eventID": "1d8706ab9d38817ea239be8505f50b38",
+            "habitat": "river",
+            "locality": "Alameda, Calaveras Crk to Welch Crk",
+            "projectId": "442",
+            "dayCollected": "25",
+            "eventRemarks": "connected",
+            "collectorList": "Sarah Kupferberg",
+            "stateProvince": "California",
+            "yearCollected": "2014",
+            "expeditionCode": "ALACOY2013to2019",
+            "monthCollected": "2",
+            "decimalLatitude": "37.503582",
+            "decimalLongitude": "-121.821653",
+            "verbatimEventDate": "2014-02-25",
+            "georeferenceProtocol": "GPS",
+            "principalInvestigator": "Sarah Kupferberg",
+            "coordinateUncertaintyInMeters": "5"
+        },
+        "record": {
+            "sex": "Female",
+            "bcid": "ark:/21547/DxI2SK2.6",
+            "genus": "Rana",
+            "entity": "Sample",
+            "length": "55",
+            "eventID": "1d8706ab9d38817ea239be8505f50b38",
+            "projectId": "442",
+            "lengthUnits": "millimeters",
+            "basisOfRecord": "LivingSpecimen",
+            "expeditionCode": "ALACOY2013to2019",
+            "specificEpithet": "boylii",
+            "materialSampleID": "SK2.6"
+        },
+        "children": [
+            {
+                "bcid": "ark:/21547/DxJ2c97f484b6202d139803050ed78490984",
+                "fatal": "false",
+                "entity": "Diagnostics",
+                "zeScore": "0",
+                "projectId": "442",
+                "sampleType": "swabbing",
+                "testMethod": "quantitative PCR",
+                "diagnosticID": "c97f484b6202d139803050ed78490984",
+                "diagnosticLab": "Briggs Lab, University of California Santa Barbara",
+                "diseaseTested": "Bd",
+                "dilutionFactor": "80",
+                "expeditionCode": "ALACOY2013to2019",
+                "diseaseDetected": "false",
+                "materialSampleID": "SK2.6",
+                "quantityDetected": "0",
+                "cycleTimeFirstDetection": "unknown"
+            },
+            {
+                "bcid": "ark:/21547/DxK2SK2.6.1",
+                "entity": "Tissue",
+                "tissueID": "SK2.6.1",
+                "projectId": "442",
+                "expeditionCode": "ALACOY2013to2019",
+                "materialSampleID": "SK2.6"
+            }
+        ],
+        "projectId": 442
+    },
+    "item_type": "Sample",
+    "resolved_url": "https://api.geome-db.org/v1/records/ark:/21547/DxI2SK2.6?includeChildren=true&includeParent=true",
+    "tresolved": "2021-10-26T04:15:28.673800-07:00",
+    "resolve_elapsed": 0.176084,
+    "id": "ark:/21547/DxI2SK2.6",
+    "primary_key": 5873711,
+    "tcreated": "2021-10-21T12:22:05-07:00",
+    "authority_id": "GEOME",
+    "resolved_status": 200,
+    "resolved_media_type": "application/json"
+}

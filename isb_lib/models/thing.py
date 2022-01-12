@@ -1,8 +1,8 @@
 import igsn_lib.time
 import json
-from typing import Optional
+from typing import Optional, List
 import typing
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, Relationship
 from datetime import datetime
 import sqlalchemy
 
@@ -72,6 +72,26 @@ class Thing(SQLModel, table=True):
     resolved_media_type: Optional[str] = Field(
         default=None, nullable=True, description="Media type of resolved content"
     )
+    identifiers: List["ThingIdentifier"] = Relationship(
+        back_populates="thing", sa_relationship_kwargs={"cascade": "all,delete-orphan"}
+    )
+
+    def insert_thing_identifier_if_not_present(self, identifier: "ThingIdentifier"):
+        for existing_identifier in self.identifiers:
+            if identifier.semantically_equals(existing_identifier):
+                # Already have it, no need to do anything so bail
+                return
+        identifier.thing = self
+
+    def take_values_from_other_thing(self, other_thing: "Thing"):
+        self.id = other_thing.id
+        self.resolved_content = other_thing.resolved_content
+        self.resolved_url = other_thing.resolved_url
+        self.resolved_status = other_thing.resolved_status
+        self.tresolved = other_thing.tresolved
+        self.resolve_elapsed = other_thing.resolve_elapsed
+        self.tcreated = other_thing.tcreated
+        self.tstamp = other_thing.tstamp
 
     def __repr__(self):
         return json.dumps(self.as_json_dict(), indent=2)
@@ -92,6 +112,20 @@ class Thing(SQLModel, table=True):
         }
         return res
 
+    def take_values_from_json_dict(self, json_dict: typing.Dict):
+        self.authority_id = json_dict["authority_id"]
+        self.id = json_dict["id"]
+        self.resolved_content = json_dict["resolved_content"]
+        self.tcreated = json_dict["tcreated"]
+        self.tresolved = json_dict["tresolved"]
+        self.resolved_url = json_dict["resolved_url"]
+        self.resolved_media_type = json_dict["resolved_media_type"]
+        self.item_type = json_dict["item_type"]
+        self.resolved_status = json_dict["resolved_status"]
+        self.resolve_elapsed = json_dict["resolve_elapsed"]
+        # Update the tstamp to now, to indicate this is the last modified date from an iSamples perspective
+        self.tstamp = datetime.now()
+
 
 class ThingIdentifier(SQLModel, table=True):
     guid: Optional[str] = Field(
@@ -109,3 +143,10 @@ class ThingIdentifier(SQLModel, table=True):
     thing_id: Optional[int] = Field(
         default=None, nullable=False, foreign_key="thing._id", index=False
     )
+    thing: Optional[Thing] = Relationship(
+        back_populates="identifiers", sa_relationship_kwargs={"cascade": "all"}
+    )
+
+    def semantically_equals(self, other: "ThingIdentifier") -> bool:
+        """Method to check if two identifiers are semantically equal ignoring bookkeeping fields"""
+        return self.thing_id == other.thing_id and self.guid == other.guid
