@@ -1,5 +1,4 @@
 import datetime
-import time
 
 import isb_lib.core
 import logging
@@ -161,8 +160,10 @@ class OpenContextRecordIterator(isb_lib.core.IdentifierIterator):
     def last_url_str(self) -> typing.AnyStr:
         return self.url
 
+
 def _validate_resolved_content(thing: isb_lib.models.thing.Thing):
     isb_lib.core.validate_resolved_content(OpenContextItem.AUTHORITY_ID, thing)
+
 
 def reparse_as_core_record(thing: isb_lib.models.thing.Thing) -> typing.List[typing.Dict]:
     _validate_resolved_content(thing)
@@ -170,7 +171,7 @@ def reparse_as_core_record(thing: isb_lib.models.thing.Thing) -> typing.List[typ
         transformer = isamples_metadata.OpenContextTransformer.OpenContextTransformer(thing.resolved_content)
         return [isb_lib.core.coreRecordAsSolrDoc(transformer)]
     except Exception as e:
-        get_logger().error("Failed trying to run transformer on %s", str(thing.resolved_content))
+        get_logger().error("Failed trying to run transformer on %s, exception: %s", thing.resolved_content, e)
         raise
 
 

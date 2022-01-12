@@ -140,7 +140,7 @@ def test_things_for_sitemap(session: Session):
     _add_some_things(session, 20, different_authority)
 
     # fetch again, should still get the first ones because they have an older tstamp
-    fetched_again_things = things_for_sitemap(session, None, 200, 100, 0, None)
+    things_for_sitemap(session, None, 200, 100, 0, None)
     for thing in things:
         assert thing.authority_id == authority
 
@@ -316,7 +316,7 @@ def test_mark_existing_thing_not_found(session: Session):
 def test_mark_nonexistent_thing_not_found(session: Session):
     id = "ark:/123456"
     existing_thing_with_id = get_thing_with_id(session, id)
-    assert None == existing_thing_with_id
+    assert existing_thing_with_id is None
     resolved_url = "http://foo.bar.baz.beg"
     mark_thing_not_found(session, id, resolved_url)
     not_found_thing = get_thing_with_id(session, id)

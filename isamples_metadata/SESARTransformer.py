@@ -193,7 +193,7 @@ class ContextCategoryMetaMapper(AbstractCategoryMetaMapper):
         "Liquid>aqueous", "Vent", "Subsurface fluid reservoir"
     )
     _floodplainAquiferMapper = StringPairedCategoryMapper(
-        "Liquid>aqueous", "floodplain\, aquifer", "Subsurface fluid reservoir"
+        "Liquid>aqueous", "floodplain\, aquifer", "Subsurface fluid reservoir"  # noqa: W605
     )
     _creekBankMapper = StringPairedCategoryMapper(
         "Sedimentary>GlacialAndOrPaleosol>Rock",
@@ -321,7 +321,7 @@ class SESARTransformer(Transformer):
         else:
             return Transformer.NOT_PROVIDED
 
-    def produced_by_description(self) -> typing.AnyStr:
+    def produced_by_description(self) -> typing.AnyStr:  # noqa: C901 -- need to examine computational complexity
         description_components = list()
         description_dict = self._source_record_description()
         if description_dict is not None:
@@ -470,8 +470,8 @@ class SESARTransformer(Transformer):
         return place_names
 
     def informal_classification(self) -> typing.List[typing.AnyStr]:
-         """Not currently used for SESAR"""
-         return Transformer.NOT_PROVIDED
+        """Not currently used for SESAR"""
+        return Transformer.NOT_PROVIDED
 
     def last_updated_time(self) -> typing.Optional[typing.AnyStr]:
         # Loop through the log and find the "lastUpdated" record

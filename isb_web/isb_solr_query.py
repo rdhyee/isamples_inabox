@@ -3,7 +3,6 @@ import requests
 import geojson
 import fastapi
 import logging
-import os.path
 import urllib.parse
 import isb_web.config
 
@@ -96,7 +95,7 @@ def _get_heatmap(
         # "facet.heatmap.gridLevel": grid_level,
         "facet.heatmap.geom": f"[{bb[MIN_LON]} {bb[MIN_LAT]} TO {bb[MAX_LON]} {bb[MAX_LAT]}]",
     }
-    if not fq is None:
+    if fq is not None:
         params["fq"] = fq
     # if grid level is None, then Solr calculates an "appropriate" grid scale
     # based on the bounding box and distErrPct. Seems a bit off...
@@ -356,7 +355,7 @@ def solr_get_record(identifier):
     return 200, docs["response"]["docs"][0]
 
 
-def solr_searchStream(params, collection="isb_core_records"):
+def solr_searchStream(params, collection="isb_core_records"):   # noqa: C901 -- need to examine computational complexity
     """
     Requests a streaming search response from solr.
 
@@ -397,7 +396,6 @@ def solr_searchStream(params, collection="isb_core_records"):
     headers = {"Accept": "application/json"}
     qparams = {}
     _params = []
-    _has_sort = False
     _has_fl = False
     _field_list = [
         "id",
@@ -413,8 +411,6 @@ def solr_searchStream(params, collection="isb_core_records"):
         if k == "rows":
             if int(v) > MAX_STREAMING_ROWS:
                 v = MAX_STREAMING_ROWS
-        if k == "sort":
-            _has_sort = True
         if k == "fl":
             _has_fl = True
             _fields = v.split(",")
@@ -422,7 +418,7 @@ def solr_searchStream(params, collection="isb_core_records"):
                 if f not in _field_list:
                     _field_list.append(f)
             v = ",".join(_field_list)
-        if not k is None:
+        if k is not None:
             _params.append(f'{k}="{v}"')
     if not _has_fl:
         _params.append(f'fl="{",".join(_field_list)}"')

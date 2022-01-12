@@ -174,7 +174,7 @@ def test_get_thing_core_format(client: TestClient, session: Session):
 
 
 def test_get_thing_list_metadata(client: TestClient, session: Session):
-    response = client.get(f"/thing")
+    response = client.get("/thing")
     data = response.json()
     assert response.status_code == 200
     assert "authority" in data
@@ -182,7 +182,7 @@ def test_get_thing_list_metadata(client: TestClient, session: Session):
 
 
 def test_get_thing_list_types(client: TestClient, session: Session):
-    response = client.get(f"/thing/types")
+    response = client.get("/thing/types")
     data = response.json()
     assert response.status_code == 200
     assert "item_type" in data[0]

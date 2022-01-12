@@ -1,9 +1,7 @@
 import asyncio
-import shutil
 import typing
 from aiofile import AIOFile, Writer
 import click
-import gzip
 import logging
 import os.path
 

@@ -41,6 +41,7 @@ pytest = "^6.2.3"
 jupyter = "^1.0.0"
 nbterm = "^0.0.7"
 heartrate = "^0.2.1"
+flake8 = "^4.0.1"
 
 [tool.poetry.scripts]
 sesar_things = "scripts.sesar_things:main"

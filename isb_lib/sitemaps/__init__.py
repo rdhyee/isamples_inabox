@@ -15,7 +15,6 @@ import lxml.etree
 import requests
 import dateparser
 import functools
-import igsn_lib.time
 
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -53,7 +52,7 @@ def gunzip(data):
             # contains the whole page content
             if output_list or getattr(f, "extrabuf", None):
                 try:
-                    output_list.append(f.extrabuf[-f.extrasize :])
+                    output_list.append(f.extrabuf[-f.extrasize:])
                 finally:
                     break
             else:
@@ -167,7 +166,7 @@ class SiteMap(object):
         for entry in entries:
             yield entry
 
-    def parseSitemap(self, response):
+    def parseSitemap(self, response):  # noqa: C901 -- need to examine computational complexity
         # L.debug("parseSitemap with url: %s", response.url)
         self._all_sitemaps.append(response.url)
         if response.url.endswith("/robots.txt"):
@@ -230,7 +229,7 @@ class SiteMap(object):
                     for item in self.scanItems(cb(params)):
                         yield (item)
         # otherwise yield it, if it's not None
-        elif not iter is None:
+        elif iter is not None:
             yield iter
 
 

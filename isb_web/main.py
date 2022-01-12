@@ -26,12 +26,8 @@ from isamples_metadata.SESARTransformer import SESARTransformer
 from isamples_metadata.OpenContextTransformer import OpenContextTransformer
 from isamples_metadata.SmithsonianTransformer import SmithsonianTransformer
 
-import time
-import json
-import hashlib
 import authlib.integrations.starlette_client
 from starlette.middleware.sessions import SessionMiddleware
-import geojson
 
 import logging
 
@@ -45,12 +41,12 @@ THIS_PATH = os.path.dirname(os.path.abspath(__file__))
 # blowup if the logging config can't be found
 try:
     logging.config.fileConfig(config.Settings().logging_config, disable_existing_loggers=False)
-except KeyError as e:
+except KeyError:
     logging.warning("Could not load logging configuration")
     pass
 L = logging.getLogger("ISB")
 
-#Cookie chaff
+# Cookie chaff
 COOKIE_SECRET = config.Settings().cookie_secret
 
 # OAuth2 application client id
@@ -124,6 +120,7 @@ templates = fastapi.templating.Jinja2Templates(
     directory=os.path.join(THIS_PATH, "templates")
 )
 
+
 def isAllowedReferer(referer):
     """
     Checks referer against oauth_allowed_origins patterns
@@ -142,7 +139,6 @@ def isAllowedReferer(referer):
             return True
     L.info("Login blocked for referer: %s", referer)
     return False
-
 
 
 @app.get("/githubauth", include_in_schema=False)
@@ -309,43 +305,6 @@ async def get_solr_select(request: fastapi.Request):
     See https://solr.apache.org/guide/8_9/common-query-parameters.html
     """
     # Somewhat sensible defaults
-    defparams = {
-        "wt": "json",
-        "q": "*:*",
-        "fl": "id",
-        "rows": 10,
-        "start": 0,
-    }
-    params = []
-    # Update params with the provided parameters
-    for k, v in request.query_params.multi_items():
-        params.append([k, v])
-    params = set_default_params(params, defparams)
-    logging.warning(params)
-    # response object is generated in the called method. This is necessary
-    # for the streaming response as otherwise the iterator is consumed
-    # before returning here, hence defeating the purpose of the streaming
-    # response.
-    return isb_solr_query.solr_query(params)
-
-
-@app.get(f"/{THING_URL_PATH}/select/info", response_model=typing.Any)
-async def get_solr_luke_info():
-    """Retrieve information about the record schema.
-
-    Returns: JSON
-    """
-    return isb_solr_query.solr_luke()
-
-
-# TODO: Don't blindly accept user input!
-@app.get(f"/{THING_URL_PATH}/select", response_model=typing.Any)
-async def get_solr_select(request: fastapi.Request):
-    """Send select request to the Solr isb_core_records collection.
-
-    See https://solr.apache.org/guide/8_9/common-query-parameters.html
-    """
-    # Somewhat sensible defaults
     params = {
         "wt": "json",
         "q": "*:*",
@@ -368,14 +327,14 @@ async def get_solr_select(request: fastapi.Request):
 async def get_solr_query(
     request: fastapi.Request, query: typing.Any = fastapi.Body(...)
 ):
-    #logging.warning(query)
+    # logging.warning(query)
     return isb_solr_query.solr_query(request.query_params, query=query)
+
 
 @app.get(f"/{THING_URL_PATH}/stream", response_model=typing.Any)
 async def get_solr_stream(request: fastapi.Request):
-    #logging.warning("Query params: ", request.query_params)
+    # logging.warning("Query params: ", request.query_params)
     return isb_solr_query.solr_searchStream(request.query_params)
-
 
 
 @app.get(f"/{THING_URL_PATH}/select/info", response_model=typing.Any)
@@ -469,6 +428,7 @@ async def get_stac_item(
         detail=f"Unable to retrieve stac item for identifier: {identifier}"
     )
 
+
 @app.get(f"/{STAC_COLLECTION_URL_PATH}/{{filename:path}}", response_model=typing.Any)
 def get_stac_collection(
     offset: int = fastapi.Query(0, ge=0),
@@ -481,7 +441,6 @@ def get_stac_collection(
     return fastapi.responses.JSONResponse(
         content=stac_collection, media_type=MEDIA_JSON
     )
-
 
 
 @app.get(
@@ -687,12 +646,12 @@ async def get_related_solr(
 
 
 @app.get("/map", include_in_schema=False)
-async def root(request: fastapi.Request):
+async def map(request: fastapi.Request):
     return templates.TemplateResponse("spatial.html", {"request": request})
 
 
 @app.get("/records_orig", include_in_schema=False)
-async def root(request: fastapi.Request):
+async def records_orig(request: fastapi.Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
@@ -715,8 +674,8 @@ if __name__ == "__main__":
         logging.StreamHandler()
     )  # RotatingFileHandler('/log/abc.log', backupCount=0)
     logging.getLogger().setLevel(logging.NOTSET)
-    #fastapi_logger.addHandler(handler)
-    #handler.setFormatter(formatter)
+    # fastapi_logger.addHandler(handler)
+    # handler.setFormatter(formatter)
 
     # gunicorn_error_logger = logging.getLogger("gunicorn.error")
     # gunicorn_logger = logging.getLogger("gunicorn")

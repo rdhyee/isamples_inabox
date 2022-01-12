@@ -3,7 +3,6 @@ import typing
 import requests
 import pytest
 import os
-import geojson
 
 
 @pytest.fixture

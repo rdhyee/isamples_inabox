@@ -7,14 +7,11 @@ import datetime
 import requests
 import sickle.oaiexceptions
 import sickle.utils
-import hashlib
-import json
 import igsn_lib
 import igsn_lib.oai
 import igsn_lib.time
 import isb_lib.core
 import isb_lib.sitemaps
-import uuid
 import isamples_metadata.SESARTransformer
 import dateparser
 
@@ -79,7 +76,6 @@ class SESARItem(object):
         self.identifier = fullIgsn(identifier)
         self.item = source
 
-
     def solrRelations(self):
         """Provides a list of relation dicts suitable for adding to Solr"""
 
@@ -98,9 +94,9 @@ class SESARItem(object):
                 )
             )
         for child in (
-            self.item.get("description", {})
-            .get("supplementMetadata", {})
-            .get("childIGSN", [])
+                self.item.get("description", {})
+                         .get("supplementMetadata", {})
+                         .get("childIGSN", [])
         ):
             _id = fullIgsn(child)
             related.append(
@@ -119,13 +115,13 @@ class SESARItem(object):
         return self.item.get("description", {}).get("sampleType", "sample")
 
     def asThing(
-        self,
-        t_created: datetime.datetime,
-        status: int,
-        resolved_url: str,
-        t_resolved: datetime.datetime,
-        resolve_elapsed: float,
-        media_type: str = None,
+            self,
+            t_created: datetime.datetime,
+            status: int,
+            resolved_url: str,
+            t_resolved: datetime.datetime,
+            resolve_elapsed: float,
+            media_type: str = None,
     ) -> Thing:
         L = getLogger()
         L.debug("SESARItem.asThing")
@@ -155,6 +151,7 @@ class SESARItem(object):
 def _validateResolvedContent(thing: Thing):
     isb_lib.core.validate_resolved_content(SESARItem.AUTHORITY_ID, thing)
 
+
 def reparseRelations(thing: Thing, as_solr: bool = False):
     _validateResolvedContent(thing)
     item = SESARItem(thing.id, thing.resolved_content)
@@ -171,10 +168,12 @@ def reparseThing(thing: Thing) -> Thing:
     thing.tstamp = igsn_lib.time.dtnow()
     return thing
 
+
 def reparseAsCoreRecord(thing: Thing) -> typing.List[typing.Dict]:
     _validateResolvedContent(thing)
     transformer = isamples_metadata.SESARTransformer.SESARTransformer(thing.resolved_content)
     return [isb_lib.core.coreRecordAsSolrDoc(transformer)]
+
 
 def _sesar_last_updated(dict: typing.Dict) -> typing.Optional[datetime.datetime]:
     description = dict.get("description")
@@ -186,8 +185,9 @@ def _sesar_last_updated(dict: typing.Dict) -> typing.Optional[datetime.datetime]
                     return dateparser.parse(record["timestamp"])
     return None
 
+
 def loadThing(
-    identifier: str, t_created: datetime.datetime, existing_thing: Thing
+        identifier: str, t_created: datetime.datetime, existing_thing: Thing
 ) -> Thing:
     """
     Load a thing from its source.
@@ -253,12 +253,12 @@ class SESARIdentifiersSitemap(isb_lib.core.IdentifierIterator):
     """
 
     def __init__(
-        self,
-        sitemap_url: str = DEFAULT_SESAR_SITEMAP,
-        offset: int = 0,
-        max_entries: int = -1,
-        date_start: datetime.datetime = None,
-        date_end: datetime.datetime = None,
+            self,
+            sitemap_url: str = DEFAULT_SESAR_SITEMAP,
+            offset: int = 0,
+            max_entries: int = -1,
+            date_start: datetime.datetime = None,
+            date_end: datetime.datetime = None,
     ):
         super().__init__(
             offset=offset,
@@ -309,14 +309,14 @@ class SESARIdentifiersOAIPMH(isb_lib.core.IdentifierIterator):
     """
 
     def __init__(
-        self,
-        service_url: str = DEFAULT_IGSN_OAI,
-        metadata_prefix=igsn_lib.oai.DEFAULT_METADATA_PREFIX,
-        set_spec="IEDA.SESAR",
-        offset: int = 0,
-        max_entries: int = -1,
-        date_start: datetime.datetime = None,
-        date_end: datetime.datetime = None,
+            self,
+            service_url: str = DEFAULT_IGSN_OAI,
+            metadata_prefix=igsn_lib.oai.DEFAULT_METADATA_PREFIX,
+            set_spec="IEDA.SESAR",
+            offset: int = 0,
+            max_entries: int = -1,
+            date_start: datetime.datetime = None,
+            date_end: datetime.datetime = None,
     ):
         super().__init__(
             offset=offset,
@@ -350,7 +350,7 @@ class SESARIdentifiersOAIPMH(isb_lib.core.IdentifierIterator):
                 except sickle.oaiexceptions.NoRecordsMatch:
                     self._cpage = None
                     return
-            _page = self.pager.next()
+            self.pager.next()
             # Get counts
             self._total_records = int(self.pager.resumption_token.complete_list_size)
             L.debug("Total records = %s", self._total_records)
@@ -365,7 +365,7 @@ class SESARIdentifiersOAIPMH(isb_lib.core.IdentifierIterator):
                         None,
                     ],
                 )[0]
-                if not igsn is None:
+                if igsn is not None:
                     tstamp = igsn_lib.time.datetimeFromSomething(
                         ditem.get(
                             "{http://www.openarchives.org/OAI/2.0/}datestamp",

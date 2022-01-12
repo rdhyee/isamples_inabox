@@ -119,12 +119,13 @@ class SmithsonianTransformer(Transformer):
         return Transformer.DESCRIPTION_SEPARATOR.join(description_pieces)
 
     def has_context_categories(self) -> typing.List[typing.AnyStr]:
-        categories = SMITHSONIAN_FEATURE_PREDICTOR.predict_sampled_feature([
-            self.source_record.get("collectionCode"),
-            self.source_record.get("habitat"),
-            self.source_record.get("higherGeography"),
-            self.source_record.get("locality"),
-            self.source_record.get("higherClassification"),
+        categories = SMITHSONIAN_FEATURE_PREDICTOR.predict_sampled_feature(
+            [
+                self.source_record.get("collectionCode"),
+                self.source_record.get("habitat"),
+                self.source_record.get("higherGeography"),
+                self.source_record.get("locality"),
+                self.source_record.get("higherClassification"),
             ]
         )
         return [categories]

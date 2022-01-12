@@ -1,15 +1,12 @@
 import datetime
 import logging
-import os
 import time
 import requests
 import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.exc
-import igsn_lib
 import isb_lib.core
 import isb_lib.geome_adapter
-import igsn_lib.time
 import asyncio
 import concurrent.futures
 import click
@@ -21,6 +18,7 @@ from isb_web.sqlmodel_database import SQLModelDAO, get_thing_with_id, save_thing
 CONCURRENT_DOWNLOADS = 10
 BACKLOG_SIZE = 40
 
+
 def getLogger():
     return logging.getLogger("main")
 
@@ -29,7 +27,7 @@ def wrapLoadThing(ark: str, tc: datetime.datetime, existing_thing: Thing = None)
     """Return request information to assist future management"""
     try:
         return ark, tc, isb_lib.geome_adapter.loadThing(ark, tc, existing_thing)
-    except:
+    except Exception:
         pass
     return ark, tc, None
 
@@ -40,7 +38,7 @@ def countThings(session):
     return cnt
 
 
-async def _loadGEOMEEntries(session, max_count, start_from=None):
+async def _loadGEOMEEntries(session, max_count, start_from=None):  # noqa: C901 -- need to examine computational complexity
     L = getLogger()
     futures = []
     working = {}
@@ -83,7 +81,7 @@ async def _loadGEOMEEntries(session, max_count, start_from=None):
                     futures.append(future)
                     working[identifier] = 0
                     total_requested += 1
-                except StopIteration as e:
+                except StopIteration:
                     L.info("Reached end of identifier iteration.")
                     num_prepared = 0
                 if total_requested >= max_count:
@@ -93,10 +91,10 @@ async def _loadGEOMEEntries(session, max_count, start_from=None):
                 for fut in concurrent.futures.as_completed(futures, timeout=1):
                     identifier, tc, _thing = fut.result()
                     futures.remove(fut)
-                    if not _thing is None:
+                    if _thing is not None:
                         try:
                             save_thing(session, _thing)
-                        except sqlalchemy.exc.IntegrityError as e:
+                        except sqlalchemy.exc.IntegrityError:
                             session.rollback()
                             logging.error("Item already exists: %s", _id[0])
                         # for _rel in _related:
@@ -109,7 +107,7 @@ async def _loadGEOMEEntries(session, max_count, start_from=None):
                         total_completed += 1
                     else:
                         if working.get(identifier, 0) < 3:
-                            if not identifier in working:
+                            if identifier not in working:
                                 working[identifier] = 1
                             else:
                                 working[identifier] += 1

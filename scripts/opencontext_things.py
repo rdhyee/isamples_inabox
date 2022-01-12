@@ -5,8 +5,6 @@ import click_config_file
 import asyncio
 import isb_lib.core
 import isb_lib.opencontext_adapter
-import concurrent.futures
-import heartrate
 import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.exc
@@ -25,7 +23,7 @@ def wrap_load_thing(thing_dict, tc):
     """Return request information to assist future management"""
     try:
         return tc, isb_lib.opencontext_adapter.load_thing(thing_dict)
-    except:
+    except Exception:
         pass
     return tc, None
 
@@ -56,7 +54,7 @@ async def _load_open_context_entries(session, max_count, start_from):
             )
             try:
                 save_thing(session, thing)
-            except sqlalchemy.exc.IntegrityError as e:
+            except sqlalchemy.exc.IntegrityError:
                 session.rollback()
                 logging.error("Item already exists: %s", record)
 

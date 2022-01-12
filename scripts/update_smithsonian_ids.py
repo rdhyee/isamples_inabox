@@ -1,4 +1,3 @@
-import datetime
 import logging
 import typing
 import click
@@ -13,6 +12,7 @@ import igsn_lib.models.thing
 def _fixed_smithsonian_id(id: typing.AnyStr) -> typing.AnyStr:
     id_no_n2t = id.removeprefix("http://n2t.net/")
     return id_no_n2t
+
 
 @click.command()
 @click.option(
@@ -63,6 +63,7 @@ def main(ctx, db_url, verbosity, heart_rate):
         index += page_size
         logging.info(f"going to next page, index is {index}")
     print(f"num records is {count}")
+
 
 """
 Updates existing Smithsonian records in a Things db to have their id column stripped of the n2t prefix.

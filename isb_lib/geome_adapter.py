@@ -1,19 +1,14 @@
 """
 Implements an adapter for getting records from GEOME
 """
-import time
 import logging
 import functools
 import datetime
 import typing
-import urllib.parse
-import json
 import dateparser
 
 import isamples_metadata.GEOMETransformer
 import requests
-import sickle.oaiexceptions
-import sickle.utils
 import igsn_lib.oai
 import igsn_lib.time
 import isb_lib.core
@@ -49,7 +44,7 @@ def geomeEventRecordTimestamp(record):
                         tstr = f"{tstr} {_tod}"
             t_collected = _datetimeFromSomething(tstr)
             # L.debug("T: %s, %s", tstr, t_collected)
-    except Exception as e:
+    except Exception:
         pass
     return t_collected
 
@@ -165,7 +160,7 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
             self._project_ids = []
             for p in self.listProjects():
                 pid = p.get("projectId", None)
-                if not pid is None:
+                if pid is not None:
                     self._project_ids.append(
                         {
                             "project_id": pid,
@@ -180,7 +175,7 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
                 for (record, modified_date) in self.recordsInProject(p["project_id"], self._record_type):
                     # record identifier
                     rid = record.get("bcid", None)
-                    if not rid is None:
+                    if rid is not None:
                         p["identifiers"].append((rid, modified_date))
                 p["loaded"] = True
                 L.info(
@@ -304,8 +299,10 @@ class GEOMEItem(object):
         _thing.resolved_content = self.item
         return _thing
 
+
 def _validateResolvedContent(thing: Thing):
     isb_lib.core.validate_resolved_content(GEOMEItem.AUTHORITY_ID, thing)
+
 
 def reparseRelations(thing):
     _validateResolvedContent(thing)

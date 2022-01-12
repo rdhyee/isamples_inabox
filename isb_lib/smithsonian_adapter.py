@@ -74,7 +74,7 @@ def load_thing(
             month=int(thing_dict["month"]),
             day=int(thing_dict["day"]),
         )
-    except ValueError as e:
+    except ValueError:
         # In many cases, these don't seem to be populated.  There's nothing we can do if they aren't there, so just
         # leave it as None.
         t_created = None
@@ -98,7 +98,7 @@ def reparse_as_core_record(thing: Thing) -> typing.List[typing.Dict]:
         # This isn't present in Smithsonian data.  Fall back to the value on Thing
         solr_doc["sourceUpdatedTime"] = isb_lib.core.datetimeToSolrStr(thing.tstamp)
         return [solr_doc]
-    except Exception as e:
+    except Exception:
         logging.fatal(
             "Failed trying to run transformer on %s", str(thing.resolved_content)
         )

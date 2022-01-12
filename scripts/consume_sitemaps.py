@@ -9,7 +9,6 @@ import isb_lib.core
 import isb_web
 import isb_web.config
 import logging
-import os.path
 from isb_lib.sitemaps.sitemap_fetcher import (
     SitemapIndexFetcher,
     SitemapFileFetcher,
@@ -124,8 +123,8 @@ def fetch_sitemap_files(authority, last_updated_date, rsession, url, db_session)
                             f"Finished fetching thing {thing_fetcher.thing.id}"
                         )
                         if (
-                            not thing_fetcher.primary_key_fetched
-                            in sitemap_index_fetcher.primary_keys_fetched
+                            thing_fetcher.primary_key_fetched
+                            not in sitemap_index_fetcher.primary_keys_fetched
                         ):
                             sqlmodel_database.save_or_update_thing(
                                 db_session, thing_fetcher.thing
