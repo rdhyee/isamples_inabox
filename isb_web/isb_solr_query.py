@@ -47,6 +47,7 @@ RESERVED_CHAR_LIST = [
     ":",
 ]
 
+ALLOWED_SELECT_METHODS = ["search", "random", ]
 
 def escape_solr_query_term(term):
     """Escape a query term for inclusion in a query."""
@@ -404,6 +405,7 @@ def solr_searchStream(params, collection="isb_core_records"):
         "x:producedBy_samplingSite_location_longitude",
         "y:producedBy_samplingSite_location_latitude",
     ]
+    selection_method = "search"
     for k, v in default_params.items():
         if k == "xycount":
             v = str(v).lower()
@@ -422,6 +424,9 @@ def solr_searchStream(params, collection="isb_core_records"):
                 if f not in _field_list:
                     _field_list.append(f)
             v = ",".join(_field_list)
+        if k == "select":
+            if v in ALLOWED_SELECT_METHODS:
+                selection_method = v
         if not k is None:
             _params.append(f'{k}="{v}"')
     if not _has_fl:
@@ -435,11 +440,11 @@ def solr_searchStream(params, collection="isb_core_records"):
         )
     )
     content_type = "application/json"
-    request = {"expr": f'search({collection},{",".join(_params)},qt="/select")'}
+    request = {"expr": f'{selection_method}({collection},{",".join(_params)},qt="/select")'}
     if point_rollup:
         request = {
             "expr": (
-                f'select(rollup(search({collection},{",".join(_params)},qt="/select")'
+                f'select(rollup({selection_method}({collection},{",".join(_params)},qt="/select")'
                 ',over="x,y",count(*)),x,y,count(*) as n)'
             )
         }
