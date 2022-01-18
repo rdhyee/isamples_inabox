@@ -16,7 +16,8 @@ from sqlmodel import Session
 import isb_web
 import isamples_metadata.GEOMETransformer
 from isb_lib.core import MEDIA_GEO_JSON, MEDIA_JSON, MEDIA_NQUADS
-from isb_web import sqlmodel_database
+from isb_web import sqlmodel_database, analytics
+from isb_web.analytics import AnalyticsEvent
 from isb_web import schemas
 from isb_web import crud
 from isb_web import config
@@ -244,15 +245,18 @@ async def login():
 
 @app.get(f"/{THING_URL_PATH}", response_model=schemas.ThingListMeta)
 async def thing_list_metadata(
+    request: fastapi.Request,
     session: Session = Depends(get_session),
 ):
     """Information about list identifiers"""
     meta = sqlmodel_database.get_thing_meta(session)
+    analytics.record_analytics_event(AnalyticsEvent.THING_LIST_METADATA, request)
     return meta
 
 
 @app.get(f"/{THING_URL_PATH}/", response_model=ThingPage)
 def thing_list(
+    request: fastapi.Request,
     offset: int = fastapi.Query(0, ge=0),
     limit: int = fastapi.Query(1000, lt=10000, gt=0),
     status: int = 200,
@@ -262,7 +266,10 @@ def thing_list(
     total_records, npages, things = sqlmodel_database.read_things_summary(
         session, offset, limit, status, authority
     )
-
+    properties = {
+        "authority": authority or "None"
+    }
+    analytics.record_analytics_event(AnalyticsEvent.THING_LIST, request, properties)
     params = {
         "limit": limit,
         "offset": offset,
@@ -279,9 +286,11 @@ def thing_list(
 
 @app.get(f"/{THING_URL_PATH}/types", response_model=typing.List[schemas.ThingType])
 async def thing_list_types(
+    request: fastapi.Request,
     session: Session = Depends(get_session),
 ):
     """List of types of things with counts"""
+    analytics.record_analytics_event(AnalyticsEvent.THING_LIST_TYPES, request)
     return sqlmodel_database.get_sample_types(session)
 
 
@@ -316,6 +325,11 @@ async def get_solr_select(request: fastapi.Request):
     # Update params with the provided parameters
     params.update(request.query_params)
 
+    properties = {
+        "q": params["q"]
+    }
+    analytics.record_analytics_event(AnalyticsEvent.THING_SOLR_SELECT, request, properties)
+
     # response object is generated in the called method. This is necessary
     # for the streaming response as otherwise the iterator is consumed
     # before returning here, hence defeating the purpose of the streaming
@@ -334,25 +348,32 @@ async def get_solr_query(
 @app.get(f"/{THING_URL_PATH}/stream", response_model=typing.Any)
 async def get_solr_stream(request: fastapi.Request):
     # logging.warning("Query params: ", request.query_params)
+    analytics.record_analytics_event(AnalyticsEvent.THING_SOLR_STREAM, request)
     return isb_solr_query.solr_searchStream(request.query_params)
 
 
 @app.get(f"/{THING_URL_PATH}/select/info", response_model=typing.Any)
-async def get_solr_luke_info():
+async def get_solr_luke_info(request: fastapi.Request):
     """Retrieve information about the record schema.
 
     Returns: JSON
     """
+    analytics.record_analytics_event(AnalyticsEvent.THING_SOLR_LUKE_INFO, request)
     return isb_solr_query.solr_luke()
 
 
 @app.get(f"/{THING_URL_PATH}/{{identifier:path}}", response_model=typing.Any)
 async def get_thing(
+    request: fastapi.Request,
     identifier: str,
     full: bool = False,
     format: isb_format.ISBFormat = isb_format.ISBFormat.ORIGINAL,
     session: Session = Depends(get_session),
 ):
+    properties = {
+        "identifier": identifier
+    }
+    analytics.record_analytics_event(AnalyticsEvent.THING_BY_IDENTIFIER, request, properties)
     """Record for the specified identifier"""
     if format == isb_format.ISBFormat.SOLR:
         # Return solr representation of the record
@@ -404,9 +425,14 @@ async def get_thing(
 
 @app.get(f"/{STAC_ITEM_URL_PATH}/{{identifier:path}}", response_model=typing.Any)
 async def get_stac_item(
+    request: fastapi.Request,
     identifier: str,
     session: Session = Depends(get_session),
 ):
+    properties = {
+        "identifier": identifier
+    }
+    analytics.record_analytics_event(AnalyticsEvent.STAC_ITEM_BY_IDENTIFIER, request, properties)
     # stac wants things to have filenames, so let these requests work, too.
     if identifier.endswith(".json"):
         identifier = identifier.removesuffix(".json")
@@ -431,11 +457,17 @@ async def get_stac_item(
 
 @app.get(f"/{STAC_COLLECTION_URL_PATH}/{{filename:path}}", response_model=typing.Any)
 def get_stac_collection(
+    request: fastapi.Request,
     offset: int = fastapi.Query(0, ge=0),
     limit: int = fastapi.Query(1000, lt=10000, gt=0),
     authority: str = fastapi.Query(None),
     filename: str = None
 ):
+    properties = {
+        "authority": authority or "None"
+    }
+    analytics.record_analytics_event(AnalyticsEvent.STAC_COLLECTION, request, properties)
+
     solr_docs, has_next = isb_solr_query.solr_records_for_stac_collection(authority, offset, limit)
     stac_collection = isb_lib.stac.stac_collection_from_solr_dicts(solr_docs, has_next, offset, limit, authority)
     return fastapi.responses.JSONResponse(
@@ -544,9 +576,10 @@ async def get_things_leaflet_heatmap(
     response_model=typing.List[schemas.RelationListMeta],
 )
 # async def relation_metadata(db: sqlalchemy.orm.Session = fastapi.Depends((getDb))):
-async def relation_metadata():
+async def relation_metadata(request: fastapi.Request):
     """List of predicates with counts"""
     # return crud.getPredicateCounts(db)
+    analytics.record_analytics_event(AnalyticsEvent.RELATION_METADATA, request)
     session = requests.session()
     return crud.getPredicateCountsSolr(session)
 
@@ -615,6 +648,7 @@ async def get_related(
     },
 )
 async def get_related_solr(
+    request: fastapi.Request,
     s: str = None,
     p: str = None,
     o: str = None,
@@ -628,6 +662,7 @@ async def get_related_solr(
 
     Each property is optional. Exact matches only.
     """
+    analytics.record_analytics_event(AnalyticsEvent.RELATED_SOLR, request)
     return_type = accept_types.get_best_match(accept, [MEDIA_JSON, MEDIA_NQUADS])
     rsession = requests.Session()
     res = crud.getRelationsSolr(rsession, s, p, o, source, name, offset, limit)

@@ -311,9 +311,9 @@ def solr_query(params, query=None):
         "smile": "application/x-jackson-smile",
         "json": "application/json",
     }
-    for k, v in params:
-        if k == "wt":
-            content_type = wt_map.get(v.lower(), "json")
+    wt_value = params.get("wt")
+    if wt_value is not None:
+        content_type = wt_map.get(wt_value.lower(), "json")
     if query is None:
         response = requests.get(url, headers=headers, params=params, stream=True)
     else:
