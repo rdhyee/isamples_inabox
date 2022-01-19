@@ -55,25 +55,10 @@ def record_analytics_event(
             )
             return False
 
-        headers = {
-            "Content-Type": MEDIA_JSON,
-            "User-Agent": request.headers.get("user-agent", "no-user-agent"),
-            "X-Forwarded-For": request.headers.get("x-forwarded-for", "no-client-ip"),
-        }
+        headers = _analytics_request_headers(request)
         logging.debug(f"Analytics request headers are {headers}")
 
-        referer = request.headers.get("referer")
-        data_dict = {
-            "name": event.value,
-            "domain": ANALYTICS_DOMAIN,
-            "url": str(request.url),
-        }
-        if referer is not None:
-            data_dict["referrer"] = referer
-        if properties is not None:
-            # plausible.io has a bug where it needs the props to be stringified when posted in the data
-            # https://github.com/plausible/analytics/discussions/1570
-            data_dict["props"] = json.dumps(properties)
+        data_dict = _analytics_request_data(event, request, properties)
         logging.debug(f"Analytics request body is {data_dict}")
         post_data_str = json.dumps(data_dict).encode("utf-8")
         response = requests.post(ANALYTICS_URL, headers=headers, data=post_data_str)
@@ -89,3 +74,28 @@ def record_analytics_event(
             "Exception recording analytics event %s, exception: %s", event.value, e
         )
         return False
+
+
+def _analytics_request_data(event: AnalyticsEvent, request: fastapi.Request, properties: typing.Optional[typing.Dict]) -> typing.Dict:
+    referer = request.headers.get("referer")
+    data_dict = {
+        "name": event.value,
+        "domain": ANALYTICS_DOMAIN,
+        "url": str(request.url),
+    }
+    if referer is not None:
+        data_dict["referrer"] = referer
+    if properties is not None:
+        # plausible.io has a bug where it needs the props to be stringified when posted in the data
+        # https://github.com/plausible/analytics/discussions/1570
+        data_dict["props"] = json.dumps(properties)
+    return data_dict
+
+
+def _analytics_request_headers(request: fastapi.Request) -> typing.Dict:
+    headers = {
+        "Content-Type": MEDIA_JSON,
+        "User-Agent": request.headers.get("user-agent", "no-user-agent"),
+        "X-Forwarded-For": request.headers.get("x-forwarded-for", "no-client-ip"),
+    }
+    return headers
