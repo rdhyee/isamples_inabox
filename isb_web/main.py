@@ -313,21 +313,27 @@ async def get_solr_select(request: fastapi.Request):
 
     See https://solr.apache.org/guide/8_9/common-query-parameters.html
     """
-    # Somewhat sensible defaults
-    params = {
+    # Construct a list of K,V pairs to hand on to the solr request.
+    # Can't use a standard dict here because we need to support possible
+    # duplicate keys in the request query string.
+    defparams = {
         "wt": "json",
         "q": "*:*",
         "fl": "id",
         "rows": 10,
         "start": 0,
     }
-
-    # Update params with the provided parameters
-    params.update(request.query_params)
-
     properties = {
-        "q": params["q"]
+        "q": defparams["q"]
     }
+    params = []
+    # Update params with the provided parameters
+    for k, v in request.query_params.multi_items():
+        params.append([k, v])
+        if k in properties:
+            properties[k] = v
+    params = set_default_params(params, defparams)
+    logging.warning(params)
     analytics.record_analytics_event(AnalyticsEvent.THING_SOLR_SELECT, request, properties)
 
     # response object is generated in the called method. This is necessary
