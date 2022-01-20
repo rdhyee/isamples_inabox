@@ -2,7 +2,6 @@ import click
 import click_config_file
 import isb_lib.core
 import csv
-import json
 import isb_lib.smithsonian_adapter
 import logging
 import sqlalchemy
@@ -23,7 +22,7 @@ def _save_record_to_db(session, file_path, record):
         )
         try:
             save_thing(session, thing)
-        except sqlalchemy.exc.IntegrityError as e:
+        except sqlalchemy.exc.IntegrityError:
             session.rollback()
             logging.error("Item already exists: %s", record)
 
@@ -86,7 +85,7 @@ def main(ctx, db_url, solr_url, verbosity, heart_rate):
     "-f",
     "--file",
     help="""
-    The path to the Darwin Core dump file containing the records to import.  This should be manually downloaded, 
+    The path to the Darwin Core dump file containing the records to import.  This should be manually downloaded,
     then preprocessed with preprocess_smithsonian.py before importing here.""",
 )
 @click.pass_context

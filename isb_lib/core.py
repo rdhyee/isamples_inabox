@@ -41,8 +41,10 @@ MEDIA_JSON = "application/json"
 MEDIA_NQUADS = "application/n-quads"
 MEDIA_GEO_JSON = "application/geo+json"
 
+
 def getLogger():
     return logging.getLogger("isb_lib.core")
+
 
 LOG_LEVELS = {
     "DEBUG": logging.DEBUG,
@@ -56,6 +58,7 @@ LOG_LEVELS = {
 LOG_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 LOG_FORMAT = "%(asctime)s %(name)s:%(levelname)s: %(message)s"
 
+
 def initialize_logging(verbosity: typing.AnyStr):
     logging.basicConfig(
         level=LOG_LEVELS.get(verbosity, logging.INFO),
@@ -66,9 +69,6 @@ def initialize_logging(verbosity: typing.AnyStr):
     verbosity = verbosity.upper()
     if verbosity not in LOG_LEVELS.keys():
         L.warning("%s is not a log level, set to INFO", verbosity)
-
-
-
 
 
 def things_main(ctx, db_url, solr_url, verbosity, heart_rate):
@@ -108,11 +108,13 @@ def relationAsSolrDoc(
     doc["tstamp"] = datetimeToSolrStr(ts)
     return doc
 
+
 def validate_resolved_content(authority_id: typing.AnyStr, thing: Thing):
     if not isinstance(thing.resolved_content, dict):
         raise ValueError("Thing.resolved_content is not an object")
     if not thing.authority_id == authority_id:
         raise ValueError(f"Mismatched authority_id on Thing, expecting {authority_id}, received {thing.authority_id}")
+
 
 def _shouldAddMetadataValueToSolrDoc(metadata: typing.Dict, key: typing.AnyStr) -> bool:
     shouldAdd = False
@@ -135,7 +137,8 @@ def _shouldAddMetadataValueToSolrDoc(metadata: typing.Dict, key: typing.AnyStr) 
             shouldAdd = True
     return shouldAdd
 
-def _coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:
+
+def _coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:  # noqa: C901 -- need to examine computational complexity
     # Before preparing the document in solr format, strip out any whitespace in string values
     for k, v in coreMetadata.items():
         if type(v) is str:
@@ -207,6 +210,7 @@ def handle_curation_fields(coreMetadata: typing.Dict, doc: typing.Dict):
     if _shouldAddMetadataValueToSolrDoc(curation, "responsibility"):
         doc["curation_responsibility"] = curation["responsibility"]
 
+
 def shapely_to_solr(shape: shapely.geometry.shape):
     centroid = shape.centroid
     bb = shape.bounds
@@ -217,12 +221,14 @@ def shapely_to_solr(shape: shapely.geometry.shape):
     }
     return res
 
+
 def lat_lon_to_solr(coreMetadata: typing.Dict, latitude: typing.SupportsFloat, longitude: typing.SupportsFloat):
     coreMetadata.update(shapely_to_solr(shapely.geometry.Point(longitude, latitude)))
     coreMetadata["producedBy_samplingSite_location_latitude"] = latitude
     coreMetadata["producedBy_samplingSite_location_longitude"] = longitude
 
-def handle_produced_by_fields(coreMetadata: typing.Dict, doc: typing.Dict):
+
+def handle_produced_by_fields(coreMetadata: typing.Dict, doc: typing.Dict):  # noqa: C901 -- need to examine computational complexity
     # The solr index flattens subdictionaries, so check the keys explicitly in the subdictionary to see if they should be added to the index
     producedBy = coreMetadata["producedBy"]
     if _shouldAddMetadataValueToSolrDoc(producedBy, "label"):
@@ -317,6 +323,7 @@ def solr_delete_records(rsession, ids_to_delete: typing.List[typing.AnyStr], url
     else:
         L.debug("Successfully posted data %s to url %s", str(data), str(_url))
 
+
 def solrAddRecords(rsession, records, url):
     """
     Push records to Solr.
@@ -391,17 +398,18 @@ def solr_max_source_updated_time(
         docs = dict["response"]["docs"]
         if docs is not None and len(docs) > 0:
             return dateparser.parse(docs[0]["sourceUpdatedTime"])
-    except:
+    except Exception:
         getLogger().error("Didn't get expected JSON back from %s when fetching max source updated time for %s", _url, authority_id)
 
     return None
+
 
 def sesar_fetch_lowercase_igsn_records(
     url: typing.AnyStr, rows: int, rsession=requests.session()
 ) -> typing.List[typing.Dict]:
     headers = {"Content-Type": "application/json"}
     params = {
-        "q": f"source:SESAR AND id:*igsn*",
+        "q": "source:SESAR AND id:*igsn*",
         "rows": rows,
     }
     _url = f"{url}select"
@@ -410,12 +418,13 @@ def sesar_fetch_lowercase_igsn_records(
     docs = dict["response"]["docs"]
     return docs
 
+
 def opencontext_fetch_broken_id_records(
     url: typing.AnyStr, rows: int, rsession=requests.session()
 ) -> typing.List[typing.Dict]:
     headers = {"Content-Type": "application/json"}
     params = {
-        "q": f"source:OPENCONTEXT AND id:http*",
+        "q": "source:OPENCONTEXT AND id:http*",
         "rows": rows,
     }
     _url = f"{url}select"
@@ -509,13 +518,13 @@ class IdentifierIterator:
             self._page_offset += 1
             self._coffset += 1
             return entry
-        except IndexError as e:
+        except IndexError:
             raise StopIteration
-        except KeyError as e:
+        except KeyError:
             raise StopIteration
-        except TypeError as e:
+        except TypeError:
             raise StopIteration
-        except ValueError as e:
+        except ValueError:
             raise StopIteration
 
 
@@ -619,7 +628,8 @@ class CoreSolrImporter:
                 try:
                     core_records_from_thing = core_record_function(thing)
                 except Exception as e:
-                    getLogger().error("Failed trying to run transformer, skipping record %s", str(thing.resolved_content))
+                    getLogger().error("Failed trying to run transformer, skipping record %s exception %s",
+                                      thing.resolved_content, e)
                     continue
 
                 for core_record in core_records_from_thing:

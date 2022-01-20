@@ -9,4 +9,3 @@ engine = sqlalchemy.create_engine(DATABASE_URL)
 SessionLocal = sqlalchemy.orm.sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = sqlalchemy.ext.declarative.declarative_base()
-

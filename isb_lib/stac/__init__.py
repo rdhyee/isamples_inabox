@@ -15,12 +15,10 @@ STAC_FEATURE_TYPE = "Feature"
 STAC_COLLECTION_TYPE = "Collection"
 STAC_VERSION = "1.0.0"
 COLLECTION_ID = "isamples-stac-collection"
-COLLECTION_DESCRIPTION = """
-The Internet of Samples (iSamples) is a multi-disciplinary and multi-institutional project funded by the National 
-Science Foundation to design, develop, and promote service infrastructure to uniquely, consistently, and conveniently 
-identify material samples, record metadata about them, and persistently link them to other samples and derived digital
-content, including images, data, and publications.
-"""
+COLLECTION_DESCRIPTION = """The Internet of Samples (iSamples) is a multi-disciplinary and multi-institutional
+project funded by the National Science Foundation to design, develop, and promote service infrastructure to uniquely,
+consistently, and conveniently identify material samples, record metadata about them, and persistently link them to
+other samples and derived digital content, including images, data, and publications."""
 COLLECTION_TITLE = "iSamples Stac Collection"
 COLLECTION_LICENSE = "CC-BY-4.0"
 

@@ -30,7 +30,7 @@ SOLR_RESERVED_CHAR_LIST = [
 def escapeSolrQueryTerm(term):
     term = term.replace("\\", "\\\\")
     for c in SOLR_RESERVED_CHAR_LIST:
-        term = term.replace(c, "\{}".format(c))
+        term = term.replace(c, "\{}".format(c))  # noqa: W605 -- this is the correct way to escape SOLR
     return term
 
 
@@ -46,15 +46,15 @@ def getRelationsSolr(
     url: str = "http://localhost:8983/solr/isb_rel/",
 ):
     q = []
-    if not s is None:
+    if s is not None:
         q.append(f"s:{escapeSolrQueryTerm(s)}")
-    if not p is None:
+    if p is not None:
         q.append(f"p:{escapeSolrQueryTerm(p)}")
-    if not o is None:
+    if o is not None:
         q.append(f"o:{escapeSolrQueryTerm(o)}")
-    if not source is None:
+    if source is not None:
         q.append(f"source:{escapeSolrQueryTerm(source)}")
-    if not name is None:
+    if name is not None:
         q.append(f"name:{escapeSolrQueryTerm(name)}")
     if len(q) == 0:
         q.append("*:*")

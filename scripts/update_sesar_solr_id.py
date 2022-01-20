@@ -1,22 +1,18 @@
-import datetime
 import logging
-import time
 import typing
 import click
 import click_config_file
 import requests
 
 import isb_lib.core
-from sqlalchemy import select
-from sqlalchemy import update
-import igsn_lib.models
-import igsn_lib.models.thing
 
 url = "http://localhost:8983/solr/isb_core_records/"
+
 
 def _fixed_sesar_id(id: typing.AnyStr) -> typing.AnyStr:
     fixed_id = id.replace("igsn", "IGSN")
     return fixed_id
+
 
 @click.command()
 @click.option(
@@ -61,6 +57,7 @@ def main(ctx, db_url, verbosity, heart_rate):
         records = isb_lib.core.sesar_fetch_lowercase_igsn_records(url, page_size, rsession)
     print(f"num records is {count}")
     isb_lib.core.solrCommit(rsession, url)
+
 
 """
 Updates existing Smithsonian records in a Things db to have their id column stripped of the n2t prefix.

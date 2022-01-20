@@ -1,4 +1,3 @@
-import os.path
 import urllib.parse
 from abc import ABC
 import datetime
@@ -68,7 +67,7 @@ class SitemapFetcher(ABC):
               <sitemap>
                 <loc>http://mars.cyverse.org/sitemaps/sitemap-5.xml</loc>
                 <lastmod>2006-08-10T12:00:00Z</lastmod>
-              </sitemap>    
+              </sitemap>
               or this:
                 <urlset>
                   <url>
@@ -76,7 +75,7 @@ class SitemapFetcher(ABC):
                     <lastmod>2021-07-02T22:49:54Z</lastmod>
                   </url>
                 </urlset>
-            Either way, we can parse them the same way              
+            Either way, we can parse them the same way
         """
         for sitemap_child in sitemap_list:
             loc = (

@@ -42,7 +42,7 @@ def createField(
     }
     if multivalued:
         data["add-field"]["multiValued"] = multivalued
-    if not default is None:
+    if default is not None:
         data["add-field"]["default"] = default
     data = json.dumps(data).encode("utf-8")
     res = requests.post(f"{SOLR_API}schema", headers=headers, data=data)
@@ -68,6 +68,7 @@ def createCopyField(source, dest):
     res = requests.post(f"{SOLR_API}schema", headers=headers, data=data)
     pj(res.json())
 
+
 def replaceFieldType(field_type_dict: typing.Dict):
     headers = {"Content-Type": MEDIA_JSON}
     data = {"replace-field-type": field_type_dict}
@@ -75,12 +76,14 @@ def replaceFieldType(field_type_dict: typing.Dict):
     res = requests.post(f"{SOLR_API}schema", headers=headers, data=data)
     pj(res.json())
 
+
 def addFieldType(field_type_dict: typing.Dict):
     headers = {"Content-Type": MEDIA_JSON}
     data = {"add-field-type": field_type_dict}
     data = json.dumps(data).encode("utf-8")
     res = requests.post(f"{SOLR_API}schema", headers=headers, data=data)
     pj(res.json())
+
 
 def addDynamicField(dynamic_field_dict: typing.Dict):
     headers = {"Content-Type": MEDIA_JSON}
@@ -99,6 +102,7 @@ def createCollection():
         print("Collection already exists.  Exiting.")
         exit(0)
     pj(res.json())
+
 
 print("Going to create collection in create_isb_core_schema")
 #############
@@ -195,15 +199,15 @@ addDynamicField({
     "stored": True
 })
 addDynamicField({
-    "name":"*_bb",
-    "type":"bbox"
+    "name": "*_bb",
+    "type": "bbox"
 })
 addDynamicField({
-    "name":"*_rpt",
-    "type":"location_rpt",
-    "multiValued":True,
-    "indexed":True,
-    "stored":True
+    "name": "*_rpt",
+    "type": "location_rpt",
+    "multiValued": True,
+    "indexed": True,
+    "stored": True
 })
 
 createField("producedBy_samplingSite_location_ll", "location", True, True, None)

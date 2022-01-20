@@ -20,6 +20,7 @@ def _sesar_last_updated(dict: typing.Dict) -> typing.Optional[datetime.datetime]
                     return record["timestamp"]
     return None
 
+
 @click.command()
 @click.option(
     "-d", "--db_url", default=None, help="SQLAlchemy database URL for storage"
@@ -69,6 +70,7 @@ def main(ctx, db_url, verbosity, heart_rate):
         index += page_size
         logging.info(f"going to next page, index is {index}")
     print(f"num records is {count}")
+
 
 """
 Updates existing OpenContext records in a Things db to have their tcreated column based on the OpenContext "updated"

@@ -9,10 +9,11 @@ iterator_testcases = [
     (1, 1),
     (55, 55),
     (999, 999),
-    (1000,1000),
+    (1000, 1000),
     (1001, 1000),
     (2020, 1000),
 ]
+
 
 @pytest.mark.parametrize("max_entries,expected_outcome", iterator_testcases)
 def test_IdentifierIterator(max_entries, expected_outcome):
@@ -22,12 +23,14 @@ def test_IdentifierIterator(max_entries, expected_outcome):
         cnt += 1
     assert cnt == expected_outcome
 
+
 def _try_to_add_solr_doc(core_doc_str):
     core_doc = json.loads(core_doc_str)
     solr_dict = isb_lib.core._coreRecordAsSolrDoc(core_doc)
     if TEST_LIVE_SERVER:
         isb_lib.core.solrAddRecords(requests.session(), [solr_dict], url="http://localhost:8983/api/collections/isb_core_records/")
     return solr_dict
+
 
 def test_coreRecordAsSolrDoc():
     core_doc_str = """
@@ -60,10 +63,11 @@ def test_coreRecordAsSolrDoc():
     },
     "registrant": "Andra Bobbitt",
     "samplingPurpose": ""
-}    
+}
     """
     solr_dict = _try_to_add_solr_doc(core_doc_str)
     assert "producedBy_samplingSite_location_ll" in solr_dict
+
 
 def test_coreRecordAsSolrDoc2():
     core_doc_str = """
@@ -117,10 +121,11 @@ def test_coreRecordAsSolrDoc2():
   },
   "relatedResource": [],
   "sampleidentifier": "ark:/28722/k2ks6xw6t"
-}  
+}
     """
     solr_dict = _try_to_add_solr_doc(core_doc_str)
     assert "producedBy_samplingSite_location_latlon" not in solr_dict
+
 
 def test_date_year_only():
     date_str = "1985"

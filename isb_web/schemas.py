@@ -4,14 +4,16 @@ import datetime
 import fastapi
 from sqlmodel import SQLModel
 
+
 class Url(pydantic.BaseModel):
     url: str
 
+
 @pydantic.dataclasses.dataclass
 class ThingListRequest:
-    offset: int=0
-    limit: int=1000
-    status:int=200
+    offset: int = 0
+    limit: int = 1000
+    status: int = 200
     authority: str = fastapi.Query(None)
 
 
@@ -45,12 +47,15 @@ class ThingType(pydantic.BaseModel):
 class ThingListmetaStatus(pydantic.BaseModel):
     status: str
     count: int
+
     class Config:
         orm_mode: True
+
 
 class ThingListmetaAuth(pydantic.BaseModel):
     authority: str
     count: int
+
     class Config:
         orm_mode: True
 
@@ -58,6 +63,7 @@ class ThingListmetaAuth(pydantic.BaseModel):
 class ThingListMeta(pydantic.BaseModel):
     status: typing.List[ThingListmetaStatus]
     authority: typing.List[ThingListmetaAuth]
+
     class Config:
         orm_mode: True
 

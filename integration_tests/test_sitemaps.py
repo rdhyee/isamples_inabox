@@ -45,7 +45,7 @@ def test_sitemap(rsession: requests.sessions, sitemap_index_url: str):
           <sitemap>
             <loc>http://mars.cyverse.org/sitemaps/sitemap-5.xml</loc>
             <lastmod>2006-08-10T12:00:00Z</lastmod>
-          </sitemap>    
+          </sitemap>
     """
     random_sitemap_index = random.randrange(0, len(sitemap_list) - 1)
     random_sitemap_element = sitemap_list[random_sitemap_index]
@@ -62,7 +62,7 @@ def test_sitemap(rsession: requests.sessions, sitemap_index_url: str):
                   <url>
                     <loc>http://mars.cyverse.org/thing/IGSN:NEON01IJE?full=false&amp;format=core</loc>
                     <lastmod>2020-03-14T10:07:56Z</lastmod>
-                  </url>            
+                  </url>
             """
 
             # Get 100 randomly selected urlset children and try and resolve the url in the loc

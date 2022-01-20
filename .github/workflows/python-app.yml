@@ -59,3 +59,7 @@
        run: |
          source ../.venv/bin/activate       
          pytest
+     - name: flake8 linter
+       run:  |
+         source ./.venv/bin/activate
+         python -m flake8 --count --max-complexity 10 --ignore E501,W503 --show-source --statistics --exclude ./.venv .

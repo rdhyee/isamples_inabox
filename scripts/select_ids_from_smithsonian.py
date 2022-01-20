@@ -1,7 +1,6 @@
 import click
 import pandas
 import os.path
-import sys
 
 # Selects a hardcoded list of ids from a complete smithsonian dump and write them out as a partial file for unit testing
 ids = [

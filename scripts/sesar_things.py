@@ -29,7 +29,7 @@ def wrapLoadThing(igsn, tc, existing_thing: Thing = None):
     """Return request information to assist future management"""
     try:
         return igsn, tc, isb_lib.sesar_adapter.loadThing(igsn, tc, existing_thing)
-    except:
+    except Exception:
         pass
     return igsn, tc, None
 
@@ -40,7 +40,7 @@ def countThings(session):
     return cnt
 
 
-async def _loadSesarEntries(session, max_count, start_from=None):
+async def _loadSesarEntries(session, max_count, start_from=None):  # noqa: C901 -- need to examine computational complexity
     L = getLogger()
     futures = []
     working = {}
@@ -74,7 +74,7 @@ async def _loadSesarEntries(session, max_count, start_from=None):
                     futures.append(future)
                     working[igsn] = 0
                     total_requested += 1
-                except StopIteration as e:
+                except StopIteration:
                     L.info("Reached end of identifier iteration.")
                     num_prepared = 0
                 if total_requested >= max_count:
@@ -84,10 +84,10 @@ async def _loadSesarEntries(session, max_count, start_from=None):
                 for fut in concurrent.futures.as_completed(futures, timeout=1):
                     igsn, tc, _thing = fut.result()
                     futures.remove(fut)
-                    if not _thing is None:
+                    if _thing is not None:
                         try:
                             save_thing(session, _thing)
-                        except sqlalchemy.exc.IntegrityError as e:
+                        except sqlalchemy.exc.IntegrityError:
                             session.rollback()
                             logging.error("Item already exists: %s", _id[0])
                         # for _rel in _related:
@@ -100,7 +100,7 @@ async def _loadSesarEntries(session, max_count, start_from=None):
                         total_completed += 1
                     else:
                         if working.get(igsn, 0) < 3:
-                            if not igsn in working:
+                            if igsn not in working:
                                 working[igsn] = 1
                             else:
                                 working[igsn] += 1

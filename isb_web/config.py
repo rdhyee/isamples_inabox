@@ -54,5 +54,11 @@ class Settings(BaseSettings):
 
     stac_collection_url_path: str = "stac_collection"
 
+    # The URL to the analytics API
+    analytics_url: str = "UNSET"
+
+    # The domain to record analytics events for, needs to be configured as a site in plausible.io
+    analytics_domain: str = "UNSET"
+
     class Config:
         env_file = "isb_web_config.env"

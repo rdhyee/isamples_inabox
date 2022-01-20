@@ -1,21 +1,17 @@
-import datetime
 import logging
-import time
 import typing
 import click
 import click_config_file
 import requests
 
 import isb_lib.core
-from sqlalchemy import select
-from sqlalchemy import update
-import igsn_lib.models
-import igsn_lib.models.thing
 
 url = "http://localhost:8984/solr/isb_core_records/"
 
+
 def _fixed_opencontext_id(id: typing.AnyStr) -> typing.AnyStr:
     return isb_lib.normalized_id(id)
+
 
 @click.command()
 @click.option(
@@ -58,6 +54,7 @@ def main(ctx, db_url, solr_url, verbosity, heart_rate):
         records = isb_lib.core.opencontext_fetch_broken_id_records(url, page_size, rsession)
     print(f"num records is {count}")
     isb_lib.core.solrCommit(rsession, url)
+
 
 """
 Updates existing OpenContext records in a Things db to have their id column stripped of the n2t prefix.
