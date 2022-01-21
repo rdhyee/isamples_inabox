@@ -364,9 +364,7 @@ def solr_get_record(identifier):
     return 200, docs["response"]["docs"][0]
 
 
-def solr_searchStream(
-    params, collection="isb_core_records"
-):  # noqa: C901 -- need to examine computational complexity
+def solr_searchStream(params, collection="isb_core_records"):  # noqa: C901
     """
     Requests a streaming search response from solr.
 
@@ -396,6 +394,7 @@ def solr_searchStream(
         Stream of records from solr
     """
     # TODO: Test coverage, need to mock solr?
+    # TODO: C901 -- need to examine computational complexity
 
     point_rollup = False
     default_params = {
