@@ -20,7 +20,8 @@ MAX_LON = "max_lon"
 
 # 0.2 seems ok for the grid cells.
 _GEOJSON_ERR_PCT = 0.2
-# 0.1 for the leaflet heatmap tends to generate more cells for the heatmap “blob” generation
+# 0.1 for the leaflet heatmap tends to generate more cells for
+# the heatmap “blob” generation
 _LEAFLET_ERR_PCT = 0.1
 
 # Maximum rows to return in a streaming request.
@@ -46,7 +47,11 @@ RESERVED_CHAR_LIST = [
     ":",
 ]
 
-ALLOWED_SELECT_METHODS = ["search", "random", ]
+ALLOWED_SELECT_METHODS = [
+    "search",
+    "random",
+]
+
 
 def escape_solr_query_term(term):
     """Escape a query term for inclusion in a query."""
@@ -94,7 +99,9 @@ def _get_heatmap(
         "facet.heatmap": _RPT_FIELD,
         "facet.heatmap.distErrPct": dist_err_pct,
         # "facet.heatmap.gridLevel": grid_level,
-        "facet.heatmap.geom": f"[{bb[MIN_LON]} {bb[MIN_LAT]} TO {bb[MAX_LON]} {bb[MAX_LAT]}]",
+        "facet.heatmap.geom": (
+            f"[{bb[MIN_LON]} {bb[MIN_LAT]}" f"TO {bb[MAX_LON]} {bb[MAX_LAT]}]"
+        ),
     }
     if fq is not None:
         params["fq"] = fq
@@ -357,7 +364,9 @@ def solr_get_record(identifier):
     return 200, docs["response"]["docs"][0]
 
 
-def solr_searchStream(params, collection="isb_core_records"):   # noqa: C901 -- need to examine computational complexity
+def solr_searchStream(
+    params, collection="isb_core_records"
+):  # noqa: C901 -- need to examine computational complexity
     """
     Requests a streaming search response from solr.
 
@@ -424,7 +433,7 @@ def solr_searchStream(params, collection="isb_core_records"):   # noqa: C901 -- 
         if k == "select":
             if v in ALLOWED_SELECT_METHODS:
                 selection_method = v
-        if not k is None:
+        if k is not None:
             _params.append(f'{k}="{v}"')
     if not _has_fl:
         _params.append(f'fl="{",".join(_field_list)}"')
@@ -437,7 +446,9 @@ def solr_searchStream(params, collection="isb_core_records"):   # noqa: C901 -- 
         )
     )
     content_type = "application/json"
-    request = {"expr": f'{selection_method}({collection},{",".join(_params)},qt="/select")'}
+    request = {
+        "expr": f'{selection_method}({collection},{",".join(_params)},qt="/select")'
+    }
     if point_rollup:
         request = {
             "expr": (
