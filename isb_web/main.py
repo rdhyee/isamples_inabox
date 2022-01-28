@@ -120,6 +120,13 @@ app.mount(
 templates = fastapi.templating.Jinja2Templates(
     directory=os.path.join(THIS_PATH, "templates")
 )
+app.mount(
+    "/ui",
+    fastapi.staticfiles.StaticFiles(
+        directory=os.path.join(THIS_PATH, "ui"), check_dir=False, html=True
+    ),
+    name="ui",
+)
 
 
 def isAllowedReferer(referer):
