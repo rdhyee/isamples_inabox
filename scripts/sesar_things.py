@@ -12,6 +12,7 @@ import asyncio
 import concurrent.futures
 import click
 import click_config_file
+import typing
 
 from isb_lib.models.thing import Thing
 from isb_web import sqlmodel_database
@@ -40,13 +41,16 @@ def countThings(session):
     return cnt
 
 
-async def _loadSesarEntries(session, max_count, start_from=None):  # noqa: C901 -- need to examine computational complexity
+async def _loadSesarEntries(session, max_count, start_from=None, manual_ids: typing.List[typing.List[str]] = None):  # noqa: C901 -- need to examine computational complexity
     L = getLogger()
     futures = []
     working = {}
-    ids = isb_lib.sesar_adapter.SESARIdentifiersSitemap(
-        max_entries=countThings(session) + max_count, date_start=start_from
-    )
+    if manual_ids is not None:
+        ids = iter(manual_ids)
+    else:
+        ids = isb_lib.sesar_adapter.SESARIdentifiersSitemap(
+            max_entries=countThings(session) + max_count, date_start=start_from
+        )
     total_requested = 0
     total_completed = 0
     more_work = True
@@ -127,10 +131,10 @@ async def _loadSesarEntries(session, max_count, start_from=None):  # noqa: C901 
             )
 
 
-def loadSesarEntries(session, max_count, start_from=None):
+def loadSesarEntries(session, max_count, start_from=None, manual_ids: typing.List[typing.List[str]] = None):
     loop = asyncio.get_event_loop()
     future = asyncio.ensure_future(
-        _loadSesarEntries(session, max_count, start_from=start_from)
+        _loadSesarEntries(session, max_count, start_from=start_from, manual_ids=manual_ids)
     )
     loop.run_until_complete(future)
 
@@ -176,6 +180,28 @@ def loadRecords(ctx, max_records):
         logging.info("Oldest = %s", oldest_record)
         time.sleep(1)
         loadSesarEntries(session, max_records, start_from=oldest_record)
+    finally:
+        session.close()
+
+
+@main.command("manual_load")
+@click.option(
+    "-f",
+    "--filename",
+    type=str,
+    help="The filename with the manual IGSN list to load.  Format should be .csv with first column as IGSN and second column as time created.",
+)
+@click.pass_context
+def manual_load_records(ctx, filename):
+    session = SQLModelDAO(ctx.obj["db_url"]).get_session()
+    try:
+        igsn_list = []
+        with open(filename, "r") as igsn_file:
+            for line in igsn_file:
+                igsn_tc = line.split(",")
+                igsn_list.append(igsn_tc)
+        time.sleep(1)
+        loadSesarEntries(session, 999999999, None, igsn_list)
     finally:
         session.close()
 
