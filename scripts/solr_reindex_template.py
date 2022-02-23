@@ -27,19 +27,27 @@ def main(ctx):
     batch_size = 50000
     current_mutated_batch = []
     rsession = requests.session()
-    iterator = ISBCoreSolrRecordIterator(rsession, None, batch_size, 100000, "id asc")
+    iterator = ISBCoreSolrRecordIterator(rsession, None, batch_size, 0, "id asc")
     for record in iterator:
         mutated_record = mutate_record(record)
         if mutated_record is not None:
             current_mutated_batch.append(mutated_record)
         if len(current_mutated_batch) == batch_size:
-            logging.info(f"Going to save {len(current_mutated_batch)} records")
-            isb_lib.core.solrAddRecords(rsession, current_mutated_batch, solr_url)
-            isb_lib.core.solrCommit(rsession, solr_url)
-            logging.info(f"Just saved {len(current_mutated_batch)} records")
+            save_mutated_batch(current_mutated_batch, rsession, solr_url)
             current_mutated_batch = []
         total_records += 1
+    if len(current_mutated_batch) > 0:
+        # handle the remainder
+        save_mutated_batch(current_mutated_batch, rsession, solr_url)
+
     logging.info(f"Finished iterating, visited {total_records} records")
+
+
+def save_mutated_batch(current_mutated_batch, rsession, solr_url):
+    logging.info(f"Going to save {len(current_mutated_batch)} records")
+    isb_lib.core.solrAddRecords(rsession, current_mutated_batch, solr_url)
+    isb_lib.core.solrCommit(rsession, solr_url)
+    logging.info(f"Just saved {len(current_mutated_batch)} records")
 
 
 if __name__ == "__main__":
