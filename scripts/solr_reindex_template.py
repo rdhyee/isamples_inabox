@@ -11,7 +11,9 @@ from isb_web.isb_solr_query import ISBCoreSolrRecordIterator
 
 def mutate_record(record: typing.Dict) -> typing.Optional[typing.Dict]:
     # Do whatever work is required to mutate the record to update things…
-    return None
+    record_copy = record.copy()
+    record_copy["producedBy_resultTimeRange"] = record.get("producedBy_resultTime")
+    return record_copy
 
 
 @click.command()
@@ -25,7 +27,7 @@ def main(ctx):
     batch_size = 50000
     current_mutated_batch = []
     rsession = requests.session()
-    iterator = ISBCoreSolrRecordIterator(rsession, None, batch_size, 0, "id asc")
+    iterator = ISBCoreSolrRecordIterator(rsession, None, batch_size, 100000, "id asc")
     for record in iterator:
         mutated_record = mutate_record(record)
         if mutated_record is not None:

@@ -216,4 +216,11 @@ createField("producedBy_samplingSite_location_rpt", "location_rpt", True, True, 
 createField("producedBy_samplingSite_location_latitude", "pfloat", True, True, None)
 createField("producedBy_samplingSite_location_longitude", "pfloat", True, True, None)
 
+addFieldType({
+    "name": "date_range",
+    "class": "solr.DateRangeField",
+    "omitNorms": True,
+})
+createField("producedBy_resultTimeRange", "date_range", True, True, None)
+
 pj(listFields())

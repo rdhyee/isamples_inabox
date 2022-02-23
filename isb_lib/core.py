@@ -243,7 +243,9 @@ def handle_produced_by_fields(coreMetadata: typing.Dict, doc: typing.Dict):  # n
         raw_date_str = producedBy["resultTime"]
         date_time = parsed_date(raw_date_str)
         if date_time is not None:
-            doc["producedBy_resultTime"] = datetimeToSolrStr(date_time)
+            solr_date_str = datetimeToSolrStr(date_time)
+            doc["producedBy_resultTime"] = solr_date_str
+            doc["producedBy_resultTimeRange"] = solr_date_str
     if _shouldAddMetadataValueToSolrDoc(producedBy, "@id"):
         doc["producedBy_isb_core_id"] = producedBy["@id"]
     if "samplingSite" in producedBy:
