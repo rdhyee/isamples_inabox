@@ -1,5 +1,7 @@
 import concurrent.futures
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor
+from typing import Iterator
 
 import click
 import requests
@@ -17,7 +19,9 @@ from isb_lib.sitemaps.sitemap_fetcher import (
 from isb_web import sqlmodel_database
 from isb_web.sqlmodel_database import SQLModelDAO
 
-CONCURRENT_DOWNLOADS = 20
+CONCURRENT_DOWNLOADS = 50
+# when we hit this length, add some more to the queue
+REFETCH_LENGTH = CONCURRENT_DOWNLOADS / 2
 
 
 @click.command()
@@ -49,11 +53,12 @@ def main(ctx, url: str, authority: str, ignore_last_modified: bool):
         pool_connections=CONCURRENT_DOWNLOADS * 2, pool_maxsize=CONCURRENT_DOWNLOADS * 2
     )
     rsession.mount("http://", adapter)
+    rsession.mount("https://", adapter)
     db_url = isb_web.config.Settings().database_url
     db_session = SQLModelDAO(db_url).get_session()
     if authority is not None:
         authority = authority.upper()
-    isb_lib.core.things_main(ctx, db_url, solr_url, "INFO", False)
+    isb_lib.core.things_main(ctx, db_url, solr_url, "CRITICAL", False)
     if ignore_last_modified:
         last_updated_date = None
     else:
@@ -64,7 +69,9 @@ def main(ctx, url: str, authority: str, ignore_last_modified: bool):
         last_updated_date = sqlmodel_database.last_time_thing_created(
             db_session, authority
         )
-    logging.info(f"Going to fetch records for authority {authority} with updated date > {last_updated_date}")
+    logging.info(
+        f"Going to fetch records for authority {authority} with updated date > {last_updated_date}"
+    )
     fetch_sitemap_files(authority, last_updated_date, rsession, url, db_session)
 
 
@@ -79,6 +86,26 @@ def thing_fetcher_for_url(thing_url: str, rsession) -> ThingFetcher:
     return thing_fetcher
 
 
+def construct_thing_futures(
+    thing_futures: list,
+    sitemap_file_iterator: Iterator,
+    rsession: requests.sessions,
+    thing_executor: ThreadPoolExecutor,
+    sitemap_file_fetcher: SitemapFileFetcher,
+) -> bool:
+    fetched_all_things_for_current_sitemap_file = False
+    while len(thing_futures) < CONCURRENT_DOWNLOADS:
+        try:
+            thing_fetcher = thing_fetcher_for_url(next(sitemap_file_iterator), rsession)
+            # Add the download job to the queue and remember it
+            thing_future = thing_executor.submit(thing_fetcher.fetch_thing)
+            thing_futures.append(thing_future)
+        except StopIteration:
+            logging.info(f"Finished all the requests for f{sitemap_file_fetcher.url}")
+            fetched_all_things_for_current_sitemap_file = True
+    return fetched_all_things_for_current_sitemap_file
+
+
 def fetch_sitemap_files(authority, last_updated_date, rsession, url, db_session):
     sitemap_index_fetcher = SitemapIndexFetcher(
         url, authority, last_updated_date, rsession
@@ -90,35 +117,31 @@ def fetch_sitemap_files(authority, last_updated_date, rsession, url, db_session)
             url, authority, last_updated_date, rsession
         )
         sitemap_file_fetcher.fetch_sitemap_file()
-        fetched_all_things_for_current_sitemap_file = False
         sitemap_file_iterator = sitemap_file_fetcher.url_iterator()
+        thing_futures = []
+        num_things_fetched = 0
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=CONCURRENT_DOWNLOADS
         ) as thing_executor:
+            fetched_all_things_for_current_sitemap_file = construct_thing_futures(
+                thing_futures,
+                sitemap_file_iterator,
+                rsession,
+                thing_executor,
+                sitemap_file_fetcher,
+            )
+
             while not fetched_all_things_for_current_sitemap_file:
-                thing_futures = []
-                # While the queue is less than the max, add things to the queue
-                while (
-                    len(thing_futures) < CONCURRENT_DOWNLOADS
-                    and not fetched_all_things_for_current_sitemap_file
-                ):
-                    try:
-                        thing_fetcher = thing_fetcher_for_url(
-                            next(sitemap_file_iterator), rsession
-                        )
-                        # Add the download job to the queue and remember it
-                        thing_future = thing_executor.submit(thing_fetcher.fetch_thing)
-                        thing_futures.append(thing_future)
-                    except StopIteration:
-                        logging.info(
-                            f"Finished all the requests for f{sitemap_file_fetcher.url}"
-                        )
-                        fetched_all_things_for_current_sitemap_file = True
                 # Then read out results and save to the database after the queue is filled to capacity.
                 # Provided there are more urls in the iterator, return to the top of the loop to fill the queue again
                 for thing_fut in concurrent.futures.as_completed(thing_futures):
+
+                    if num_things_fetched % 1000 == 0:
+                        logging.critical(f"Have fetched {num_things_fetched} things")
+
                     thing_fetcher = thing_fut.result()
                     if thing_fetcher.thing is not None:
+                        num_things_fetched += 1
                         logging.info(
                             f"Finished fetching thing {thing_fetcher.thing.id}"
                         )
@@ -135,8 +158,21 @@ def fetch_sitemap_files(authority, last_updated_date, rsession, url, db_session)
                     else:
                         logging.error(f"Error fetching thing for {thing_fetcher.url}")
                         thing_id = thing_fetcher.thing_identifier()
-                        sqlmodel_database.mark_thing_not_found(db_session, thing_id, thing_fetcher.url)
+                        sqlmodel_database.mark_thing_not_found(
+                            db_session, thing_id, thing_fetcher.url
+                        )
                     thing_futures.remove(thing_fut)
+                    if len(thing_futures) < REFETCH_LENGTH:
+                        # if we are running low on things to process, kick off the next batch to download
+                        fetched_all_things_for_current_sitemap_file = (
+                            construct_thing_futures(
+                                thing_futures,
+                                sitemap_file_iterator,
+                                rsession,
+                                thing_executor,
+                                sitemap_file_fetcher,
+                            )
+                        )
 
 
 if __name__ == "__main__":
