@@ -2,6 +2,9 @@ from abc import ABC, abstractmethod
 import typing
 
 
+NOT_PROVIDED = "Not Provided"
+
+
 class Transformer(ABC):
     """Abstract base class for various iSamples provider transformers"""
 

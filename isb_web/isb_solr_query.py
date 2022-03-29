@@ -580,7 +580,7 @@ class ISBCoreSolrRecordIterator:
     def __init__(
         self,
         rsession=requests.session(),
-        authority: str = None,
+        query: str = None,
         batch_size: int = 50000,
         offset: int = 0,
         sort: str = None,
@@ -595,7 +595,7 @@ class ISBCoreSolrRecordIterator:
             sort: The solr sort parameter to use
         """
         self.rsession = rsession
-        self.authority = authority
+        self.query = query
         self.batch_size = batch_size
         self.offset = offset
         self.sort = sort
@@ -611,11 +611,12 @@ class ISBCoreSolrRecordIterator:
         ):
             self._current_batch = _fetch_solr_records(
                 self.rsession,
-                self.authority,
+                None,
                 self.offset,
                 self.batch_size,
                 None,
                 self.sort,
+                self.query
             )[0]
             if len(self._current_batch) == 0:
                 # reached the end of the records
