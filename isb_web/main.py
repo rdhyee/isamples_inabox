@@ -318,7 +318,7 @@ def set_default_params(params, defs):
 async def get_solr_select(request: fastapi.Request):
     """Send select request to the Solr isb_core_records collection.
 
-    See https://solr.apache.org/guide/8_9/common-query-parameters.html
+    See https://solr.apache.org/guide/8_11/common-query-parameters.html
     """
     # Construct a list of K,V pairs to hand on to the solr request.
     # Can't use a standard dict here because we need to support possible
@@ -360,9 +360,54 @@ async def get_solr_query(
 
 @app.get(f"/{THING_URL_PATH}/stream", response_model=typing.Any)
 async def get_solr_stream(request: fastapi.Request):
-    # logging.warning("Query params: ", request.query_params)
-    analytics.record_analytics_event(AnalyticsEvent.THING_SOLR_STREAM, request)
-    return isb_solr_query.solr_searchStream(request.query_params)
+    '''
+    Make a streaming request to the solr index.
+
+    The Solr streaming API offers much richer interaction with the index, though
+    also adds risk that a request may perform harmful actions. Here only
+    search expressions are constructed from parameters similar to the select API
+    to limit potential harm to the index.
+
+    See https://solr.apache.org/guide/8_11/streaming-expressions.html
+
+    Args:
+        request: The http request
+
+    Returns:
+        fastapi.responses.StreamingResponse
+    '''
+    # Note that there may be duplicate keys in params, e.g. multiple fq=
+    defparams = {
+        "wt": "json",
+        "q": "*:*",
+        "fl": [
+            "id",
+            f"x:{isb_solr_query.LONGITUDE_FIELD}",
+            f"y:{isb_solr_query.LATITUDE_FIELD}",
+        ],
+        "rows": isb_solr_query.MAX_STREAMING_ROWS,
+        "start": 0,
+        "select": "search",
+
+        # if true, return counts per location
+        "xycount": False,
+
+        # if true, return only records with latitude,longitude
+        "onlyxy": True,
+    }
+    properties = {
+        "q": defparams["q"]
+    }
+    params = []
+    # Update params with the provided parameters
+    for k, v in request.query_params.multi_items():
+        params.append([k, v])
+        if k in properties:
+            properties[k] = v
+    params = set_default_params(params, defparams)
+    # L.debug("Params: %s", params)
+    analytics.record_analytics_event(AnalyticsEvent.THING_SOLR_STREAM, request, properties)
+    return isb_solr_query.solr_searchStream(params)
 
 
 @app.get(f"/{THING_URL_PATH}/select/info", response_model=typing.Any)
