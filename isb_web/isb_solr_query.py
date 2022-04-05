@@ -8,6 +8,8 @@ import isb_web.config
 
 BASE_URL = isb_web.config.Settings().solr_url
 _RPT_FIELD = "producedBy_samplingSite_location_rpt"
+LONGITUDE_FIELD = "producedBy_samplingSite_location_longitude"
+LATITUDE_FIELD = "producedBy_samplingSite_location_latitude"
 
 # Identify the bounding boxes for solr and leaflet for diagnostic purposes
 SOLR_BOUNDS = -1
@@ -25,6 +27,8 @@ _GEOJSON_ERR_PCT = 0.2
 _LEAFLET_ERR_PCT = 0.1
 
 # Maximum rows to return in a streaming request.
+# Note that this limit should vary by the number of fields being returned since
+# that somewhat dictates memory use for constructing the stream
 MAX_STREAMING_ROWS = 500000
 
 RESERVED_CHAR_LIST = [
@@ -52,6 +56,7 @@ ALLOWED_SELECT_METHODS = [
     "random",
 ]
 
+L = logging.getLogger("ISB_SOLR_QUERY")
 
 def escape_solr_query_term(term):
     """Escape a query term for inclusion in a query."""
@@ -368,6 +373,8 @@ def solr_searchStream(params, collection="isb_core_records"):  # noqa: C901
     """
     Requests a streaming search response from solr.
 
+    params is a list of [key, value]
+
     The usual q, fq, fl, sort and other standard parameters are accepted.
 
     Only records that have longitude and latitude are returned.
@@ -381,13 +388,29 @@ def solr_searchStream(params, collection="isb_core_records"):  # noqa: C901
     If "xycount" is provided as a truthy value, then the results include only
     the fields "x,y,n" where n is the number of records at x,y.
 
+    Sorting by distance from a location can be done with the geodist() function, however the
+    function result must be included in the streaming response field list.
+
+    For example, given latitude=-17.47833 and longtiude=-149.92189, a request
+    to stream results in order of distance from that location:
+
+        gdfunc=geodist(producedBy_samplingSite_location_ll,-17.47833,-149.92189)
+        &fl=id,x:producedBy_samplingSite_location_longitude,y:producedBy_samplingSite_location_latitude,$gdfunc
+        &sort=$gdfunc asc
+
+    The full url (encoded) for 5000 records:
+
+        /thing/stream?rows=5000&fl=id,x:producedBy_samplingSite_location_longitude,y:producedBy_samplingSite_location_latitude,$gdfunc&gdfunc=geodist%28producedBy_samplingSite_location_ll%2C-17.47833%2C-149.92189%29&sort=$gdfunc%20asc
+
+    geodist(producedBy_samplingSite_location_ll,-17.47833,-149.92189)
+
     Example with curl:
     curl --data-urlencode \
       'expr=search(isb_core_records,q="source:SESAR",fq="searchText:sample",fq="hasMaterialCategory:Mineral",fl="id,producedBy_samplingSite_location_latitude,producedBy_samplingSite_location_longitude",sort="id asc",qt="/export")'\
       "http://localhost:8983/solr/isb_core_records/stream"
 
     Args:
-        params: parameters for the search expression
+        params: list of [k,v], the parameters for the stream expression
         collection: name of collection to search
 
     Returns:
@@ -397,53 +420,37 @@ def solr_searchStream(params, collection="isb_core_records"):  # noqa: C901
     # TODO: C901 -- need to examine computational complexity
 
     point_rollup = False
-    default_params = {
-        "q": "*:*",
-        "rows": MAX_STREAMING_ROWS,
-    }
-    default_params.update(params)
+    qparams = {}
     url = get_solr_url("stream")
     headers = {"Accept": "application/json"}
-    qparams = {}
-    _params = []
-    _has_fl = False
-    _field_list = [
-        "id",
-        "x:producedBy_samplingSite_location_longitude",
-        "y:producedBy_samplingSite_location_latitude",
-    ]
     selection_method = "search"
-    for k, v in default_params.items():
-        if k == "xycount":
-            v = str(v).lower()
+    _params = []
+    for kv in params:
+        if kv[0] == "xycount":
+            v = str(kv[1]).lower()
             if v in ["1", "true", "yes", "y"]:
                 point_rollup = True
-            k = None
-        if k == "rows":
-            if int(v) > MAX_STREAMING_ROWS:
-                v = MAX_STREAMING_ROWS
-        if k == "fl":
-            _has_fl = True
-            _fields = v.split(",")
-            for f in _fields:
-                if f not in _field_list:
-                    _field_list.append(f)
-            v = ",".join(_field_list)
-        if k == "select":
-            if v in ALLOWED_SELECT_METHODS:
-                selection_method = v
-        if k is not None:
-            _params.append(f'{k}="{v}"')
-    if not _has_fl:
-        _params.append(f'fl="{",".join(_field_list)}"')
-    # if not _has_sort:
-    #    _params.append('sort="id asc"')
-    _params.append(
-        (
-            'fq="producedBy_samplingSite_location_longitude:*'
-            ' AND producedBy_samplingSite_location_latitude:*"'
-        )
-    )
+            else:
+                point_rollup = False
+            continue
+        if kv[0] == "onlyxy":
+            v = str(kv[1]).lower()
+            if v in ["1", "true", "yes", "y"]:
+                _params.append(
+                    (
+                        f'fq="{LONGITUDE_FIELD}:*'
+                        f' AND {LATITUDE_FIELD}:*"'
+                    )
+                )
+            continue
+        if kv[0] == "select":
+            assert kv[1] in ALLOWED_SELECT_METHODS
+            selection_method = kv[1]
+        if isinstance(kv[1], list):
+            _params.append(f'{kv[0]}="{",".join(kv[1])}"')
+        else:
+            _params.append(f'{kv[0]}="{kv[1]}"')
+    L.debug("_params = %s", _params)
     content_type = "application/json"
     request = {
         "expr": f'{selection_method}({collection},{",".join(_params)},qt="/select")'
@@ -455,7 +462,10 @@ def solr_searchStream(params, collection="isb_core_records"):  # noqa: C901
                 ',over="x,y",count(*)),x,y,count(*) as n)'
             )
         }
-    logging.info("Expression = %s", request["expr"])
+    L.info("Expression = %s", request["expr"])
+    # Post the request to solr
+    # The response is an open stream that is read in chunks to
+    # be passed on to the client as they are received
     response = requests.post(
         url, headers=headers, params=qparams, data=request, stream=True
     )
