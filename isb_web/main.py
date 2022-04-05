@@ -387,9 +387,13 @@ async def get_solr_stream(request: fastapi.Request):
         ],
         "rows": isb_solr_query.MAX_STREAMING_ROWS,
         "start": 0,
-        "select":"search",
-        "xycount": False,  #if true, return counts per location
-        "onlyxy": True,    #if true, return only records with latitude,longitude
+        "select": "search",
+
+        # if true, return counts per location
+        "xycount": False,
+
+        # if true, return only records with latitude,longitude
+        "onlyxy": True,
     }
     properties = {
         "q": defparams["q"]
@@ -401,7 +405,7 @@ async def get_solr_stream(request: fastapi.Request):
         if k in properties:
             properties[k] = v
     params = set_default_params(params, defparams)
-    #L.debug("Params: %s", params)
+    # L.debug("Params: %s", params)
     analytics.record_analytics_event(AnalyticsEvent.THING_SOLR_STREAM, request, properties)
     return isb_solr_query.solr_searchStream(params)
 

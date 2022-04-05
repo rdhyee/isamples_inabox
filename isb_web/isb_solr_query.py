@@ -58,6 +58,7 @@ ALLOWED_SELECT_METHODS = [
 
 L = logging.getLogger("ISB_SOLR_QUERY")
 
+
 def escape_solr_query_term(term):
     """Escape a query term for inclusion in a query."""
     term = term.replace("\\", "\\\\")
