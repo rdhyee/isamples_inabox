@@ -391,7 +391,7 @@ def solr_searchStream(params, collection="isb_core_records"):  # noqa: C901
     Sorting by distance from a location can be done with the geodist() function, however the
     function result must be included in the streaming response field list.
 
-    For example, given latitude=-17.47833 and longtiude=-149.92189, a request
+    For example, given latitude=-17.47833 and longitude=-149.92189, a request
     to stream results in order of distance from that location:
 
         gdfunc=geodist(producedBy_samplingSite_location_ll,-17.47833,-149.92189)
@@ -408,6 +408,8 @@ def solr_searchStream(params, collection="isb_core_records"):  # noqa: C901
     curl --data-urlencode \
       'expr=search(isb_core_records,q="source:SESAR",fq="searchText:sample",fq="hasMaterialCategory:Mineral",fl="id,producedBy_samplingSite_location_latitude,producedBy_samplingSite_location_longitude",sort="id asc",qt="/export")'\
       "http://localhost:8983/solr/isb_core_records/stream"
+
+    For the ISB solr schema configuration, geodist() returns results in km.
 
     Args:
         params: list of [k,v], the parameters for the stream expression
