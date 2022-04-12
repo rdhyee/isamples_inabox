@@ -1,10 +1,12 @@
 import igsn_lib.time
 import json
-from typing import Optional, List
+from typing import Optional
 import typing
-from sqlmodel import Field, SQLModel, Relationship
+from sqlmodel import Field, SQLModel
 from datetime import datetime
 import sqlalchemy
+
+from isb_lib.models.string_list_type import StringListType
 
 
 class Thing(SQLModel, table=True):
@@ -72,18 +74,23 @@ class Thing(SQLModel, table=True):
     resolved_media_type: Optional[str] = Field(
         default=None, nullable=True, description="Media type of resolved content"
     )
-    identifiers: List["ThingIdentifier"] = Relationship(
-        back_populates="thing", sa_relationship_kwargs={"cascade": "all,delete-orphan"}
+    identifiers: Optional[list[str]] = Field(
+        sa_column=sqlalchemy.Column(
+            StringListType,
+            nullable=True,
+            default=None,
+            doc="Additional identifiers used to look up the Thing"
+        )
     )
 
-    def insert_thing_identifier_if_not_present(self, identifier: "ThingIdentifier"):
-        for existing_identifier in self.identifiers:
-            if identifier.semantically_equals(existing_identifier):
-                # Already have it, no need to do anything so bail
-                return
-        identifier.thing = self
+    def insert_thing_identifier_if_not_present(self, identifier: str):
+        if self.identifiers is None:
+            self.identifiers = []
+        if identifier not in self.identifiers:
+            self.identifiers.append(identifier)
 
     def take_values_from_other_thing(self, other_thing: "Thing"):
+        self.primary_key = other_thing.primary_key
         self.id = other_thing.id
         self.resolved_content = other_thing.resolved_content
         self.resolved_url = other_thing.resolved_url
@@ -143,10 +150,3 @@ class ThingIdentifier(SQLModel, table=True):
     thing_id: Optional[int] = Field(
         default=None, nullable=False, foreign_key="thing._id", index=False
     )
-    thing: Optional[Thing] = Relationship(
-        back_populates="identifiers", sa_relationship_kwargs={"cascade": "all"}
-    )
-
-    def semantically_equals(self, other: "ThingIdentifier") -> bool:
-        """Method to check if two identifiers are semantically equal ignoring bookkeeping fields"""
-        return self.thing_id == other.thing_id and self.guid == other.guid

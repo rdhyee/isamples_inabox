@@ -1,3 +1,4 @@
+import re
 import urllib.parse
 from abc import ABC
 import datetime
@@ -9,39 +10,86 @@ import typing
 import logging
 
 import isb_lib.core
-from isb_lib.models.thing import Thing
+import json
 
 
 class ThingFetcher:
     pass
 
 
+class ThingsFetcher:
+    pass
+
+
+IDENTIFIER_REGEX = re.compile(r".*/thing/(.*)")
+
+
+class ThingsFetcher:
+    def __init__(
+        self,
+        url: str,
+        identifiers: list[str],
+        session: requests.sessions = requests.session(),
+    ):
+        self.url = url
+        self._session = session
+        self.identifiers = identifiers
+        self.json_things = None
+        self.primary_keys_fetched = None
+
+    def fetch_things(self) -> ThingsFetcher:
+        try:
+            # headers = {"Content-Type": "application/json"}
+            params = {
+                "identifiers": self.identifiers,
+            }
+            data = json.dumps(params).encode("utf-8")
+            logging.info(f"Going to fetch {len(self.identifiers)} things from {self.url}")
+            response = self._session.post(self.url, data=data)
+            self.json_things = response.json()
+            self.primary_keys_fetched = [
+                json_thing["primary_key"] for json_thing in self.json_things
+            ]
+        except Exception as e:
+            logging.critical(
+                f"Error fetching things from: url: {self.url} exception is {e}"
+            )
+        return self
+
+
 class ThingFetcher:
     def __init__(self, url: str, session: requests.sessions = requests.session()):
         self.url = url
         self._session = session
-        self.thing = None
+        self.json_dict = None
         self.primary_key_fetched = None
 
     def fetch_thing(self) -> ThingFetcher:
         try:
             response = self._session.get(self.url)
             json_dict = response.json()
-            thing = Thing()
-            thing.take_values_from_json_dict(json_dict)
-            self.thing = thing
+            json_dict["tstamp"] = datetime.datetime.now()
+            # thing = Thing()
+            # thing.take_values_from_json_dict(json_dict)
+            self.json_dict = json_dict
             self.primary_key_fetched = json_dict["primary_key"]
             return self
         except Exception as e:
             logging.error(
                 f"Error fetching thing from url: {self.url}, exception is: {e}"
             )
-            self.thing = None
+            # self.thing = None
             return self
 
     def thing_identifier(self) -> str:
         url_path = urllib.parse.urlparse(self.url).path
-        return url_path.removeprefix("/thing/")
+        match = IDENTIFIER_REGEX.search(url_path)
+        if match is None:
+            logging.critical(f"Didn't find identifier in URL {self.url}")
+            return None
+        else:
+            identifier = match.group(1)
+            return identifier
 
 
 class SitemapFetcher(ABC):
@@ -108,7 +156,6 @@ class SitemapFetcher(ABC):
 
 
 class SitemapFileFetcher(SitemapFetcher):
-
     def fetch_sitemap_file(self) -> SitemapFetcher:
         """Fetches the contents of the particular sitemap file and stores the URLs to fetch"""
         self._fetch_file()
@@ -131,7 +178,6 @@ class SitemapFileFetcher(SitemapFetcher):
 
 
 class SitemapIndexFetcher(SitemapFetcher):
-
     def __init__(
         self,
         url: str,

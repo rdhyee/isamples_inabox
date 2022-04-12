@@ -1,4 +1,5 @@
 import os
+
 import uvicorn
 import typing
 import re
@@ -11,6 +12,7 @@ import fastapi.middleware.cors
 import fastapi.responses
 import accept_types
 from fastapi.params import Query, Depends
+from pydantic import BaseModel
 from sqlmodel import Session
 
 import isb_web
@@ -418,6 +420,33 @@ async def get_solr_luke_info(request: fastapi.Request):
     """
     analytics.record_analytics_event(AnalyticsEvent.THING_SOLR_LUKE_INFO, request)
     return isb_solr_query.solr_luke()
+
+
+class ThingsSitemapParams(BaseModel):
+    identifiers: list[str]
+
+
+@app.post("/things", response_model=typing.Any)
+async def get_things_for_sitemap(
+    request: fastapi.Request,
+    params: ThingsSitemapParams,
+    session: Session = Depends(get_session),
+):
+    """Returns batched things suitable for sitemap ingestion
+    Args:
+        request: The fastapi request
+        params: Class that contains the identifier list, JSON-encoded in the request body
+        session: The database session to use to fetch things
+    """
+    content = sqlmodel_database.get_things_with_ids(session, params.identifiers)
+    # things
+    # for identifier in params.identifiers:
+    #     thing = sqlmodel_database.get_thing_with_id(session, identifier)
+    #     if thing is not None:
+    #         content.append(thing)
+    #     else:
+    #         logging.error(f"No thing with identifier {identifier}")
+    return content
 
 
 @app.get(f"/{THING_URL_PATH}/{{identifier:path}}", response_model=typing.Any)

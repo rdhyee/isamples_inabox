@@ -3,7 +3,6 @@ import requests
 import os
 from urllib.request import url2pathname
 import datetime
-import dateparser
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, create_engine, Session
 
@@ -12,7 +11,6 @@ from isb_lib.sitemaps.sitemap_fetcher import (
     SitemapFileFetcher,
     ThingFetcher,
 )
-from isb_web import sqlmodel_database
 
 
 class LocalFileSitemapIndexFetcher(SitemapIndexFetcher):
@@ -146,16 +144,6 @@ def test_sitemap_fetcher(
         # Note that this data has been doctored to have the same number of qualified urls for the sitemap index
         # and the individual child files, so this assertion is valid -- otherwise this wouldn't necessarily work
         assert expected_num_urls == len(child_fetcher.urls_to_fetch)
-
-        thing_fetchers = child_fetcher.fetch_child_files()
-        for thing_fetcher in thing_fetchers:
-            thing = thing_fetcher.thing
-            assert thing is not None
-            # postgres will do the type coercion from string to timestamp, sqlite will not, so manually
-            # convert these to datetime objects for test purposes
-            thing.tcreated = dateparser.parse(thing.tcreated)
-            thing.tresolved = dateparser.parse(thing.tresolved)
-            sqlmodel_database.save_thing(sqlmodel_session, thing_fetcher.thing)
 
 
 def test_thing_fetcher_thing_identifier():

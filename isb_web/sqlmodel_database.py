@@ -16,12 +16,12 @@ from isb_web.schemas import ThingPage
 
 
 class SQLModelDAO:
-    def __init__(self, db_url: str):
+    def __init__(self, db_url: str, echo: bool = False):
         # This is a strange initializer, but FastAPI wants us to construct the object before we know we
         # want to use it.  So, separate out the object construction from the database connection.
         # In unit tests, this ends up getting swapped out and unused, which is the source of the confusion.
         if db_url is not None:
-            self.connect_sqlmodel(db_url)
+            self.connect_sqlmodel(db_url, echo)
         else:
             self.engine = None
 
@@ -32,8 +32,8 @@ class SQLModelDAO:
         except ProgrammingError:
             pass
 
-    def connect_sqlmodel(self, db_url: str):
-        self.engine = create_engine(db_url, echo=False)
+    def connect_sqlmodel(self, db_url: str, echo: bool = False):
+        self.engine = create_engine(db_url, echo=echo)
         SQLModel.metadata.create_all(self.engine)
         # There doesn't appear to be a SQLModel-native way of creating those, so fall back to SQLAlchemy
         id_resolved_status_authority_id_idx = Index(
@@ -62,10 +62,10 @@ class SQLModelDAO:
         )
         self._create_index(resolved_status_authority_id_idx)
 
-        guid_thing_id_idx = Index(
-            "guid_thing_id_idx", ThingIdentifier.guid, ThingIdentifier.thing_id
-        )
-        self._create_index(guid_thing_id_idx)
+        # guid_thing_id_idx = Index(
+        #     "guid_thing_id_idx", ThingIdentifier.guid, ThingIdentifier.thing_id
+        # )
+        # self._create_index(guid_thing_id_idx)
 
     def get_session(self) -> Session:
         return Session(self.engine)
@@ -109,22 +109,54 @@ def read_things_summary(
 
 
 def get_thing_with_id(session: Session, identifier: str) -> Optional[Thing]:
-    statement = select(Thing).filter(Thing.id == identifier).order_by(Thing.primary_key.asc())
+    statement = (
+        select(Thing).filter(Thing.id == identifier).order_by(Thing.primary_key.asc())
+    )
     result = session.exec(statement).first()
     if result is None:
         # Fall back to querying the Identifiers table
-        join_statement = (
-            select(Thing)
-            .join(ThingIdentifier)
-            .where(ThingIdentifier.guid == identifier)
+        identifiers_statement = select(Thing).where(
+            Thing.identifiers.like(f"%{identifier}%")
         )
-        result = session.exec(join_statement).first()
+        result = session.exec(identifiers_statement).first()
     return result
 
 
-def get_thing_identifiers_for_thing(session: Session, thing_id: int) -> typing.List[ThingIdentifier]:
-    statement = select(ThingIdentifier).filter(ThingIdentifier.thing_id == thing_id)
-    return session.exec(statement).all()
+def get_things_with_ids(session: Session, identifiers: list[str]) -> list[Thing]:
+    statement = select(Thing).where(Thing.id.in_(identifiers))
+    things = session.exec(statement).all()
+
+    for thing in things:
+        try:
+            identifiers.remove(thing.id)
+        except ValueError:
+            pass
+    if len(identifiers) > 0:
+        # didn't find all the things, so we need to do an additional query against the remainder
+        statement = select(Thing).where(Thing.identifiers.in_(identifiers))
+        things_by_identifier = session.exec(statement).all()
+        things.extend(things_by_identifier)
+    filtered_things = []
+    primary_keys = set()
+    identifiers = set()
+    for thing in things:
+        # Check to see if we already have the thing in the list -- multiple identifiers can collapse to a single
+        # thing, and we don't want to include the thing in the list more than once.
+        if thing.primary_key not in primary_keys and thing.id not in identifiers:
+            filtered_things.append(thing)
+        primary_keys.add(thing.primary_key)
+        identifiers.add(thing.id)
+    return filtered_things
+
+
+def get_thing_identifiers_for_thing(session: Session, thing_id: int) -> list[str]:
+    statement = select(Thing.identifiers).where(Thing.primary_key == thing_id)
+    session_exec = session.exec(statement)
+    allrows = session_exec.all()
+    thing_identifiers = []
+    for row in allrows:
+        thing_identifiers.append(row[0])
+    return thing_identifiers
 
 
 def last_time_thing_created(
@@ -135,12 +167,14 @@ def last_time_thing_created(
     one_year_ago = datetime.datetime(
         year=datetime.date.today().year - 1, month=1, day=1
     )
-    created_select = (
-        select(Thing.tcreated)
-    )
+    created_select = select(Thing.tcreated)
     if authority_id is not None:
         created_select = created_select.filter(Thing.authority_id == authority_id)
-    created_select = created_select.filter(Thing.tcreated >= one_year_ago).limit(1).order_by(Thing.tcreated.desc())
+    created_select = (
+        created_select.filter(Thing.tcreated >= one_year_ago)
+        .limit(1)
+        .order_by(Thing.tcreated.desc())
+    )
     result = session.exec(created_select).first()
     return result
 
@@ -227,6 +261,16 @@ def get_sample_types(session: Session):
     return dbq.all()
 
 
+def geome_identifiers_from_resolved_content(resolved_content: typing.Dict) -> list[str]:
+    children = resolved_content.get("children")
+    identifiers = []
+    if children is not None:
+        for child in children:
+            child_ark = child["bcid"]
+            identifiers.append(child_ark)
+    return identifiers
+
+
 def _insert_geome_identifiers(thing: Thing):
     # For now, we will fail all requests for parent IDs, because events appear in multiple samples
     # and would violate referential integrity if we made pointers to children from the event ID
@@ -237,37 +281,44 @@ def _insert_geome_identifiers(thing: Thing):
     #         print()
     #     event_identifier = ThingIdentifier(guid=event_ark, thing_id=thing.primary_key)
     #     session.add(event_identifier)
-    children = thing.resolved_content.get("children")
-    if children is not None:
-        for child in children:
-            child_ark = child["bcid"]
-            child_identifier = ThingIdentifier(
-                guid=child_ark, thing_id=thing.primary_key
-            )
-            thing.insert_thing_identifier_if_not_present(child_identifier)
+    identifiers = geome_identifiers_from_resolved_content(thing.resolved_content)
+    for identifier in identifiers:
+        thing.insert_thing_identifier_if_not_present(identifier)
+
+
+def opencontext_identifiers_from_resolved_content(resolved_content: typing.Dict) -> list[str]:
+    identifiers = []
+    citation_uri = resolved_content["citation uri"]
+    if citation_uri is not None and type(citation_uri) is str:
+        identifiers.append(isb_lib.normalized_id(citation_uri))
+    return identifiers
 
 
 def _insert_open_context_identifiers(thing: Thing):
     citation_uri = thing.resolved_content["citation uri"]
     if citation_uri is not None and type(citation_uri) is str:
         open_context_uri = isb_lib.normalized_id(citation_uri)
-        open_context_identifier = ThingIdentifier(
-            guid=open_context_uri, thing_id=thing.primary_key
-        )
-        thing.insert_thing_identifier_if_not_present(open_context_identifier)
+        thing.insert_thing_identifier_if_not_present(open_context_uri)
 
 
-def _insert_standard_identifier(thing: Thing):
-    thing_identifier = ThingIdentifier(guid=thing.id, thing_id=thing.primary_key)
-    thing.insert_thing_identifier_if_not_present(thing_identifier)
+def _standard_identifier(thing: Thing) -> str:
+    return thing.id
+
+
+def thing_identifiers_from_resolved_content(authority_id: str, resolved_content: typing.Dict) -> list[str]:
+    identifiers = []
+    if authority_id == "GEOME":
+        identifiers += geome_identifiers_from_resolved_content(resolved_content)
+    elif authority_id == "OPENCONTEXT":
+        identifiers += opencontext_identifiers_from_resolved_content(resolved_content)
+    return identifiers
 
 
 def insert_identifiers(thing: Thing):
-    if thing.authority_id == "GEOME":
-        _insert_geome_identifiers(thing)
-    elif thing.authority_id == "OPENCONTEXT":
-        _insert_open_context_identifiers(thing)
-    _insert_standard_identifier(thing)
+    identifiers = thing_identifiers_from_resolved_content(thing.authority_id, thing.resolved_content)
+    identifiers.append(_standard_identifier(thing))
+    for identifier in identifiers:
+        thing.insert_thing_identifier_if_not_present(identifier)
 
 
 def save_thing(session: Session, thing: Thing):
@@ -287,9 +338,13 @@ def save_or_update_thing(session: Session, thing: Thing):
     except sqlalchemy.exc.IntegrityError as e:
         session.rollback()
         logging.info(f"Thing already exists {thing.id}, will recreate record")
-        logging.info(f"Thing already exists with primary key {thing.primary_key}, will update record")
+        logging.info(
+            f"Thing already exists with primary key {thing.primary_key}, will update record"
+        )
         existing_thing = get_thing_with_id(session, thing.id)
-        thing_identifiers = get_thing_identifiers_for_thing(session, existing_thing.primary_key)
+        thing_identifiers = (
+            []
+        )  # get_thing_identifiers_for_thing(session, existing_thing.primary_key)
         existing_thing.identifiers = thing_identifiers
         if existing_thing is None:
             logging.error(
@@ -304,6 +359,38 @@ def save_or_update_thing(session: Session, thing: Thing):
                 logging.error(
                     f"Got error attempting to save existing thing {thing.id}, exception: {integrity_error}"
                 )
+
+
+def all_thing_identifier_objects(
+    session: Session, min_id: int, batch_size: int
+) -> list[ThingIdentifier]:
+    thing_identifiers_select = (
+        select(ThingIdentifier)
+        .filter(ThingIdentifier.thing_id >= min_id)
+        .order_by(ThingIdentifier.thing_id.asc())
+        .limit(batch_size)
+    )
+    thing_identifiers = session.exec(thing_identifiers_select).all()
+    return thing_identifiers
+
+
+def things_with_null_identifiers(session: Session) -> list[Thing]:
+    # Note that SQLAlchemy needs things to be written this way but it triggers flake8 so manually override
+    things_select = select(Thing).filter(Thing.identifiers == None)  # noqa: E711
+    things = session.exec(things_select).all()
+    return things
+
+
+def all_thing_identifiers(session: Session, authority: typing.Optional[str] = None) -> typing.Dict[str, int]:
+    thing_identifiers_select = select(Thing.primary_key, Thing.identifiers)
+    if authority is not None:
+        thing_identifiers_select = thing_identifiers_select.where(Thing.authority_id == authority)
+    thing_identifiers = session.execute(thing_identifiers_select).fetchall()
+    thing_identifiers_dict = {}
+    for row in thing_identifiers:
+        for identifier in row[1]:
+            thing_identifiers_dict[identifier] = row[0]
+    return thing_identifiers_dict
 
 
 def mark_thing_not_found(session: Session, thing_id: str, resolved_url: str):
