@@ -177,3 +177,14 @@ def test_isamples_date():
     assert datetime.hour == 11
     assert datetime.minute == 25
     assert datetime.second == 16
+
+
+def test_isamples_date_with_ms():
+    datetime = isb_lib.core.parsed_datetime_from_isamples_format("2020-07-16T11:25:16.123Z")
+    assert datetime is not None
+    assert datetime.year == 2020
+    assert datetime.month == 7
+    assert datetime.day == 16
+    assert datetime.hour == 11
+    assert datetime.minute == 25
+    assert datetime.second == 16

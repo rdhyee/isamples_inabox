@@ -3,6 +3,7 @@ import datetime
 from sqlmodel import Session
 
 from isb_lib.models.thing import Thing
+from isb_web.sqlmodel_database import insert_identifiers
 
 
 def _add_some_things(
@@ -21,5 +22,6 @@ def _add_some_things(
         )
         if tcreated is not None:
             new_thing.tcreated = tcreated
+        insert_identifiers(new_thing)
         session.add(new_thing)
     session.commit()

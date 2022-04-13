@@ -28,12 +28,12 @@ class ThingsFetcher:
     def __init__(
         self,
         url: str,
-        identifiers: list[str],
+        identifiers: set[str],
         session: requests.sessions = requests.session(),
     ):
         self.url = url
         self._session = session
-        self.identifiers = identifiers
+        self.identifiers = list(identifiers)
         self.json_things = None
         self.primary_keys_fetched = None
 

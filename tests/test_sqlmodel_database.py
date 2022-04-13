@@ -381,9 +381,9 @@ def test_get_things_with_ids_with_identifier(session: Session):
     should_be_empty = get_things_with_ids(session, [guid])
     assert 0 == len(should_be_empty)
     get_thing_with_id(session, "0")
-    # thing_identifier = NoneThingIdentifier(guid=guid, thing_id=thing.primary_key)
-    # thing.identifiers.append(thing_identifier)
-    # save_thing(session, thing)
-    # ids_to_assert = [guid, "1"]
-    # things = get_things_with_ids(session, ids_to_assert)
-    # assert len(things) == 2
+
+
+def test_all_thing_identifiers(session: Session):
+    _add_some_things(session, 10, "authority", datetime.datetime.now())
+    all_identifiers = all_thing_identifiers(session)
+    assert 10 == len(all_identifiers)

@@ -299,8 +299,8 @@ def parsed_datetime_from_isamples_format(raw_date_str) -> datetime.datetime:
     time = time.replace("Z", "")
     time_pieces = time.split(":")
     lastmod_date = datetime.datetime(year=int(date_pieces[0]), month=int(date_pieces[1]), day=int(date_pieces[2]),
-                                     hour=int(time_pieces[0]), minute=int(time_pieces[1]), second=int(time_pieces[2]),
-                                     tzinfo=None)
+                                     hour=int(time_pieces[0]), minute=int(time_pieces[1]),
+                                     second=int(float(time_pieces[2])), tzinfo=None)
     return lastmod_date
 
 

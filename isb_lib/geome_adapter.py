@@ -119,7 +119,7 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
                 expedition_modified_datetime = dateparser.parse(expedition_modified_date)
                 # For each expedition, check to see if the mod date is greater than the last time we fetched.
                 # If it is, fetch the bcids of the samples in the expedition.
-                if expedition_modified_datetime.timestamp() > self._date_start.timestamp():
+                if self._date_start is None or expedition_modified_datetime.timestamp() > self._date_start.timestamp():
                     more_work = True
                     params = {
                         "limit": _page_size,

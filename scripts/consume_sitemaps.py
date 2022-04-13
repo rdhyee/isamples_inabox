@@ -25,7 +25,7 @@ from isb_lib.sitemaps.sitemap_fetcher import (
 from isb_web import sqlmodel_database
 from isb_web.sqlmodel_database import SQLModelDAO, all_thing_identifiers, thing_identifiers_from_resolved_content
 
-CONCURRENT_DOWNLOADS = 50000
+CONCURRENT_DOWNLOADS = 25000
 # when we hit this length, add some more to the queue
 REFETCH_LENGTH = CONCURRENT_DOWNLOADS / 2
 
@@ -96,12 +96,11 @@ def thing_fetcher_for_url(thing_url: str, rsession) -> ThingFetcher:
     return thing_fetcher
 
 
-THING_URL_REGEX = re.compile(r"(.*)/thing/(.*)")
+THING_URL_REGEX = re.compile(r"(.*)/thing/([^?]+)?")
 
 
 def _group_from_thing_url_regex(thing_url: str, group: int) -> typing.Optional[str]:
-    url_path = urllib.parse.urlparse(thing_url).path
-    match = THING_URL_REGEX.search(url_path)
+    match = THING_URL_REGEX.match(thing_url)
     if match is None:
         logging.critical(f"Didn't find match in thing URL {thing_url}")
         return None
@@ -132,7 +131,7 @@ def construct_thing_futures(
     thing_executor: ThreadPoolExecutor,
 ) -> bool:
     constructed_all_futures_for_sitemap_file = False
-    thing_ids = []
+    thing_ids = set()
     things_url = None
     while len(thing_ids) < CONCURRENT_DOWNLOADS:
         try:
@@ -146,7 +145,7 @@ def construct_thing_futures(
                     logging.critical(f"Couldn't parse out things url from url {url} -- unable to construct things.")
             identifier = thing_identifier_from_thing_url(url)
             if identifier is not None:
-                thing_ids.append(identifier)
+                thing_ids.add(identifier)
             else:
                 logging.critical(f"Cannot parse out identifier from url {url} -- will not fetch thing.")
         except StopIteration:
