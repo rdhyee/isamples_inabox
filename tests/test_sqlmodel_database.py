@@ -1,6 +1,7 @@
 import datetime
 
 import pytest
+from sqlalchemy.orm.attributes import flag_modified
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
@@ -375,12 +376,18 @@ def test_get_things_with_ids(session: Session):
     assert len(things) == 3
 
 
-def test_get_things_with_ids_with_identifier(session: Session):
+def test_get_thing_with_id_with_identifier(session: Session):
     _add_some_things(session, 10, "authority", datetime.datetime.now())
     guid = "12345"
-    should_be_empty = get_things_with_ids(session, [guid])
-    assert 0 == len(should_be_empty)
-    get_thing_with_id(session, "0")
+    should_be_empty = get_thing_with_id(session, guid)
+    assert should_be_empty is None
+    existing_thing = get_thing_with_id(session, "0")
+    existing_thing.insert_thing_identifier_if_not_present(guid)
+    # this bit is curious…
+    flag_modified(existing_thing, "identifiers")
+    session.commit()
+    thing_with_identifier = get_thing_with_id(session, guid)
+    assert thing_with_identifier is not None
 
 
 def test_all_thing_identifiers(session: Session):

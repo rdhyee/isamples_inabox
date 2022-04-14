@@ -25,9 +25,7 @@ from isb_lib.sitemaps.sitemap_fetcher import (
 from isb_web import sqlmodel_database
 from isb_web.sqlmodel_database import SQLModelDAO, all_thing_identifiers, thing_identifiers_from_resolved_content
 
-CONCURRENT_DOWNLOADS = 25000
-# when we hit this length, add some more to the queue
-REFETCH_LENGTH = CONCURRENT_DOWNLOADS / 2
+BATCH_SIZE = 20000
 
 __NUM_THINGS_FETCHED = 0
 
@@ -58,7 +56,7 @@ def main(ctx, url: str, authority: str, ignore_last_modified: bool):
     solr_url = isb_web.config.Settings().solr_url
     rsession = requests.session()
     adapter = requests.adapters.HTTPAdapter(
-        pool_connections=CONCURRENT_DOWNLOADS * 2, pool_maxsize=CONCURRENT_DOWNLOADS * 2
+        pool_connections=5, pool_maxsize=5
     )
     rsession.mount("http://", adapter)
     rsession.mount("https://", adapter)
@@ -127,33 +125,36 @@ def pre_thing_host_url(thing_url: str) -> typing.Optional[str]:
 def construct_thing_futures(
     thing_futures: list,
     sitemap_file_iterator: Iterator,
+    sitemap_file_url: str,
     rsession: requests.sessions,
     thing_executor: ThreadPoolExecutor,
 ) -> bool:
     constructed_all_futures_for_sitemap_file = False
-    thing_ids = set()
-    things_url = None
-    while len(thing_ids) < CONCURRENT_DOWNLOADS:
-        try:
-            url = next(sitemap_file_iterator)
-            if things_url is None:
-                # parse out the base things url from the first one we grab (they should all be the same)
-                things_url = pre_thing_host_url(url)
-                if things_url is not None:
-                    things_url += "/things"
+    while not constructed_all_futures_for_sitemap_file:
+        thing_ids = set()
+        things_url = None
+        while len(thing_ids) < BATCH_SIZE:
+            try:
+                url = next(sitemap_file_iterator)
+                if things_url is None:
+                    # parse out the base things url from the first one we grab (they should all be the same)
+                    things_url = pre_thing_host_url(url)
+                    if things_url is not None:
+                        things_url += "/things"
+                    else:
+                        logging.critical(f"Couldn't parse out things url from url {url} -- unable to construct things.")
+                identifier = thing_identifier_from_thing_url(url)
+                if identifier is not None:
+                    thing_ids.add(identifier)
                 else:
-                    logging.critical(f"Couldn't parse out things url from url {url} -- unable to construct things.")
-            identifier = thing_identifier_from_thing_url(url)
-            if identifier is not None:
-                thing_ids.add(identifier)
-            else:
-                logging.critical(f"Cannot parse out identifier from url {url} -- will not fetch thing.")
-        except StopIteration:
-            constructed_all_futures_for_sitemap_file = True
-            break
-    things_fetcher = ThingsFetcher(things_url, thing_ids, rsession)
-    things_future = thing_executor.submit(things_fetcher.fetch_things)
-    thing_futures.append(things_future)
+                    logging.critical(f"Cannot parse out identifier from url {url} -- will not fetch thing.")
+            except StopIteration:
+                constructed_all_futures_for_sitemap_file = True
+                break
+        if len(thing_ids) > 0:
+            things_fetcher = ThingsFetcher(things_url, sitemap_file_url, thing_ids, rsession)
+            things_future = thing_executor.submit(things_fetcher.fetch_things)
+            thing_futures.append(things_future)
     return constructed_all_futures_for_sitemap_file
 
 
@@ -170,62 +171,52 @@ def fetch_sitemap_files(authority, last_updated_date, thing_ids: typing.Dict[str
         sitemap_file_fetcher.fetch_sitemap_file()
         sitemap_file_iterator = sitemap_file_fetcher.url_iterator()
         thing_futures = []
+        # max_workers is 1 so that we may execute one request at a time in order to avoid overwhelming the server
+        # We still gain benefits as the next things request executes while the local processing is occurring
         with concurrent.futures.ThreadPoolExecutor(
-            max_workers=CONCURRENT_DOWNLOADS
+            max_workers=1
         ) as thing_executor:
-            # Initialize to false because we want to process everything at least once even if we hit the end
-            fetched_all_things_for_current_sitemap_file = False
             construct_thing_futures(
                 thing_futures,
                 sitemap_file_iterator,
+                sitemap_file_fetcher.url,
                 rsession,
                 thing_executor,
             )
             current_existing_things_batch = []
             current_new_things_batch = []
-            while not fetched_all_things_for_current_sitemap_file:
-                # Then read out results and save to the database after the queue is filled to capacity.
-                # Provided there are more urls in the iterator, return to the top of the loop to fill the queue again
-                for thing_fut in concurrent.futures.as_completed(thing_futures):
-                    things_fetcher = thing_fut.result()
-                    if things_fetcher is not None and things_fetcher.json_things is not None:
-                        global __NUM_THINGS_FETCHED
-                        __NUM_THINGS_FETCHED += len(things_fetcher.json_things)
-                        logging.info(f"About to process {len(things_fetcher.json_things)} things")
-                        for json_thing in things_fetcher.json_things:
-                            json_thing["tstamp"] = datetime.datetime.now()
-                            identifiers = thing_identifiers_from_resolved_content(authority, json_thing["resolved_content"])
-                            identifiers.append(json_thing["id"])
-                            json_thing["identifiers"] = json.dumps(identifiers)
-                            # remove the pk as that isn't guaranteed to be the same
-                            del json_thing["primary_key"]
-                            if thing_ids.__contains__(json_thing["id"]):
-                                # existing row in the db, for the update to work we need to insert the pk into the dict
-                                json_thing["primary_key"] = thing_ids[json_thing["id"]]
-                                current_existing_things_batch.append(json_thing)
-                            else:
-                                current_new_things_batch.append(json_thing)
-                        db_session.bulk_insert_mappings(
-                            mapper=Thing, mappings=current_new_things_batch, return_defaults=False
-                        )
-                        db_session.bulk_update_mappings(
-                            mapper=Thing, mappings=current_existing_things_batch
-                        )
-                        db_session.commit()
-                        logging.info(f"Just processed {len(things_fetcher.json_things)} things")
-                    else:
-                        logging.error(f"Error fetching thing for {things_fetcher.url}")
-                    thing_futures.remove(thing_fut)
-                    if len(thing_futures) < REFETCH_LENGTH:
-                        # if we are running low on things to process, kick off the next batch to download
-                        fetched_all_things_for_current_sitemap_file = (
-                            construct_thing_futures(
-                                thing_futures,
-                                sitemap_file_iterator,
-                                rsession,
-                                thing_executor,
-                            )
-                        )
+            # Then read out results and save to the database after the queue is filled to capacity.
+            # Provided there are more urls in the iterator, return to the top of the loop to fill the queue again
+            for thing_fut in concurrent.futures.as_completed(thing_futures):
+                things_fetcher = thing_fut.result()
+                if things_fetcher is not None and things_fetcher.json_things is not None:
+                    global __NUM_THINGS_FETCHED
+                    __NUM_THINGS_FETCHED += len(things_fetcher.json_things)
+                    logging.info(f"About to process {len(things_fetcher.json_things)} things")
+                    for json_thing in things_fetcher.json_things:
+                        json_thing["tstamp"] = datetime.datetime.now()
+                        identifiers = thing_identifiers_from_resolved_content(authority, json_thing["resolved_content"])
+                        identifiers.append(json_thing["id"])
+                        json_thing["identifiers"] = json.dumps(identifiers)
+                        # remove the pk as that isn't guaranteed to be the same
+                        del json_thing["primary_key"]
+                        if thing_ids.__contains__(json_thing["id"]):
+                            # existing row in the db, for the update to work we need to insert the pk into the dict
+                            json_thing["primary_key"] = thing_ids[json_thing["id"]]
+                            current_existing_things_batch.append(json_thing)
+                        else:
+                            current_new_things_batch.append(json_thing)
+                    db_session.bulk_insert_mappings(
+                        mapper=Thing, mappings=current_new_things_batch, return_defaults=False
+                    )
+                    db_session.bulk_update_mappings(
+                        mapper=Thing, mappings=current_existing_things_batch
+                    )
+                    db_session.commit()
+                    logging.info(f"Just processed {len(things_fetcher.json_things)} things")
+                else:
+                    logging.error(f"Error fetching thing for {things_fetcher.url}")
+                thing_futures.remove(thing_fut)
 
 
 if __name__ == "__main__":

@@ -28,10 +28,12 @@ class ThingsFetcher:
     def __init__(
         self,
         url: str,
+        sitemap_url: str,
         identifiers: set[str],
         session: requests.sessions = requests.session(),
     ):
         self.url = url
+        self.sitemap_url = sitemap_url
         self._session = session
         self.identifiers = list(identifiers)
         self.json_things = None
@@ -44,9 +46,10 @@ class ThingsFetcher:
                 "identifiers": self.identifiers,
             }
             data = json.dumps(params).encode("utf-8")
-            logging.info(f"Going to fetch {len(self.identifiers)} things from {self.url}")
+            logging.info(f"Going to fetch {len(self.identifiers)} things from {self.sitemap_url} at {self.url}")
             response = self._session.post(self.url, data=data)
             self.json_things = response.json()
+            logging.info(f"Completed fetching {len(self.identifiers)} things from {self.sitemap_url} at {self.url}")
             self.primary_keys_fetched = [
                 json_thing["primary_key"] for json_thing in self.json_things
             ]

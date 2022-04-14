@@ -125,28 +125,7 @@ def get_thing_with_id(session: Session, identifier: str) -> Optional[Thing]:
 def get_things_with_ids(session: Session, identifiers: list[str]) -> list[Thing]:
     statement = select(Thing).where(Thing.id.in_(identifiers))
     things = session.exec(statement).all()
-
-    for thing in things:
-        try:
-            identifiers.remove(thing.id)
-        except ValueError:
-            pass
-    if len(identifiers) > 0:
-        # didn't find all the things, so we need to do an additional query against the remainder
-        statement = select(Thing).where(Thing.identifiers.in_(identifiers))
-        things_by_identifier = session.exec(statement).all()
-        things.extend(things_by_identifier)
-    filtered_things = []
-    primary_keys = set()
-    identifiers = set()
-    for thing in things:
-        # Check to see if we already have the thing in the list -- multiple identifiers can collapse to a single
-        # thing, and we don't want to include the thing in the list more than once.
-        if thing.primary_key not in primary_keys and thing.id not in identifiers:
-            filtered_things.append(thing)
-        primary_keys.add(thing.primary_key)
-        identifiers.add(thing.id)
-    return filtered_things
+    return things
 
 
 def get_thing_identifiers_for_thing(session: Session, thing_id: int) -> list[str]:
