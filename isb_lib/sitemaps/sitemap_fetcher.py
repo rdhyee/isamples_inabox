@@ -23,6 +23,8 @@ class ThingsFetcher:
 
 IDENTIFIER_REGEX = re.compile(r".*/thing/(.*)")
 
+NUM_RETRIES = 5
+
 
 class ThingsFetcher:
     def __init__(
@@ -41,18 +43,26 @@ class ThingsFetcher:
 
     def fetch_things(self) -> ThingsFetcher:
         try:
-            # headers = {"Content-Type": "application/json"}
-            params = {
-                "identifiers": self.identifiers,
-            }
-            data = json.dumps(params).encode("utf-8")
-            logging.info(f"Going to fetch {len(self.identifiers)} things from {self.sitemap_url} at {self.url}")
-            response = self._session.post(self.url, data=data)
-            self.json_things = response.json()
-            logging.info(f"Completed fetching {len(self.identifiers)} things from {self.sitemap_url} at {self.url}")
-            self.primary_keys_fetched = [
-                json_thing["primary_key"] for json_thing in self.json_things
-            ]
+            for i in range(NUM_RETRIES):
+                # headers = {"Content-Type": "application/json"}
+                params = {
+                    "identifiers": self.identifiers,
+                }
+                data = json.dumps(params).encode("utf-8")
+                logging.info(f"Going to fetch {len(self.identifiers)} things from {self.sitemap_url} at {self.url}")
+                response = self._session.post(self.url, data=data, timeout=90)
+                if response.status_code != 200:
+                    logging.error(f"Got response code {response.status_code} from {self.url}, will retry")
+                    continue
+                else:
+                    self.json_things = response.json()
+                    logging.info(f"Completed fetching {len(self.identifiers)} things from {self.sitemap_url} at {self.url}")
+                    self.primary_keys_fetched = [
+                        json_thing["primary_key"] for json_thing in self.json_things
+                    ]
+                    break
+            if len(self.json_things) == 0:
+                raise RuntimeError(f"Didn't receive a valid response from {self.url} after {NUM_RETRIES} attempts.")
         except Exception as e:
             logging.critical(
                 f"Error fetching things from: url: {self.url} exception is {e}"
