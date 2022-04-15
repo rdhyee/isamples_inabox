@@ -275,6 +275,8 @@ def fetch_sitemap_files(
                     db_session.bulk_update_mappings(
                         mapper=Thing, mappings=current_existing_things_batch
                     )
+                    current_existing_things_batch = []
+                    current_new_things_batch = []
                     db_session.commit()
                     logging.info(
                         f"Just processed {len(things_fetcher.json_things)} things"
