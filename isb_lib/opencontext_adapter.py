@@ -175,6 +175,18 @@ def reparse_as_core_record(thing: isb_lib.models.thing.Thing) -> typing.List[typ
         raise
 
 
+def identifier_from_thing_dict(thing_dict: typing.Dict) -> str:
+    opencontext_id = thing_dict["citation uri"]
+    # check the type here because some records don't have it and have a boolean False instead
+    if opencontext_id is not None and type(opencontext_id) is str:
+        opencontext_id = isb_lib.normalized_id(opencontext_id)
+    else:
+        opencontext_id = thing_dict["uri"]
+        get_logger().error(
+            "Received OpenContext record without citation uri -- this is going to be problematic but will save.")
+    return opencontext_id
+
+
 def load_thing(
     thing_dict: typing.Dict, t_resolved: datetime.datetime, url: typing.AnyStr
 ) -> isb_lib.models.thing.Thing:
@@ -191,7 +203,7 @@ def load_thing(
         Instance of Thing
     """
     L = get_logger()
-    id = thing_dict["uri"]
+    id = identifier_from_thing_dict(thing_dict)
     t_created = dateparser.parse(thing_dict.get("updated"))
     L.info("loadThing: %s", id)
     item = OpenContextItem(id, thing_dict)

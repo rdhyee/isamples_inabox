@@ -9,6 +9,7 @@ import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.exc
 
+from isb_lib import opencontext_adapter
 from isb_web import sqlmodel_database
 from isb_web.sqlmodel_database import SQLModelDAO, save_thing
 
@@ -38,7 +39,7 @@ async def _load_open_context_entries(session, max_count, start_from):
     for record in records:
         L.info("got next id from open context %s", record)
         num_ids += 1
-        id = record["uri"]
+        id = opencontext_adapter.identifier_from_thing_dict(record)
         existing_thing = sqlmodel_database.get_thing_with_id(session, id)
         if existing_thing is not None:
             logging.info("Already have %s", id)

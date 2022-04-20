@@ -237,8 +237,6 @@ def fetch_sitemap_files(
                 thing_executor,
                 batch_size,
             )
-            current_existing_things_batch = []
-            current_new_things_batch = []
             # Then read out results and save to the database after the queue is filled to capacity.
             # Provided there are more urls in the iterator, return to the top of the loop to fill the queue again
             for thing_fut in concurrent.futures.as_completed(thing_futures):
@@ -252,6 +250,9 @@ def fetch_sitemap_files(
                     logging.info(
                         f"About to process {len(things_fetcher.json_things)} things"
                     )
+                    current_existing_things_batch = []
+                    current_new_things_batch = []
+
                     for json_thing in things_fetcher.json_things:
                         json_thing["tstamp"] = datetime.datetime.now()
                         identifiers = thing_identifiers_from_resolved_content(
@@ -275,8 +276,6 @@ def fetch_sitemap_files(
                     db_session.bulk_update_mappings(
                         mapper=Thing, mappings=current_existing_things_batch
                     )
-                    current_existing_things_batch = []
-                    current_new_things_batch = []
                     db_session.commit()
                     logging.info(
                         f"Just processed {len(things_fetcher.json_things)} things"
