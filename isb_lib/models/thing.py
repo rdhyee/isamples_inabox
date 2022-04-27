@@ -82,6 +82,9 @@ class Thing(SQLModel, table=True):
             doc="Additional identifiers used to look up the Thing"
         )
     )
+    h3: Optional[str] = Field(
+        default=None, nullable=True, description="The h3 value (https://uber.github.io/h3-py/intro.html)"
+    )
 
     def insert_thing_identifier_if_not_present(self, identifier: str):
         if self.identifiers is None:
@@ -149,4 +152,23 @@ class ThingIdentifier(SQLModel, table=True):
     )
     thing_id: Optional[int] = Field(
         default=None, nullable=False, foreign_key="thing._id", index=False
+    )
+
+
+class Point(SQLModel, table=True):
+    h3: Optional[str] = Field(
+        primary_key=True,
+        default=None,
+        nullable=False,
+        index=False,
+        description="The h3 value representing the geo"
+    )
+    longitude: Optional[float] = Field(
+        default=None, nullable=False, description="Longitude of the geo", index=False
+    )
+    latitude: Optional[float] = Field(
+        default=None, nullable=False, description="Latitude of the geo", index=False
+    )
+    height: Optional[float] = Field(
+        default=None, nullable=True, description="Height of the geo, as returned by Cesium.  Null if uncalculated."
     )

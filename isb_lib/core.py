@@ -624,6 +624,7 @@ class CoreSolrImporter:
         )
         allkeys = set()
         rsession = requests.session()
+        h3_to_height = sqlmodel_database.h3_to_height(self._db_session)
         try:
             core_records = []
             for thing in self._thing_iterator.yieldRecordsByPage():
@@ -636,6 +637,8 @@ class CoreSolrImporter:
 
                 for core_record in core_records_from_thing:
                     core_record["source"] = self._authority_id
+                    core_record["producedBy_samplingSite_location_h3"] = thing.h3
+                    core_record["producedBy_samplingSite_location_cesium_height"] = h3_to_height.get(thing.h3)
                     core_records.append(core_record)
                 for r in core_records:
                     allkeys.add(r["id"])

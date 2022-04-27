@@ -20,7 +20,7 @@ igsn-lib = {git = "https://github.com/isamplesorg/igsn_lib.git", rev = "main"}
 accept-types = "^0.4.1"
 shapely = "^1.7.1"
 geojson = "^2.5.0"
-Jinja2 = "^3.0.1"
+Jinja2 = "3.0.3"
 heartrate = "^0.2.1"
 aiofile = "^3.7.2"
 
@@ -29,6 +29,7 @@ Authlib = "^0.15.5"
 httpx = "^0.20.0"
 
 fasttext = "^0.9.2"
+h3 = "^3.7.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.3"

@@ -2,6 +2,7 @@ import typing
 import re
 
 from isamples_metadata.isamplesfasttext import SMITHSONIAN_FEATURE_PREDICTOR
+import isamples_metadata.Transformer
 from isamples_metadata.Transformer import (
     Transformer,
     AbstractCategoryMetaMapper,
@@ -245,10 +246,10 @@ class SmithsonianTransformer(Transformer):
             return None
 
     def sampling_site_latitude(self) -> typing.Optional[typing.SupportsFloat]:
-        return self._float_or_none(self.source_record.get("decimalLatitude"))
+        return _content_latitude(self.source_record)
 
     def sampling_site_longitude(self) -> typing.Optional[typing.SupportsFloat]:
-        return self._float_or_none(self.source_record.get("decimalLongitude"))
+        return _content_longitude(self.source_record)
 
     def sampling_site_place_names(self) -> typing.List:
         place_names = []
@@ -287,3 +288,17 @@ class SmithsonianTransformer(Transformer):
     def last_updated_time(self) -> typing.Optional[typing.AnyStr]:
         # This doesn't appear to be available in the Smithsonian DwC
         return None
+
+
+def _content_latitude(source_record: typing.Dict) -> typing.Optional[float]:
+    # noinspection PyProtectedMember
+    return SmithsonianTransformer._float_or_none(source_record.get("decimalLatitude"))
+
+
+def _content_longitude(source_record: typing.Dict) -> typing.Optional[float]:
+    # noinspection PyProtectedMember
+    return SmithsonianTransformer._float_or_none(source_record.get("decimalLongitude"))
+
+
+def geo_to_h3(content: typing.Dict) -> typing.Optional[str]:
+    return isamples_metadata.Transformer.geo_to_h3(_content_latitude(content), _content_longitude(content))

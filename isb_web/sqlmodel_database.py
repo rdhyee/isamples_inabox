@@ -11,7 +11,7 @@ from sqlmodel import SQLModel, create_engine, Session, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 import isb_lib
-from isb_lib.models.thing import Thing, ThingIdentifier
+from isb_lib.models.thing import Thing, ThingIdentifier, Point
 from isb_web.schemas import ThingPage
 
 
@@ -370,6 +370,21 @@ def all_thing_identifiers(session: Session, authority: typing.Optional[str] = No
         for identifier in row[1]:
             thing_identifiers_dict[identifier] = row[0]
     return thing_identifiers_dict
+
+
+def h3_values_without_points(session: Session, all_h3_values: set) -> list:
+    h3_select = select(Point.h3).distinct().where(Point.h3.in_(list(all_h3_values)))
+    h3_with_points_set = set(session.exec(h3_select).all())
+    return all_h3_values - h3_with_points_set
+
+
+def h3_to_height(session: Session) -> typing.Dict:
+    h3_select = select(Point.h3, Point.height).filter(Point.height != None)  # noqa: E711
+    point_rows = session.execute(h3_select).fetchall()
+    point_dict = {}
+    for row in point_rows:
+        point_dict[row[0]] = row[1]
+    return point_dict
 
 
 def mark_thing_not_found(session: Session, thing_id: str, resolved_url: str):

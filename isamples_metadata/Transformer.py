@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import typing
 
+import h3
 
 NOT_PROVIDED = "Not Provided"
 
@@ -397,3 +398,11 @@ class StringPairedCategoryMapper(AbstractCategoryMapper):
             and potential_match.lower().strip() == self._primaryMatch
             and auxiliary_match.lower().strip() == self._auxiliaryMatch
         )
+
+
+def geo_to_h3(latitude: typing.Optional[float], longitude: typing.Optional[float]) -> typing.Optional[str]:
+    if latitude is not None and longitude is not None:
+        # Set the resolution value to 15, which is the maximum
+        return h3.geo_to_h3(latitude, longitude, 15)
+    else:
+        return None

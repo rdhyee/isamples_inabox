@@ -6,7 +6,7 @@ from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
 from isb_lib.core import ThingRecordIterator
-from isb_lib.models.thing import Thing
+from isb_lib.models.thing import Thing, Point
 from isb_web.sqlmodel_database import (
     get_thing_with_id,
     read_things_summary,
@@ -17,6 +17,7 @@ from isb_web.sqlmodel_database import (
     mark_thing_not_found,
     save_or_update_thing,
     get_things_with_ids, insert_identifiers, all_thing_identifiers, get_thing_identifiers_for_thing,
+    h3_values_without_points, h3_to_height,
 )
 from test_utils import _add_some_things
 
@@ -394,3 +395,30 @@ def test_all_thing_identifiers(session: Session):
     _add_some_things(session, 10, "authority", datetime.datetime.now())
     all_identifiers = all_thing_identifiers(session)
     assert 10 == len(all_identifiers)
+
+
+def test_h3_values_without_points(session: Session):
+    no_height = "8f3f6dadb58ad40"
+    with_height = "8f3e6dca50120b3"
+    point = Point(h3=with_height, latitude=1.0, longitude=1.0, height=10.0)
+    session.add(point)
+    session.commit()
+    h3_no_height = h3_values_without_points(session, set([no_height, with_height]))
+    assert 1 == len(h3_no_height)
+    assert no_height == h3_no_height.pop()
+
+
+def test_h3_to_height(session: Session):
+    h3_1 = "8f3e6dca50120b3"
+    height_1 = 10.0
+    point1 = Point(h3=h3_1, latitude=1.0, longitude=1.0, height=height_1)
+    session.add(point1)
+    h3_2 = "8f3f6dadb58ad40"
+    height_2 = 20.0
+    point2 = Point(h3=h3_2, latitude=1.0, longitude=1.0, height=height_2)
+    session.add(point2)
+    session.commit()
+    height_dict = h3_to_height(session)
+    assert len(height_dict) == 2
+    assert height_1 == height_dict.get(h3_1)
+    assert height_2 == height_dict.get(h3_2)

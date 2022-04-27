@@ -6,7 +6,7 @@ import requests
 import isb_lib.models.thing
 import typing
 import dateparser
-import isamples_metadata.OpenContextTransformer
+from isamples_metadata import OpenContextTransformer
 
 HTTP_TIMEOUT = 10.0  # seconds
 OPENCONTEXT_API = "https://opencontext.org/subjects-search/.json?add-attribute-uris=1&attributes=obo-foodon-00001303%2Coc-zoo-has-anat-id%2Ccidoc-crm-p2-has-type%2Ccidoc-crm-p45-consists-of%2Ccidoc-crm-p49i-is-former-or-current-keeper-of%2Ccidoc-crm-p55-has-current-location%2Cdc-terms-temporal%2Cdc-terms-creator%2Cdc-terms-contributor&prop=oc-gen-cat-sample-col%7C%7Coc-gen-cat-bio-subj-ecofact%7C%7Coc-gen-cat-object&response=metadata%2Curi-meta&sort=updated--desc"
@@ -56,6 +56,7 @@ class OpenContextItem(object):
         # to the raw http response here.
         # _thing.resolve_elapsed = resolve_elapsed
         _thing.resolved_content = self.item
+        _thing.h3 = OpenContextTransformer.geo_to_h3(_thing.resolved_content)
         return _thing
 
 
@@ -168,7 +169,7 @@ def _validate_resolved_content(thing: isb_lib.models.thing.Thing):
 def reparse_as_core_record(thing: isb_lib.models.thing.Thing) -> typing.List[typing.Dict]:
     _validate_resolved_content(thing)
     try:
-        transformer = isamples_metadata.OpenContextTransformer.OpenContextTransformer(thing.resolved_content)
+        transformer = OpenContextTransformer.OpenContextTransformer(thing.resolved_content)
         return [isb_lib.core.coreRecordAsSolrDoc(transformer)]
     except Exception as e:
         get_logger().error("Failed trying to run transformer on %s, exception: %s", thing.resolved_content, e)

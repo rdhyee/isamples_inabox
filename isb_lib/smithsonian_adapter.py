@@ -7,6 +7,7 @@ import isb_lib
 import isb_lib.core
 import logging
 
+from isamples_metadata import SmithsonianTransformer
 from isb_lib.models.thing import Thing
 
 
@@ -44,6 +45,7 @@ class SmithsonianItem(object):
         # Note that this field doesn't make sense for Smithsonian as the information is coming from a local file
         # _thing.resolve_elapsed = resolve_elapsed
         _thing.resolved_content = self.source_item
+        _thing.h3 = SmithsonianTransformer.geo_to_h3(_thing.resolved_content)
         return _thing
 
 

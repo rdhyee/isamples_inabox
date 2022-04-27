@@ -223,4 +223,7 @@ addFieldType({
 })
 createField("producedBy_resultTimeRange", "date_range", True, True, None)
 
+createField("producedBy_samplingSite_location_h3", "string", True, True, None)
+createField("producedBy_samplingSite_location_cesium_height", "pfloat", True, True, None)
+
 pj(listFields())

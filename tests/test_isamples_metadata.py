@@ -6,6 +6,7 @@ import typing
 import re
 
 import isamples_metadata.GEOMETransformer
+from isamples_metadata import Transformer
 from isamples_metadata.SESARTransformer import SESARTransformer
 from isamples_metadata.GEOMETransformer import GEOMETransformer, GEOMEChildTransformer
 from isamples_metadata.OpenContextTransformer import OpenContextTransformer
@@ -177,7 +178,6 @@ def _get_record_with_id(record_id: typing.AnyStr) -> typing.Dict:
     with open(raw_csv, newline="") as csv_file:
         csv_reader = csv.reader(csv_file, delimiter="\t")
         column_headers = []
-        i = 0
         for i, current_values in enumerate(csv_reader):
             if i == 0:
                 column_headers = current_values
@@ -214,3 +214,8 @@ def test_smithsonian_dicts_equal(isamples_path):
     transformer = SmithsonianTransformer(source_dict)
     transformed_to_isamples_record = transformer.transform()
     _assert_transformed_dictionary(isamples_path, transformed_to_isamples_record)
+
+
+def test_geo_to_h3():
+    h3 = Transformer.geo_to_h3(32.253460, -110.911789)
+    assert h3 is not None

@@ -1,7 +1,7 @@
 import datetime
 import logging
 import typing
-
+import isamples_metadata
 from isamples_metadata.Transformer import (
     Transformer,
 )
@@ -334,21 +334,11 @@ class GEOMETransformer(Transformer):
                 return f"{depth} m"
         return Transformer.NOT_PROVIDED
 
-    def _geo_location_float_value(
-        self, key: typing.AnyStr
-    ) -> typing.Optional[typing.SupportsFloat]:
-        parent_record = self._source_record_parent_record()
-        if parent_record is not None:
-            geo_location_str = parent_record.get(key)
-            if geo_location_str is not None:
-                return float(geo_location_str)
-        return None
-
     def sampling_site_latitude(self) -> typing.Optional[typing.SupportsFloat]:
-        return self._geo_location_float_value("decimalLatitude")
+        return _content_latitude(self.source_record)
 
     def sampling_site_longitude(self) -> typing.Optional[typing.SupportsFloat]:
-        return self._geo_location_float_value("decimalLongitude")
+        return _content_longitude(self.source_record)
 
     def sampling_site_place_names(self) -> typing.List:
         return self._place_names(False)
@@ -520,7 +510,8 @@ class GEOMEChildTransformer(GEOMETransformer):
         return [parent_dict]
 
 
-# Function to iterate through the identifiers and instantiate the proper GEOME Transformer based on the identifier used for lookup
+# Function to iterate through the identifiers and instantiate the proper GEOME Transformer based on the identifier
+# used for lookup
 def geome_transformer_for_identifier(
     identifier: str, source_record: typing.Dict
 ) -> GEOMETransformer:
@@ -541,3 +532,24 @@ def geome_transformer_for_identifier(
         str(source_record),
     )
     return None
+
+
+def _geo_location_float_value(content: typing.Dict, key: typing.AnyStr) -> typing.Optional[float]:
+    parent_record = content.get("parent")
+    if parent_record is not None:
+        geo_location_str = parent_record.get(key)
+        if geo_location_str is not None:
+            return float(geo_location_str)
+    return None
+
+
+def _content_latitude(content: typing.Dict) -> typing.Optional[float]:
+    return _geo_location_float_value(content, "decimalLatitude")
+
+
+def _content_longitude(content: typing.Dict) -> typing.Optional[float]:
+    return _geo_location_float_value(content, "decimalLongitude")
+
+
+def geo_to_h3(content: typing.Dict) -> typing.Optional[str]:
+    return isamples_metadata.Transformer.geo_to_h3(_content_longitude(content), _content_longitude(content))
