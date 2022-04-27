@@ -311,15 +311,21 @@ def reloadRecords(ctx, status_code):
 
 
 @main.command("populate_isb_core_solr")
+@click.option(
+    "-I", "--ignore_last_modified", is_flag=True, help="Whether to ignore the last modified date and do a full rebuild"
+)
 @click.pass_context
-def populateIsbCoreSolr(ctx):
+def populateIsbCoreSolr(ctx, ignore_last_modified: bool):
     logger = getLogger()
     db_url = ctx.obj["db_url"]
     solr_url = ctx.obj["solr_url"]
-    max_solr_updated_date = isb_lib.core.solr_max_source_updated_time(
-        url=solr_url,
-        authority_id=isb_lib.geome_adapter.GEOMEItem.AUTHORITY_ID,
-    )
+    if ignore_last_modified:
+        max_solr_updated_date = None
+    else:
+        max_solr_updated_date = isb_lib.core.solr_max_source_updated_time(
+            url=solr_url,
+            authority_id=isb_lib.geome_adapter.GEOMEItem.AUTHORITY_ID,
+        )
     logger.info(f"Going to index Things with tcreated > {max_solr_updated_date}")
     solr_importer = isb_lib.core.CoreSolrImporter(
         db_url=db_url,
