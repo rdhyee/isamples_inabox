@@ -63,9 +63,12 @@ def assign_h3(session: Session):
             for row in results:
                 i += 1
                 primary_key = row[0]
-                h3 = geo_to_h3(row[1])
-                if h3 is not None:
-                    update_batch_values.append({"primary_key": primary_key, "h3": h3})
+                # Guard against degenerate records in the database -- could happen if there are problems with the
+                # initial import
+                if row[1] is not None:
+                    h3 = geo_to_h3(row[1])
+                    if h3 is not None:
+                        update_batch_values.append({"primary_key": primary_key, "h3": h3})
                 last_id = primary_key
             # It's possible the length could be 0 since we don't have lat/lon for all records
             if len(update_batch_values) > 0:
