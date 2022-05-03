@@ -372,6 +372,17 @@ def all_thing_identifiers(session: Session, authority: typing.Optional[str] = No
     return thing_identifiers_dict
 
 
+def all_thing_primary_keys(session: Session, authority: typing.Optional[str] = None) -> typing.Dict[str, int]:
+    thing_pk_select = select(Thing.primary_key, Thing.id)
+    if authority is not None:
+        thing_pk_select = thing_pk_select.where(Thing.authority_id == authority)
+    thing_pks = session.execute(thing_pk_select).fetchall()
+    thing_pks_dict = {}
+    for row in thing_pks:
+        thing_pks_dict[row[1]] = row[0]
+    return thing_pks_dict
+
+
 def h3_values_without_points(session: Session, all_h3_values: set) -> list:
     h3_select = select(Point.h3).distinct().where(Point.h3.in_(list(all_h3_values)))
     h3_with_points_set = set(session.exec(h3_select).all())

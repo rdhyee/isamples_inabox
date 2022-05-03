@@ -240,7 +240,7 @@ class SmithsonianTransformer(Transformer):
 
     @staticmethod
     def _float_or_none(string_val: typing.AnyStr) -> typing.Optional[typing.SupportsFloat]:
-        if len(string_val) > 0:
+        if string_val is not None and len(string_val) > 0:
             return float(string_val)
         else:
             return None

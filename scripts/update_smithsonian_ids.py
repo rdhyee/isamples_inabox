@@ -8,6 +8,8 @@ from sqlalchemy import update
 import igsn_lib.models
 import igsn_lib.models.thing
 
+from isb_web.sqlmodel_database import SQLModelDAO
+
 
 def _fixed_smithsonian_id(id: typing.AnyStr) -> typing.AnyStr:
     id_no_n2t = id.removeprefix("http://n2t.net/")
@@ -31,8 +33,8 @@ def _fixed_smithsonian_id(id: typing.AnyStr) -> typing.AnyStr:
 @click_config_file.configuration_option(config_file_name="isb.cfg")
 @click.pass_context
 def main(ctx, db_url, verbosity, heart_rate):
-    isb_lib.core.things_main(ctx, db_url, verbosity, heart_rate)
-    session = isb_lib.core.get_db_session(db_url)
+    isb_lib.core.things_main(ctx, db_url, None, verbosity, heart_rate)
+    session = SQLModelDAO(ctx.obj["db_url"]).get_session()
     index = 0
     page_size = 10000
     max_index = 195000

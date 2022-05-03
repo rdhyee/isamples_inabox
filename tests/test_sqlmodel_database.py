@@ -17,7 +17,7 @@ from isb_web.sqlmodel_database import (
     mark_thing_not_found,
     save_or_update_thing,
     get_things_with_ids, insert_identifiers, all_thing_identifiers, get_thing_identifiers_for_thing,
-    h3_values_without_points, h3_to_height,
+    h3_values_without_points, h3_to_height, all_thing_primary_keys,
 )
 from test_utils import _add_some_things
 
@@ -395,6 +395,12 @@ def test_all_thing_identifiers(session: Session):
     _add_some_things(session, 10, "authority", datetime.datetime.now())
     all_identifiers = all_thing_identifiers(session)
     assert 10 == len(all_identifiers)
+
+
+def test_all_thing_primary_keys(session: Session):
+    _add_some_things(session, 10, "authority", datetime.datetime.now())
+    all_primary_keys = all_thing_primary_keys(session)
+    assert 10 == len(all_primary_keys)
 
 
 def test_h3_values_without_points(session: Session):
