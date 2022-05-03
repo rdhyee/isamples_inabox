@@ -6,7 +6,9 @@ import isb_lib.smithsonian_adapter
 import logging
 import sqlalchemy
 import datetime
-from isb_web.sqlmodel_database import get_thing_with_id, SQLModelDAO, save_thing
+
+from isb_lib import smithsonian_adapter
+from isb_web.sqlmodel_database import get_thing_with_id, SQLModelDAO, save_thing, all_thing_primary_keys
 
 
 def _save_record_to_db(session, file_path, record):
@@ -28,17 +30,59 @@ def _save_record_to_db(session, file_path, record):
 
 
 def load_smithsonian_entries(session, max_count, file_path, start_from=None):
+    primary_keys_by_id = all_thing_primary_keys(session, smithsonian_adapter.SmithsonianItem.AUTHORITY_ID)
+    # current_existing_things_batch = []
+    # current_new_things_batch = []
+    #
+    # for json_thing in things_fetcher.json_things:
+    #     json_thing["tstamp"] = datetime.datetime.now()
+    #     identifiers = thing_identifiers_from_resolved_content(
+    #         authority, json_thing["resolved_content"]
+    #     )
+    #     identifiers.append(json_thing["id"])
+    #     json_thing["identifiers"] = json.dumps(identifiers)
+    #     # remove the pk as that isn't guaranteed to be the same
+    #     del json_thing["primary_key"]
+    #     if thing_ids.__contains__(json_thing["id"]):
+    #         # existing row in the db, for the update to work we need to insert the pk into the dict
+    #         json_thing["primary_key"] = thing_ids[json_thing["id"]]
+    #         current_existing_things_batch.append(json_thing)
+    #     else:
+    #         current_new_things_batch.append(json_thing)
+    # db_session.bulk_insert_mappings(
+    #     mapper=Thing,
+    #     mappings=current_new_things_batch,
+    #     return_defaults=False,
+    # )
+    # db_session.bulk_update_mappings(
+    #     mapper=Thing, mappings=current_existing_things_batch
+    # )
+
     with open(file_path, newline="") as csvfile:
         csvreader = csv.reader(csvfile, delimiter="\t", quoting=csv.QUOTE_NONE)
         column_headers = []
         i = 0
+        num_newer = 0
         for i, current_values in enumerate(csvreader):
             if i == 0:
                 column_headers = current_values
                 continue
             # Otherwise iterate over the keys and make source JSON
             current_record = {}
+            newer_than_start_from = False
             for index, key in enumerate(column_headers):
+                if key == "id":
+                    # check to see if we have the id for it -- if we do, add in the pk
+                    normalized_thing_id = isb_lib.normalized_id(current_values[index])
+                    current_record["id"] = normalized_thing_id
+                    if normalized_thing_id in primary_keys_by_id:
+                        current_record["primary_key"] = primary_keys_by_id[normalized_thing_id]
+                elif key == "modified":
+                    modified_date = datetime.datetime.strptime(current_values[index], "%Y-%m-%d %H:%M:%S")
+                    if modified_date >= start_from:
+                        newer_than_start_from = True
+                    else:
+                        break
                 try:
                     current_record[key] = current_values[index]
                 except IndexError as e:
@@ -47,9 +91,13 @@ def load_smithsonian_entries(session, max_count, file_path, start_from=None):
                     isb_lib.core.getLogger().info(
                         "Ran into an index error processing input: %s", e
                     )
-            _save_record_to_db(session, file_path, current_record)
+            if newer_than_start_from:
+                num_newer += 1
+                # print(f"newer: {current_record['id']}")
+                #_save_record_to_db(session, file_path, current_record)
             if i % 1000 == 0:
-                isb_lib.core.getLogger().info("\n\nNum records=%d\n\n", i)
+                print(f"\n\nNum records={i}")
+                print(f"Num newer={num_newer}\n\n")
 
 
 @click.group()
@@ -88,11 +136,19 @@ def main(ctx, db_url, solr_url, verbosity, heart_rate):
     The path to the Darwin Core dump file containing the records to import.  This should be manually downloaded,
     then preprocessed with preprocess_smithsonian.py before importing here.""",
 )
+@click.option(
+    "-d",
+    "--modification_date",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    default=None,
+    help="""The modified date to use when considering delta updates.  Records with a last modified before this date 
+    will be ignored"""
+)
 @click.pass_context
-def load_records(ctx, max_records, file):
+def load_records(ctx, max_records, file, modification_date):
     session = SQLModelDAO(ctx.obj["db_url"]).get_session()
     logging.info("loadRecords: %s", str(session))
-    load_smithsonian_entries(session, max_records, file, None)
+    load_smithsonian_entries(session, max_records, file, modification_date)
 
 
 @main.command("populate_isb_core_solr")
