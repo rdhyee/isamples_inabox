@@ -1,4 +1,5 @@
 import datetime
+import random
 
 import pytest
 from sqlalchemy.orm.attributes import flag_modified
@@ -17,7 +18,7 @@ from isb_web.sqlmodel_database import (
     mark_thing_not_found,
     save_or_update_thing,
     get_things_with_ids, insert_identifiers, all_thing_identifiers, get_thing_identifiers_for_thing,
-    h3_values_without_points, h3_to_height, all_thing_primary_keys,
+    h3_values_without_points, h3_to_height, all_thing_primary_keys, save_draft_thing_with_id,
 )
 from test_utils import _add_some_things
 
@@ -428,3 +429,10 @@ def test_h3_to_height(session: Session):
     assert len(height_dict) == 2
     assert height_1 == height_dict.get(h3_1)
     assert height_2 == height_dict.get(h3_2)
+
+
+def test_save_draft_thing(session: Session):
+    draft_id = f"doi:12345/{random.randrange(0, 1000000)}"
+    draft_thing = save_draft_thing_with_id(session, draft_id)
+    assert draft_thing is not None
+    assert draft_id == draft_thing.id

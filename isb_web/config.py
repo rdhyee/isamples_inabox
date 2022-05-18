@@ -60,5 +60,8 @@ class Settings(BaseSettings):
     # The domain to record analytics events for, needs to be configured as a site in plausible.io
     analytics_domain: str = "UNSET"
 
+    # The URL to the datacite API
+    datacite_url: str = "https://api.test.datacite.org/"
+
     class Config:
         env_file = "isb_web_config.env"

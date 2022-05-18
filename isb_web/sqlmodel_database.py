@@ -15,6 +15,11 @@ from isb_lib.models.thing import Thing, ThingIdentifier, Point
 from isb_web.schemas import ThingPage
 
 
+DRAFT_RESOLVED_URL = "DRAFT"
+DRAFT_AUTHORITY_ID = "DRAFT"
+DRAFT_RESOLVED_STATUS = -1
+
+
 class SQLModelDAO:
     def __init__(self, db_url: str, echo: bool = False):
         # This is a strange initializer, but FastAPI wants us to construct the object before we know we
@@ -301,14 +306,23 @@ def insert_identifiers(thing: Thing):
 
 
 def save_thing(session: Session, thing: Thing):
+    insert_identifiers(thing)
     logging.debug("Going to add thing to session")
     session.add(thing)
     logging.debug("Added thing to session")
     session.commit()
     logging.debug("committed session")
-    insert_identifiers(thing)
-    logging.debug("going to insert identifiers")
-    session.commit()
+
+
+def save_draft_thing_with_id(session: Session, draft_id: str) -> Thing:
+    draft_thing = Thing()
+    draft_thing.id = draft_id
+    draft_thing.resolved_status = DRAFT_RESOLVED_STATUS
+    draft_thing.authority_id = DRAFT_AUTHORITY_ID
+    draft_thing.resolved_url = DRAFT_RESOLVED_URL
+    draft_thing.tcreated = datetime.datetime.now()
+    save_thing(session, draft_thing)
+    return draft_thing
 
 
 def save_or_update_thing(session: Session, thing: Thing):
