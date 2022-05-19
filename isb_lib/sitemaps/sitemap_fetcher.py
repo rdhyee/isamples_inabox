@@ -1,8 +1,9 @@
+from __future__ import annotations
 import re
 import urllib.parse
 from abc import ABC
 import datetime
-from typing import Iterator
+from typing import Iterator, Optional
 
 import lxml.etree
 import requests
@@ -11,14 +12,6 @@ import logging
 
 import isb_lib.core
 import json
-
-
-class ThingFetcher:
-    pass
-
-
-class ThingsFetcher:
-    pass
 
 
 IDENTIFIER_REGEX = re.compile(r".*/thing/(.*)")
@@ -32,14 +25,14 @@ class ThingsFetcher:
         url: str,
         sitemap_url: str,
         identifiers: set[str],
-        session: requests.sessions = requests.session(),
+        session: requests.Session = requests.session(),
     ):
         self.url = url
         self.sitemap_url = sitemap_url
         self._session = session
         self.identifiers = list(identifiers)
-        self.json_things = None
-        self.primary_keys_fetched = None
+        self.json_things: list[dict] = []
+        self.primary_keys_fetched: Optional[list[str]] = None
 
     def fetch_things(self) -> ThingsFetcher:
         try:
@@ -71,7 +64,7 @@ class ThingsFetcher:
 
 
 class ThingFetcher:
-    def __init__(self, url: str, session: requests.sessions = requests.session()):
+    def __init__(self, url: str, session: requests.Session = requests.session()):
         self.url = url
         self._session = session
         self.json_dict = None
@@ -94,7 +87,7 @@ class ThingFetcher:
             # self.thing = None
             return self
 
-    def thing_identifier(self) -> str:
+    def thing_identifier(self) -> Optional[str]:
         url_path = urllib.parse.urlparse(self.url).path
         match = IDENTIFIER_REGEX.search(url_path)
         if match is None:
@@ -111,13 +104,13 @@ class SitemapFetcher(ABC):
         url: str,
         authority: str,
         last_modified: typing.Optional[datetime.datetime],
-        session: requests.sessions = requests.session(),
+        session: requests.Session = requests.session(),
     ):
         self._url = url
         self._authority = authority
         self._last_modified = last_modified
         self._session = session
-        self.urls_to_fetch = []
+        self.urls_to_fetch: list[str] = []
 
     def _fetch_file(self):
         logging.info(f"Going to fetch sitemap at {self._url}")
@@ -196,10 +189,9 @@ class SitemapIndexFetcher(SitemapFetcher):
         url: str,
         authority: str,
         last_modified: typing.Optional[datetime.datetime],
-        session: requests.sessions = requests.session(),
+        session: requests.Session = requests.session(),
     ):
         super().__init__(url, authority, last_modified, session)
-        self.primary_keys_fetched = set()
 
     def fetch_index_file(self):
         xmlp = lxml.etree.XMLParser(

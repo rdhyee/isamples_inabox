@@ -55,21 +55,21 @@ class SpecimenCategoryMetaMapper(AbstractCategoryMetaMapper):
 class SmithsonianTransformer(Transformer):
     RESPONSIBILITIES_SPLIT_RE = re.compile(r",|&")
 
-    def _source_id(self) -> typing.AnyStr:
-        return self.source_record.get("id")
+    def _source_id(self) -> str:
+        return self.source_record.get("id", "")
 
-    def id_string(self) -> typing.AnyStr:
+    def id_string(self) -> str:
         source_id = self._source_id()
         return f"metadata/{source_id.removeprefix(Transformer.N2T_ARK_NO_HTTPS_PREFIX)}"
 
-    def sample_label(self) -> typing.AnyStr:
+    def sample_label(self) -> str:
         return f"{self.source_record.get('scientificName', Transformer.NOT_PROVIDED)} {self.source_record.get('materialSampleID')}"
 
-    def sample_identifier_string(self) -> typing.AnyStr:
+    def sample_identifier_string(self) -> str:
         return self._source_id().removeprefix(Transformer.N2T_NO_HTTPS_PREFIX)
 
-    def sample_description(self) -> typing.AnyStr:
-        description_pieces = []
+    def sample_description(self) -> str:
+        description_pieces: list[str] = []
         self._transform_key_to_label(
             "basisOfRecord", self.source_record, description_pieces
         )
@@ -119,38 +119,38 @@ class SmithsonianTransformer(Transformer):
         )
         return Transformer.DESCRIPTION_SEPARATOR.join(description_pieces)
 
-    def has_context_categories(self) -> typing.List[typing.AnyStr]:
+    def has_context_categories(self) -> typing.List[str]:
         categories = SMITHSONIAN_FEATURE_PREDICTOR.predict_sampled_feature(
             [
-                self.source_record.get("collectionCode"),
-                self.source_record.get("habitat"),
-                self.source_record.get("higherGeography"),
-                self.source_record.get("locality"),
-                self.source_record.get("higherClassification"),
+                self.source_record.get("collectionCode", ""),
+                self.source_record.get("habitat", ""),
+                self.source_record.get("higherGeography", ""),
+                self.source_record.get("locality", ""),
+                self.source_record.get("higherClassification", ""),
             ]
         )
         return [categories]
 
-    def has_material_categories(self) -> typing.List[typing.AnyStr]:
+    def has_material_categories(self) -> typing.List[str]:
         material_sample_type = self.source_record.get("materialSampleType")
         if material_sample_type == "Environmental sample":
             return ["Biogenic non organic material"]
         else:
             return ["Organic material"]
 
-    def has_specimen_categories(self) -> typing.List[typing.AnyStr]:
-        preparation_type = self.source_record.get("preparationType")
+    def has_specimen_categories(self) -> typing.List[str]:
+        preparation_type = self.source_record.get("preparationType", "")
         return SpecimenCategoryMetaMapper.categories(preparation_type)
 
-    def informal_classification(self) -> typing.List[typing.AnyStr]:
-        return [self.source_record.get("scientificName")]
+    def informal_classification(self) -> typing.List[str]:
+        return [self.source_record.get("scientificName", "")]
 
-    def keywords(self) -> typing.List[typing.AnyStr]:
-        keywords = [self.source_record.get("collectionCode")]
-        water_body = self.source_record.get("waterBody")
+    def keywords(self) -> typing.List[str]:
+        keywords = [self.source_record.get("collectionCode", "")]
+        water_body = self.source_record.get("waterBody", "")
         if len(water_body) > 0:
             keywords.append(water_body)
-        higher_classification = self.source_record.get("higherClassification")
+        higher_classification = self.source_record.get("higherClassification", "")
         if len(higher_classification) > 0:
             keywords.extend(higher_classification.split(", "))
         keywords.append(self.source_record.get("scientificName"))
@@ -158,34 +158,34 @@ class SmithsonianTransformer(Transformer):
         # If so, which ones?
         return keywords
 
-    def sample_registrant(self) -> typing.AnyStr:
+    def sample_registrant(self) -> str:
         return Transformer.NOT_PROVIDED
 
-    def sample_sampling_purpose(self) -> typing.AnyStr:
+    def sample_sampling_purpose(self) -> str:
         return Transformer.NOT_PROVIDED
 
-    def produced_by_id_string(self) -> typing.AnyStr:
+    def produced_by_id_string(self) -> str:
         return Transformer.NOT_PROVIDED
 
-    def produced_by_label(self) -> typing.AnyStr:
+    def produced_by_label(self) -> str:
         return Transformer.NOT_PROVIDED
 
-    def produced_by_description(self) -> typing.AnyStr:
-        description_pieces = []
+    def produced_by_description(self) -> str:
+        description_pieces: list[str] = []
         self._transform_key_to_label("verbatimEventDate", self.source_record, description_pieces)
         return " | ".join(description_pieces)
 
-    def produced_by_feature_of_interest(self) -> typing.AnyStr:
+    def produced_by_feature_of_interest(self) -> str:
         return Transformer.NOT_PROVIDED
 
-    def _add_to_responsibilities(self, label: typing.AnyStr, responsibilities: typing.List[typing.AnyStr]):
+    def _add_to_responsibilities(self, label: str, responsibilities: typing.List[str]):
         value = self.source_record[label]
         if len(value) > 0:
             for current in self.RESPONSIBILITIES_SPLIT_RE.split(value):
                 responsibilities.append(f"{label}: {current.strip()}")
 
-    def produced_by_responsibilities(self) -> typing.List[typing.AnyStr]:
-        responsibilities = []
+    def produced_by_responsibilities(self) -> typing.List[str]:
+        responsibilities: list[str] = []
         self._add_to_responsibilities("recordedBy", responsibilities)
         self._add_to_responsibilities("scientificNameAuthorship", responsibilities)
 
@@ -196,15 +196,15 @@ class SmithsonianTransformer(Transformer):
                 responsibilities.append(f"identifiedBy: {current}")
         return responsibilities
 
-    def produced_by_result_time(self) -> typing.AnyStr:
+    def produced_by_result_time(self) -> str:
         return self._formatted_date(
-            self.source_record.get("year"),
-            self.source_record.get("month"),
-            self.source_record.get("day"),
+            self.source_record.get("year", ""),
+            self.source_record.get("month", ""),
+            self.source_record.get("day", ""),
         )
 
-    def sampling_site_description(self) -> typing.AnyStr:
-        description_pieces = []
+    def sampling_site_description(self) -> str:
+        description_pieces: list[str] = []
         self._transform_key_to_label(
             "locationID", self.source_record, description_pieces
         )
@@ -225,11 +225,11 @@ class SmithsonianTransformer(Transformer):
         )
         return " | ".join(description_pieces)
 
-    def sampling_site_label(self) -> typing.AnyStr:
+    def sampling_site_label(self) -> str:
         return self.source_record.get("locality", Transformer.NOT_PROVIDED)
 
-    def sampling_site_elevation(self) -> typing.AnyStr:
-        elevation_pieces = []
+    def sampling_site_elevation(self) -> str:
+        elevation_pieces: list[str] = []
         self._transform_key_to_label(
             "minimumDepthInMeters", self.source_record, elevation_pieces
         )
@@ -239,53 +239,53 @@ class SmithsonianTransformer(Transformer):
         return " | ".join(elevation_pieces)
 
     @staticmethod
-    def _float_or_none(string_val: typing.AnyStr) -> typing.Optional[typing.SupportsFloat]:
+    def _float_or_none(string_val: typing.Optional[str]) -> typing.Optional[float]:
         if string_val is not None and len(string_val) > 0:
             return float(string_val)
         else:
             return None
 
-    def sampling_site_latitude(self) -> typing.Optional[typing.SupportsFloat]:
+    def sampling_site_latitude(self) -> typing.Optional[float]:
         return _content_latitude(self.source_record)
 
-    def sampling_site_longitude(self) -> typing.Optional[typing.SupportsFloat]:
+    def sampling_site_longitude(self) -> typing.Optional[float]:
         return _content_longitude(self.source_record)
 
     def sampling_site_place_names(self) -> typing.List:
         place_names = []
-        locality = self.source_record.get("locality")
+        locality = self.source_record.get("locality", "")
         if len(locality) > 0:
             place_names.append(locality)
-        county = self.source_record.get("county")
+        county = self.source_record.get("county", "")
         if len(county) > 0:
             place_names.append(county)
-        state = self.source_record.get("stateProvince")
+        state = self.source_record.get("stateProvince", "")
         if len(state) > 0:
             place_names.append(state)
-        country = self.source_record.get("country")
+        country = self.source_record.get("country", "")
         if len(country) > 0:
             place_names.append(country)
-        island = self.source_record.get("island")
+        island = self.source_record.get("island", "")
         if len(island) > 0:
             place_names.append(island)
-        island_group = self.source_record.get("islandGroup")
+        island_group = self.source_record.get("islandGroup", "")
         if len(island_group) > 0:
             place_names.append(island_group)
-        water_body = self.source_record.get("waterBody")
+        water_body = self.source_record.get("waterBody", "")
         if len(water_body) > 0:
             place_names.append(water_body)
-        continent = self.source_record.get("continent")
+        continent = self.source_record.get("continent", "")
         if len(continent) > 0:
             place_names.append(continent)
-        higher_geography = self.source_record.get("higherGeography")
+        higher_geography = self.source_record.get("higherGeography", "")
         if len(higher_geography) > 0:
             place_names.append(higher_geography)
         return place_names
 
-    def curation_responsibility(self) -> typing.AnyStr:
+    def curation_responsibility(self) -> str:
         return f"{self.source_record.get('institutionCode')} {self.source_record.get('institutionID')}"
 
-    def last_updated_time(self) -> typing.Optional[typing.AnyStr]:
+    def last_updated_time(self) -> typing.Optional[str]:
         # This doesn't appear to be available in the Smithsonian DwC
         return None
 

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import typing
+from typing import Optional
 
 import h3
 
@@ -25,10 +26,10 @@ class Transformer(ABC):
 
     @staticmethod
     def _transform_key_to_label(
-        key: typing.AnyStr,
+        key: str,
         source_dict: typing.Dict,
-        dest_list: typing.List[typing.AnyStr],
-        label: typing.AnyStr = None,
+        dest_list: typing.List[str],
+        label: Optional[str] = None,
     ):
         if label is None:
             label = key
@@ -38,8 +39,8 @@ class Transformer(ABC):
 
     @staticmethod
     def _formatted_date(
-        year: typing.AnyStr, month: typing.AnyStr, day: typing.AnyStr
-    ) -> typing.AnyStr:
+        year: Optional[str], month: Optional[str], day: Optional[str]
+    ) -> str:
         result_time_pieces = []
         if year is not None and len(year) > 0:
             result_time_pieces.append(year)
@@ -103,101 +104,101 @@ class Transformer(ABC):
         return transformed_record
 
     @abstractmethod
-    def id_string(self) -> typing.AnyStr:
+    def id_string(self) -> str:
         """The value for the @id key in the iSamples record"""
         pass
 
     @abstractmethod
-    def sample_identifier_string(self) -> typing.AnyStr:
+    def sample_identifier_string(self) -> str:
         pass
 
     @abstractmethod
-    def sample_label(self) -> typing.AnyStr:
+    def sample_label(self) -> str:
         """A label for the sample in source_record"""
         pass
 
     @abstractmethod
-    def sample_description(self) -> typing.AnyStr:
+    def sample_description(self) -> str:
         """A textual description of the sample in source_record"""
         pass
 
     @abstractmethod
-    def sample_registrant(self) -> typing.AnyStr:
+    def sample_registrant(self) -> str:
         """The name of the sample registrant in source_record"""
         pass
 
     @abstractmethod
-    def sample_sampling_purpose(self) -> typing.AnyStr:
+    def sample_sampling_purpose(self) -> str:
         """The samplingPurpose of the sample registrant in source_record"""
         pass
 
     @abstractmethod
-    def has_context_categories(self) -> typing.List[typing.AnyStr]:
+    def has_context_categories(self) -> typing.List[str]:
         """Map from the source record into an iSamples context category"""
         pass
 
     @abstractmethod
-    def has_material_categories(self) -> typing.List[typing.AnyStr]:
+    def has_material_categories(self) -> typing.List[str]:
         """Map from the source record into an iSamples material category"""
         pass
 
     @abstractmethod
-    def has_specimen_categories(self) -> typing.List[typing.AnyStr]:
+    def has_specimen_categories(self) -> typing.List[str]:
         """Map from the source record into an iSamples specimen category"""
         pass
 
     @abstractmethod
-    def informal_classification(self) -> typing.List[typing.AnyStr]:
+    def informal_classification(self) -> typing.List[str]:
         """An informal scientificName"""
         pass
 
     @abstractmethod
-    def keywords(self) -> typing.List[typing.AnyStr]:
+    def keywords(self) -> typing.List[str]:
         """The keywords for the sample in source record"""
         pass
 
     @abstractmethod
-    def produced_by_id_string(self) -> typing.AnyStr:
+    def produced_by_id_string(self) -> str:
         """The id for the producedBy dictionary, likely used for parent identifiers"""
         pass
 
     @abstractmethod
-    def produced_by_label(self) -> typing.AnyStr:
+    def produced_by_label(self) -> str:
         """The label for the producedBy dictionary"""
         pass
 
     @abstractmethod
-    def produced_by_description(self) -> typing.AnyStr:
+    def produced_by_description(self) -> str:
         """The description for the producedBy dictionary"""
         pass
 
     @abstractmethod
-    def produced_by_feature_of_interest(self) -> typing.AnyStr:
+    def produced_by_feature_of_interest(self) -> str:
         """The feature of interest for the producedBy dictionary"""
         pass
 
     @abstractmethod
-    def produced_by_responsibilities(self) -> typing.List[typing.AnyStr]:
+    def produced_by_responsibilities(self) -> typing.List[str]:
         """The responsibility list for the producedBy dictionary"""
         pass
 
     @abstractmethod
-    def produced_by_result_time(self) -> typing.AnyStr:
+    def produced_by_result_time(self) -> str:
         """The result time for the producedBy dictionary"""
         pass
 
     @abstractmethod
-    def sampling_site_description(self) -> typing.AnyStr:
+    def sampling_site_description(self) -> str:
         """The sampling site description"""
         pass
 
     @abstractmethod
-    def sampling_site_label(self) -> typing.AnyStr:
+    def sampling_site_label(self) -> str:
         """The sampling site label"""
         pass
 
     @abstractmethod
-    def sampling_site_elevation(self) -> typing.AnyStr:
+    def sampling_site_elevation(self) -> str:
         """The sampling site elevation"""
         pass
 
@@ -219,19 +220,19 @@ class Transformer(ABC):
     # region Curation information
 
     # For the curation fields, not all of the collections have them, so provide stubs returning the empty sentinel
-    def curation_label(self) -> typing.AnyStr:
+    def curation_label(self) -> str:
         return Transformer.NOT_PROVIDED
 
-    def curation_description(self) -> typing.AnyStr:
+    def curation_description(self) -> str:
         return Transformer.NOT_PROVIDED
 
-    def curation_access_constraints(self) -> typing.AnyStr:
+    def curation_access_constraints(self) -> str:
         return Transformer.NOT_PROVIDED
 
-    def curation_location(self) -> typing.AnyStr:
+    def curation_location(self) -> str:
         return Transformer.NOT_PROVIDED
 
-    def curation_responsibility(self) -> typing.AnyStr:
+    def curation_responsibility(self) -> str:
         return Transformer.NOT_PROVIDED
 
     # endregion
@@ -240,28 +241,28 @@ class Transformer(ABC):
         return []
 
     @abstractmethod
-    def last_updated_time(self) -> typing.Optional[typing.AnyStr]:
+    def last_updated_time(self) -> typing.Optional[str]:
         """Return the time the record was last modified in the source collection"""
         pass
 
 
 class AbstractCategoryMapper(ABC):
-    _destination: typing.AnyStr
+    _destination: str
 
     @abstractmethod
     def matches(
         self,
-        potential_match: typing.AnyStr,
-        auxiliary_match: typing.Optional[typing.AnyStr] = None,
+        potential_match: str,
+        auxiliary_match: typing.Optional[str] = None,
     ) -> bool:
         """Whether a particular String input matches this category mapper"""
         pass
 
     def append_if_matched(
         self,
-        potential_match: typing.AnyStr,
-        auxiliary_match: typing.Optional[typing.AnyStr] = None,
-        categories_list: typing.List[typing.AnyStr] = (),
+        potential_match: str,
+        auxiliary_match: typing.Optional[str] = None,
+        categories_list: typing.List[str] = list(),
     ):
         if self.matches(potential_match, auxiliary_match):
             categories_list.append(self._destination)
@@ -276,15 +277,15 @@ class AbstractCategoryMapper(ABC):
 
 
 class AbstractCategoryMetaMapper(ABC):
-    _categoriesMappers = []
+    _categoriesMappers: list[AbstractCategoryMapper] = []
 
     @classmethod
     def categories(
         cls,
-        source_category: typing.AnyStr,
-        auxiliary_source_category: typing.Optional[typing.AnyStr] = None,
+        source_category: str,
+        auxiliary_source_category: typing.Optional[str] = None,
     ):
-        categories = []
+        categories: list[str] = []
         if source_category is not None:
             for mapper in cls._categoriesMappers:
                 mapper.append_if_matched(
@@ -295,7 +296,7 @@ class AbstractCategoryMetaMapper(ABC):
         return categories
 
     @classmethod
-    def categories_mappers(cls) -> typing.List[AbstractCategoryMapper]:
+    def categories_mappers(cls) -> list[AbstractCategoryMapper]:
         return []
 
     def __init_subclass__(cls, **kwargs):
@@ -307,14 +308,14 @@ class StringConstantCategoryMapper(AbstractCategoryMapper):
 
     def __init__(
         self,
-        destination_category: typing.AnyStr,
+        destination_category: str,
     ):
         self._destination = destination_category
 
     def matches(
         self,
-        potential_match: typing.AnyStr,
-        auxiliary_match: typing.Optional[typing.AnyStr] = None,
+        potential_match: str,
+        auxiliary_match: typing.Optional[str] = None,
     ) -> bool:
         return True
 
@@ -324,8 +325,8 @@ class StringEqualityCategoryMapper(AbstractCategoryMapper):
 
     def __init__(
         self,
-        categories: typing.List[typing.AnyStr],
-        destination_category: typing.AnyStr,
+        categories: list[str],
+        destination_category: str,
     ):
         categories = [keyword.lower() for keyword in categories]
         categories = [keyword.strip() for keyword in categories]
@@ -334,8 +335,8 @@ class StringEqualityCategoryMapper(AbstractCategoryMapper):
 
     def matches(
         self,
-        potential_match: typing.AnyStr,
-        auxiliary_match: typing.Optional[typing.AnyStr] = None,
+        potential_match: str,
+        auxiliary_match: typing.Optional[str] = None,
     ) -> bool:
         return potential_match.lower().strip() in self._categories
 
@@ -343,14 +344,14 @@ class StringEqualityCategoryMapper(AbstractCategoryMapper):
 class StringEndsWithCategoryMapper(AbstractCategoryMapper):
     """A mapper that matches if the potentialMatch ends with the specified string"""
 
-    def __init__(self, ends_with: typing.AnyStr, destination_category: typing.AnyStr):
+    def __init__(self, ends_with: str, destination_category: str):
         self._endsWith = ends_with.lower().strip()
         self._destination = destination_category
 
     def matches(
         self,
-        potential_match: typing.AnyStr,
-        auxiliary_match: typing.Optional[typing.AnyStr] = None,
+        potential_match: str,
+        auxiliary_match: typing.Optional[str] = None,
     ) -> bool:
         return potential_match.lower().strip().endswith(self._endsWith)
 
@@ -363,8 +364,8 @@ class StringOrderedCategoryMapper(AbstractCategoryMapper):
 
     def matches(
         self,
-        potential_match: typing.AnyStr,
-        auxiliary_match: typing.Optional[typing.AnyStr] = None,
+        potential_match: str,
+        auxiliary_match: typing.Optional[str] = None,
     ) -> bool:
         for mapper in self._submappers:
             if mapper.matches(potential_match, auxiliary_match):
@@ -379,9 +380,9 @@ class StringPairedCategoryMapper(AbstractCategoryMapper):
 
     def __init__(
         self,
-        primary_match: typing.AnyStr,
-        auxiliary_match: typing.AnyStr,
-        destination_category: typing.AnyStr,
+        primary_match: str,
+        auxiliary_match: str,
+        destination_category: str,
     ):
         self._primaryMatch = primary_match.lower().strip()
         self._auxiliaryMatch = auxiliary_match.lower().strip()
@@ -389,8 +390,8 @@ class StringPairedCategoryMapper(AbstractCategoryMapper):
 
     def matches(
         self,
-        potential_match: typing.AnyStr,
-        auxiliary_match: typing.Optional[typing.AnyStr] = None,
+        potential_match: str,
+        auxiliary_match: typing.Optional[str] = None,
     ) -> bool:
         return (
             potential_match is not None

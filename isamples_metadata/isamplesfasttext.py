@@ -24,14 +24,14 @@ else:
 class SampledFeaturePredictor:
     RESULT_PREFIX = "__label__"
 
-    def __init__(self, name: typing.AnyStr, model: _FastText):
+    def __init__(self, name: str, model: _FastText):
         self._name = name
         self._model = model
         self._model_valid = model is not None
 
     def predict_sampled_feature(
-        self, context: typing.List[typing.AnyStr]
-    ) -> typing.AnyStr:
+        self, context: typing.List[str]
+    ) -> str:
         """
         Invoke the pre-trained fasttext model to predict the sampledFeature label for the specified string inputs.
         Prerequisite: In order to use this, make sure that there is a pydantic settings file on the

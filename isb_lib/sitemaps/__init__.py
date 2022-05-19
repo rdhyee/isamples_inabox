@@ -141,7 +141,7 @@ class SiteMap(object):
             self.start_from = None
         self._session = requests.Session()
         self._cbs = []
-        self._all_sitemaps = []  # list of all sitemaps visited
+        self._all_sitemaps: list[str] = []  # list of all sitemaps visited
         if alt_rules is not None:
             for r, c in alt_rules:
                 if isinstance(c, str):
@@ -236,7 +236,7 @@ class SiteMap(object):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     url = "https://app.geosamples.org/sitemaps/sitemap-index.xml"
-    sm = SiteMap(url)
+    sm = SiteMap(url, datetime.datetime.now())
     counter = 0
     for item in sm.scanItems():
         counter += 1

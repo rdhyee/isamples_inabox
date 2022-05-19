@@ -235,7 +235,7 @@ class SESARTransformer(Transformer):
             return self._source_record_description()["supplementMetadata"]
         return {}
 
-    def _primary_location_type(self) -> typing.Optional[typing.AnyStr]:
+    def _primary_location_type(self) -> typing.Optional[str]:
         supplement_metadata = self._supplement_metadata()
         if (
             supplement_metadata is not None
@@ -244,7 +244,7 @@ class SESARTransformer(Transformer):
             return supplement_metadata["primaryLocationType"]
         return None
 
-    def _material_type(self) -> typing.AnyStr:
+    def _material_type(self) -> str:
         return self._source_record_description().get("material", None)
 
     @staticmethod
@@ -256,35 +256,35 @@ class SESARTransformer(Transformer):
             self.sample_identifier_scheme(), self.sample_identifier_value()
         )
 
-    def sample_identifier_string(self) -> typing.AnyStr:
+    def sample_identifier_string(self) -> str:
         return f"{self.sample_identifier_scheme().upper()}:{self.sample_identifier_value()}"
 
     @staticmethod
-    def sample_identifier_scheme() -> typing.AnyStr:
+    def sample_identifier_scheme() -> str:
         return "igsn"
 
-    def sample_identifier_value(self) -> typing.AnyStr:
+    def sample_identifier_value(self) -> str:
         return self.source_record["igsn"]
 
-    def sample_label(self) -> typing.AnyStr:
+    def sample_label(self) -> str:
         return self._source_record_description()["sampleName"]
 
-    def sample_description(self) -> typing.AnyStr:
+    def sample_description(self) -> str:
         # TODO: implement
         return Transformer.NOT_PROVIDED
 
-    def has_context_categories(self) -> typing.List[typing.AnyStr]:
+    def has_context_categories(self) -> typing.List[str]:
         material_type = self._material_type()
         primary_location_type = self._primary_location_type()
         return ContextCategoryMetaMapper.categories(
             material_type, primary_location_type
         )
 
-    def has_material_categories(self) -> typing.List[typing.AnyStr]:
+    def has_material_categories(self) -> typing.List[str]:
         material = self._material_type()
         return MaterialCategoryMetaMapper.categories(material)
 
-    def has_specimen_categories(self) -> typing.List[typing.AnyStr]:
+    def has_specimen_categories(self) -> typing.List[str]:
         sample_type = self._source_record_description()["sampleType"]
         return SpecimenCategoryMetaMapper.categories(sample_type)
 
@@ -292,11 +292,11 @@ class SESARTransformer(Transformer):
         # TODO: implement
         return [self._source_record_description()["sampleType"]]
 
-    def produced_by_id_string(self) -> typing.AnyStr:
+    def produced_by_id_string(self) -> str:
         # TODO: this is present for GEOME, does anything make sense for SESAR?
         return ""
 
-    def _contributor_name_with_role(self, role_name: typing.AnyStr):
+    def _contributor_name_with_role(self, role_name: str):
         contributor_name = ""
         contributors = self._source_record_description()["contributors"]
         if contributors is not None and len(contributors) > 0:
@@ -310,20 +310,20 @@ class SESARTransformer(Transformer):
                 contributor_name = contributors_with_role[0]["contributor"][0]["name"]
         return contributor_name
 
-    def sample_registrant(self) -> typing.AnyStr:
+    def sample_registrant(self) -> str:
         return self._contributor_name_with_role("Sample Registrant")
 
-    def sample_sampling_purpose(self) -> typing.AnyStr:
+    def sample_sampling_purpose(self) -> str:
         # TODO: implement
         return ""
 
-    def produced_by_label(self) -> typing.AnyStr:
+    def produced_by_label(self) -> str:
         if "collectionMethod" in self._source_record_description():
             return self._source_record_description()["collectionMethod"]
         else:
             return Transformer.NOT_PROVIDED
 
-    def produced_by_description(self) -> typing.AnyStr:  # noqa: C901 -- need to examine computational complexity
+    def produced_by_description(self) -> str:  # noqa: C901 -- need to examine computational complexity
         description_components = list()
         description_dict = self._source_record_description()
         if description_dict is not None:
@@ -364,13 +364,13 @@ class SESARTransformer(Transformer):
 
         return Transformer.NOT_PROVIDED
 
-    def produced_by_feature_of_interest(self) -> typing.AnyStr:
+    def produced_by_feature_of_interest(self) -> str:
         primary_location_type = self._primary_location_type()
         if primary_location_type is not None:
             return primary_location_type
         return Transformer.NOT_PROVIDED
 
-    def produced_by_responsibilities(self) -> typing.List[typing.AnyStr]:
+    def produced_by_responsibilities(self) -> typing.List[str]:
         responsibilities = list()
         description_dict = self._source_record_description()
         if "collector" in description_dict:
@@ -384,7 +384,7 @@ class SESARTransformer(Transformer):
 
         return responsibilities
 
-    def produced_by_result_time(self) -> typing.AnyStr:
+    def produced_by_result_time(self) -> str:
         result_time = Transformer.NOT_PROVIDED
         description = self._source_record_description()
         if "collectionStartDate" in description:
@@ -394,7 +394,7 @@ class SESARTransformer(Transformer):
             result_time = description["log"][0]["timestamp"]
         return result_time
 
-    def sampling_site_description(self) -> typing.AnyStr:
+    def sampling_site_description(self) -> str:
         description_dict = self._source_record_description()
         if description_dict is not None:
             supplement_metadata = self._supplement_metadata()
@@ -405,19 +405,19 @@ class SESARTransformer(Transformer):
                 return supplement_metadata["locationDescription"]
         return Transformer.NOT_PROVIDED
 
-    def sampling_site_label(self) -> typing.AnyStr:
+    def sampling_site_label(self) -> str:
         # TODO: implement
         return Transformer.NOT_PROVIDED
 
     def elevation_str(
-        self, elevation_value: typing.AnyStr, elevation_unit: typing.AnyStr
-    ) -> typing.AnyStr:
+        self, elevation_value: str, elevation_unit: str
+    ) -> str:
         elevation_unit_abbreviation = ""
         if elevation_unit is not None:
             elevation_unit = elevation_unit.lower().strip()
             if elevation_unit == "feet":
                 # target elevation for core metadata will always be meters, so convert here
-                elevation_value = elevation_value / Transformer.FEET_PER_METER
+                elevation_value = str(float(elevation_value) / Transformer.FEET_PER_METER)
                 elevation_unit_abbreviation = "m"
             elif elevation_unit == "meters":
                 elevation_unit_abbreviation = "m"
@@ -430,7 +430,7 @@ class SESARTransformer(Transformer):
             elevation_str += " " + elevation_unit_abbreviation
         return elevation_str
 
-    def sampling_site_elevation(self) -> typing.AnyStr:
+    def sampling_site_elevation(self) -> str:
         supplement_metadata = self._supplement_metadata()
         if supplement_metadata is not None and "elevation" in supplement_metadata:
             elevation_value = supplement_metadata["elevation"]
@@ -458,11 +458,11 @@ class SESARTransformer(Transformer):
             place_names.append(supplement_metadata["city"])
         return place_names
 
-    def informal_classification(self) -> typing.List[typing.AnyStr]:
+    def informal_classification(self) -> typing.List[str]:
         """Not currently used for SESAR"""
-        return Transformer.NOT_PROVIDED
+        return [Transformer.NOT_PROVIDED]
 
-    def last_updated_time(self) -> typing.Optional[typing.AnyStr]:
+    def last_updated_time(self) -> typing.Optional[str]:
         # Loop through the log and find the "lastUpdated" record
         description = self._source_record_description()
         log = description.get("log")
@@ -473,7 +473,7 @@ class SESARTransformer(Transformer):
         return None
 
 
-def _geo_location_float_value(source_record: typing.Dict, key_name: typing.AnyStr) -> typing.Optional[float]:
+def _geo_location_float_value(source_record: typing.Dict, key_name: str) -> typing.Optional[float]:
     description = source_record.get("description")
     if description is not None:
         geo_location = None

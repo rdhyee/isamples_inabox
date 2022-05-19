@@ -1,5 +1,6 @@
 import typing
 import urllib.parse
+from typing import Any
 
 import geojson
 
@@ -43,7 +44,7 @@ def stac_item_from_solr_dict(
         return None
 
     point = geojson.Point([longitude, latitude])
-    identifier = solr_dict.get("id")
+    identifier = solr_dict.get("id", "")
     stac_item = {
         "stac_version": STAC_VERSION,
         "stac_extensions": [],
@@ -80,17 +81,17 @@ def stac_item_from_solr_dict(
     return stac_item
 
 
-def thing_href(identifier: str):
+def thing_href(identifier: str) -> str:
     return f"/{config.Settings().thing_url_path}/{identifier}"
 
 
-def item_href(identifier: str):
+def item_href(identifier: str) -> str:
     return f"/{config.Settings().stac_item_url_path}/{identifier}.json"
 
 
 def collection_href(offset: int, limit: int, authority: typing.Optional[str]) -> str:
     href = "/stac_collection/"
-    query_params = {}
+    query_params: dict[str, Any] = {}
     if offset > 0:
         query_params["offset"] = offset
     if limit > 0:

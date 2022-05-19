@@ -1,4 +1,5 @@
 import typing
+from typing import Optional
 
 import isamples_metadata.Transformer
 from isamples_metadata.Transformer import (
@@ -102,21 +103,21 @@ class SpecimenCategoryMetaMapper(AbstractCategoryMetaMapper):
 
 class OpenContextTransformer(Transformer):
 
-    def _citation_uri(self) -> typing.AnyStr:
-        return self.source_record.get("citation uri")
+    def _citation_uri(self) -> str:
+        return self.source_record.get("citation uri") or ""
 
-    def id_string(self) -> typing.AnyStr:
+    def id_string(self) -> str:
         citation_uri = self._citation_uri()
         return f"metadata/{citation_uri.removeprefix(Transformer.N2T_ARK_PREFIX)}"
 
-    def sample_identifier_string(self) -> typing.AnyStr:
+    def sample_identifier_string(self) -> str:
         return self._citation_uri().removeprefix(Transformer.N2T_PREFIX)
 
-    def sample_label(self) -> typing.AnyStr:
+    def sample_label(self) -> str:
         return self.source_record.get("label", Transformer.NOT_PROVIDED)
 
-    def sample_description(self) -> typing.AnyStr:
-        description_pieces = []
+    def sample_description(self) -> str:
+        description_pieces: list[str] = []
         self._transform_key_to_label(
             "early bce/ce", self.source_record, description_pieces
         )
@@ -150,46 +151,46 @@ class OpenContextTransformer(Transformer):
             )
         return Transformer.DESCRIPTION_SEPARATOR.join(description_pieces)
 
-    def sample_registrant(self) -> typing.AnyStr:
+    def sample_registrant(self) -> str:
         pass
 
-    def sample_sampling_purpose(self) -> typing.AnyStr:
+    def sample_sampling_purpose(self) -> str:
         pass
 
-    def has_context_categories(self) -> typing.List[typing.AnyStr]:
+    def has_context_categories(self) -> typing.List[str]:
         return ["Site of past human activities"]
 
-    def has_material_categories(self) -> typing.List[typing.AnyStr]:
-        item_category = self.source_record.get("item category")
+    def has_material_categories(self) -> typing.List[str]:
+        item_category = self.source_record.get("item category") or ""
         return MaterialCategoryMetaMapper.categories(item_category)
 
-    def has_specimen_categories(self) -> typing.List[typing.AnyStr]:
-        item_category = self.source_record.get("item category")
+    def has_specimen_categories(self) -> typing.List[str]:
+        item_category = self.source_record.get("item category") or ""
         return SpecimenCategoryMetaMapper.categories(item_category)
 
-    def _context_label_pieces(self) -> typing.List[typing.AnyStr]:
+    def _context_label_pieces(self) -> typing.List[str]:
         context_label = self.source_record.get("context label")
-        if len(context_label) > 0:
+        if type(context_label) is str and len(context_label) > 0:
             return context_label.split("/")
         else:
             return []
 
-    def keywords(self) -> typing.List[typing.AnyStr]:
+    def keywords(self) -> typing.List[str]:
         return self._context_label_pieces()
 
-    def produced_by_id_string(self) -> typing.AnyStr:
+    def produced_by_id_string(self) -> str:
         return Transformer.NOT_PROVIDED
 
-    def produced_by_label(self) -> typing.AnyStr:
+    def produced_by_label(self) -> str:
         return self.source_record.get("project label", Transformer.NOT_PROVIDED)
 
-    def produced_by_description(self) -> typing.AnyStr:
+    def produced_by_description(self) -> str:
         return self.source_record.get("project uri", Transformer.NOT_PROVIDED)
 
-    def produced_by_feature_of_interest(self) -> typing.AnyStr:
+    def produced_by_feature_of_interest(self) -> str:
         return Transformer.NOT_PROVIDED
 
-    def produced_by_responsibilities(self) -> typing.List[typing.AnyStr]:
+    def produced_by_responsibilities(self) -> typing.List[str]:
         # from ekansa:
         # "Creator" is typically a project PI (Principle Investigator). They may or may not be the person that
         # collected the sample. If given, a "Contributor" is the person that originally collected or first
@@ -205,44 +206,44 @@ class OpenContextTransformer(Transformer):
                 responsibilities.append(f"collector: {contributor.get('label')}")
         return responsibilities
 
-    def produced_by_result_time(self) -> typing.AnyStr:
+    def produced_by_result_time(self) -> str:
         return self.source_record.get("published", Transformer.NOT_PROVIDED)
 
-    def sampling_site_description(self) -> typing.AnyStr:
+    def sampling_site_description(self) -> str:
         return Transformer.NOT_PROVIDED
 
-    def sampling_site_label(self) -> typing.AnyStr:
+    def sampling_site_label(self) -> str:
         return self.source_record.get("context label", Transformer.NOT_PROVIDED)
 
-    def sampling_site_elevation(self) -> typing.AnyStr:
+    def sampling_site_elevation(self) -> str:
         return Transformer.NOT_PROVIDED
 
-    def sampling_site_latitude(self) -> typing.Optional[typing.SupportsFloat]:
+    def sampling_site_latitude(self) -> Optional[typing.SupportsFloat]:
         return _content_latitude(self.source_record)
 
-    def sampling_site_longitude(self) -> typing.Optional[typing.SupportsFloat]:
+    def sampling_site_longitude(self) -> Optional[typing.SupportsFloat]:
         return _content_longitude(self.source_record)
 
     def sampling_site_place_names(self) -> typing.List:
         return self._context_label_pieces()
 
-    def informal_classification(self) -> typing.List[typing.AnyStr]:
+    def informal_classification(self) -> typing.List[str]:
         classifications = []
         for consists_of_dict in self.source_record.get("Has taxonomic identifier", []):
             classifications.append(consists_of_dict.get("label"))
         return classifications
 
-    def last_updated_time(self) -> typing.Optional[typing.AnyStr]:
+    def last_updated_time(self) -> Optional[str]:
         return self.source_record.get("updated", None)
 
 
-def _content_latitude(content: typing.Dict) -> typing.Optional[float]:
+def _content_latitude(content: typing.Dict) -> Optional[float]:
     return content.get("latitude", None)
 
 
-def _content_longitude(content: typing.Dict) -> typing.Optional[float]:
+def _content_longitude(content: typing.Dict) -> Optional[float]:
     return content.get("longitude", None)
 
 
-def geo_to_h3(content: typing.Dict) -> typing.Optional[str]:
+def geo_to_h3(content: typing.Dict) -> Optional[str]:
     return isamples_metadata.Transformer.geo_to_h3(_content_latitude(content), _content_longitude(content))

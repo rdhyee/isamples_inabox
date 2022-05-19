@@ -1,4 +1,6 @@
 import typing
+from typing import Optional
+
 import requests
 
 from isb_web import isb_solr_query
@@ -31,15 +33,13 @@ class UrlSetIterator:
         max_length: int,
         things: typing.List[typing.Dict[typing.AnyStr, typing.AnyStr]],
     ):
-        self._things = things
+        self._things: list = things
         self._thing_index = 0
         self._max_length = max_length
         self.num_urls = 0
         self.sitemap_index = sitemap_index
-        self.last_tstamp_str = None
-        self.last_identifier = None
-
-        self.entries = []
+        self.last_tstamp_str: Optional[str] = None
+        self.last_identifier: Optional[str] = None
 
     def __iter__(self):
         return self
@@ -60,7 +60,7 @@ class UrlSetIterator:
 
     def sitemap_index_entry(self) -> SitemapIndexEntry:
         return SitemapIndexEntry(
-            f"sitemap-{self.sitemap_index}.xml", self.last_tstamp_str
+            f"sitemap-{self.sitemap_index}.xml", self.last_tstamp_str or ""
         )
 
 
@@ -74,13 +74,13 @@ class SitemapIndexIterator:
         status: int = 200,
         offset: int = 0,
     ):
-        self._last_timestamp_str = None
-        self._last_primary_key = 0
+        self._last_timestamp_str: Optional[str] = None
+        self._last_primary_key: Optional[str] = "0"
         self._authority = authority
         self._num_things_per_file = num_things_per_file
         self._status = status
         self._offset = offset
-        self._last_url_set_iterator = None
+        self._last_url_set_iterator: Optional[UrlSetIterator] = None
         self._rsession = requests.session()
         self.num_url_sets = 0
 

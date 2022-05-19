@@ -42,18 +42,6 @@
        run: poetry install --no-interaction --no-root
      - name: Install 
        run: poetry install --no-interaction
-     # In theory this could move to poetry?  
-     # - name: Install flake
-     #   run: |
-     #     python -m pip install --upgrade pip
-     #     pip install flake8
-     #     if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-     # - name: Lint with flake8
-     #   run: |
-     #     # stop the build if there are Python syntax errors or undefined names
-     #     flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-     #     # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-     #     flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
      - name: Test with pytest
        working-directory: ./tests
        run: |
@@ -63,3 +51,8 @@
        run:  |
          source ./.venv/bin/activate
          python -m flake8 --count --max-complexity 10 --ignore E501,W503 --show-source --statistics --exclude ./.venv .
+     - name: Run mypy
+       run: |
+         source ./.venv/bin/activate       
+         pip install mypy
+         mypy --install-types --non-interactive --namespace-packages

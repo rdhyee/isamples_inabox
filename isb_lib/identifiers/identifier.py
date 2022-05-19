@@ -1,6 +1,6 @@
 import datetime
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Any
 
 
 class Identifier(ABC):
@@ -55,8 +55,8 @@ class DataciteIdentifier(Identifier):
             super().__init__(prefix, creators, titles, publisher, publication_year, resource_type)
             self._is_doi = False
 
-    def metadata_dict(self) -> dict:
-        metadata_dict = {}
+    def metadata_dict(self) -> dict[Any, Any]:
+        metadata_dict: dict[Any, Any] = {}
         if self._is_doi:
             metadata_dict["doi"] = self._identifier
         else:

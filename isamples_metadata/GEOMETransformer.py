@@ -1,6 +1,9 @@
+from __future__ import annotations
 import datetime
 import logging
 import typing
+from typing import Optional
+
 import isamples_metadata
 from isamples_metadata.Transformer import (
     Transformer,
@@ -10,20 +13,11 @@ TISSUE_ENTITY = "Tissue"
 JSON_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 
 
-# Forward declarations appear to be the cleanest way to manage the circular dependency between these two classes
-class GEOMETransformer(Transformer):
-    pass
-
-
-class GEOMEChildTransformer(GEOMETransformer):
-    pass
-
-
 class GEOMETransformer(Transformer):
     """Concrete transformer class for going from a GEOME record to an iSamples record"""
 
     def __init__(
-        self, source_record: typing.Dict, last_updated_time: datetime.datetime
+        self, source_record: typing.Dict, last_updated_time: Optional[datetime.datetime]
     ):
         super().__init__(source_record)
         self._child_transformers = []
@@ -48,13 +42,13 @@ class GEOMETransformer(Transformer):
         # The sub-record for the parent record
         return self.source_record["parent"]
 
-    def _id_minus_prefix(self) -> typing.AnyStr:
+    def _id_minus_prefix(self) -> str:
         return self._source_record_main_record()["bcid"].removeprefix(self.ARK_PREFIX)
 
-    def id_string(self) -> typing.AnyStr:
+    def id_string(self) -> str:
         return f"metadata/{self._id_minus_prefix()}"
 
-    def sample_label(self) -> typing.AnyStr:
+    def sample_label(self) -> str:
         main_record = self._source_record_main_record()
         label_components = []
         scientific_name = main_record.get("scientificName")
@@ -65,11 +59,11 @@ class GEOMETransformer(Transformer):
             label_components.append(sample_id)
         return " ".join(label_components)
 
-    def sample_identifier_string(self) -> typing.AnyStr:
+    def sample_identifier_string(self) -> str:
         return self._source_record_main_record()["bcid"]
 
-    def sample_description(self) -> typing.AnyStr:
-        description_pieces = []
+    def sample_description(self) -> str:
+        description_pieces: list[str] = []
         main_record = self._source_record_main_record()
 
         self._transform_key_to_label(
@@ -135,22 +129,22 @@ class GEOMETransformer(Transformer):
 
         return Transformer.DESCRIPTION_SEPARATOR.join(description_pieces)
 
-    def has_context_categories(self) -> typing.List[typing.AnyStr]:
+    def has_context_categories(self) -> typing.List[str]:
         # TODO: implement
         # ["[infer from locality and taxon names]"]
         return []
 
-    def has_material_categories(self) -> typing.List[typing.AnyStr]:
+    def has_material_categories(self) -> typing.List[str]:
         # TODO: implement
         # ["'Organic material' unless record/entity, record/basisOfRecord, or record/collectionCode indicate otherwise"]
         return ["Organic material"]
 
-    def has_specimen_categories(self) -> typing.List[typing.AnyStr]:
+    def has_specimen_categories(self) -> typing.List[str]:
         # TODO: implement
         # ["'Whole organism'  unless record/entity, record/basisOfRecord, or record/collectionCode indicate otherwise"]
         return ["Whole organism"]
 
-    def informal_classification(self) -> typing.List[typing.AnyStr]:
+    def informal_classification(self) -> typing.List[str]:
         main_record = self._source_record_main_record()
         scientific_name = main_record.get("scientificName")
         if scientific_name is None:
@@ -165,7 +159,7 @@ class GEOMETransformer(Transformer):
         else:
             return [scientific_name]
 
-    def _place_names(self, only_general: bool) -> typing.List[typing.AnyStr]:
+    def _place_names(self, only_general: bool) -> typing.List[str]:
         parent_record = self._source_record_parent_record()
         if parent_record is not None:
             place_names = []
@@ -187,7 +181,7 @@ class GEOMETransformer(Transformer):
             return place_names
         return []
 
-    def keywords(self) -> typing.List[typing.AnyStr]:
+    def keywords(self) -> typing.List[str]:
         # "JSON array of values from record/ -order, -phylum, -family, -class, and parent/ -country, -county,
         # -stateProvince, -continentOcean... (place names more general that the locality or most specific
         # rank place name) "
@@ -210,13 +204,13 @@ class GEOMETransformer(Transformer):
             keywords.append(classname)
         return keywords
 
-    def produced_by_id_string(self) -> typing.AnyStr:
+    def produced_by_id_string(self) -> str:
         parent_record = self._source_record_parent_record()
         if parent_record is not None:
             return parent_record["bcid"]
         return Transformer.NOT_PROVIDED
 
-    def produced_by_label(self) -> typing.AnyStr:
+    def produced_by_label(self) -> str:
         parent_record = self._source_record_parent_record()
         if parent_record is not None:
             label_pieces = []
@@ -229,7 +223,7 @@ class GEOMETransformer(Transformer):
             return " ".join(label_pieces)
         return Transformer.NOT_PROVIDED
 
-    def produced_by_description(self) -> typing.AnyStr:
+    def produced_by_description(self) -> str:
         parent_record = self._source_record_parent_record()
         if parent_record is not None:
             description_pieces = []
@@ -252,7 +246,7 @@ class GEOMETransformer(Transformer):
             return Transformer.DESCRIPTION_SEPARATOR.join(description_pieces)
         return Transformer.NOT_PROVIDED
 
-    def produced_by_feature_of_interest(self) -> typing.AnyStr:
+    def produced_by_feature_of_interest(self) -> str:
         # TODO: implement
         # "[infer from specimen category, locality; need to so some unique values analysis]"
         parent_record = self._source_record_parent_record()
@@ -262,7 +256,7 @@ class GEOMETransformer(Transformer):
                 return f"microhabitat: {microhabitat}"
         return Transformer.NOT_PROVIDED
 
-    def produced_by_responsibilities(self) -> typing.List[typing.AnyStr]:
+    def produced_by_responsibilities(self) -> typing.List[str]:
         parent_record = self._source_record_parent_record()
         if parent_record is not None:
             responsibilities_pieces = []
@@ -296,17 +290,17 @@ class GEOMETransformer(Transformer):
             return responsibilities_pieces
         return []
 
-    def produced_by_result_time(self) -> typing.AnyStr:
+    def produced_by_result_time(self) -> str:
         parent_record = self._source_record_parent_record()
         if parent_record is not None:
             return self._formatted_date(
-                parent_record.get("yearCollected"),
-                parent_record.get("monthCollected"),
-                parent_record.get("dayCollected"),
+                parent_record.get("yearCollected", ""),
+                parent_record.get("monthCollected", ""),
+                parent_record.get("dayCollected", ""),
             )
         return Transformer.NOT_PROVIDED
 
-    def sampling_site_description(self) -> typing.AnyStr:
+    def sampling_site_description(self) -> str:
         parent_record = self._source_record_parent_record()
         if parent_record is not None:
             habitat = parent_record.get("habitat")
@@ -318,13 +312,13 @@ class GEOMETransformer(Transformer):
                     return f"Depth to bottom {depth_to_bottom} m"
         return Transformer.NOT_PROVIDED
 
-    def sampling_site_label(self) -> typing.AnyStr:
+    def sampling_site_label(self) -> str:
         parent_record = self._source_record_parent_record()
         if parent_record is not None:
             return parent_record.get("locality", Transformer.NOT_PROVIDED)
         return Transformer.NOT_PROVIDED
 
-    def sampling_site_elevation(self) -> typing.AnyStr:
+    def sampling_site_elevation(self) -> str:
         # Note that this is subject to revision based on the outcome of
         # https://github.com/isamplesorg/metadata/issues/35
         parent_record = self._source_record_parent_record()
@@ -343,22 +337,22 @@ class GEOMETransformer(Transformer):
     def sampling_site_place_names(self) -> typing.List:
         return self._place_names(False)
 
-    def sample_registrant(self) -> typing.AnyStr:
+    def sample_registrant(self) -> str:
         return self._source_record_main_record().get(
             "sampleEnteredBy", Transformer.NOT_PROVIDED
         )
 
-    def sample_sampling_purpose(self) -> typing.AnyStr:
+    def sample_sampling_purpose(self) -> str:
         # TODO: implement
         return Transformer.NOT_PROVIDED
 
     # region Curation
 
-    def curation_label(self) -> typing.AnyStr:
+    def curation_label(self) -> str:
         return Transformer.NOT_PROVIDED
 
-    def curation_description(self) -> typing.AnyStr:
-        curation_description_pieces = []
+    def curation_description(self) -> str:
+        curation_description_pieces: list[str] = []
         main_record = self._source_record_main_record()
         self._transform_key_to_label(
             "fixative", main_record, curation_description_pieces
@@ -391,15 +385,15 @@ class GEOMETransformer(Transformer):
             return "; ".join(curation_description_pieces)
         return Transformer.NOT_PROVIDED
 
-    def curation_access_constraints(self) -> typing.AnyStr:
+    def curation_access_constraints(self) -> str:
         return Transformer.NOT_PROVIDED
 
-    def curation_location(self) -> typing.AnyStr:
+    def curation_location(self) -> str:
         return self._source_record_main_record().get(
             "institutionCode", Transformer.NOT_PROVIDED
         )
 
-    def curation_responsibility(self) -> typing.AnyStr:
+    def curation_responsibility(self) -> str:
         if "institutionCode" in self._source_record_main_record():
             institution_code = self._source_record_main_record()["institutionCode"]
             return f"curator:{institution_code}"
@@ -429,7 +423,7 @@ class GEOMETransformer(Transformer):
     def child_transformers(self) -> typing.List[GEOMEChildTransformer]:
         return self._child_transformers
 
-    def last_updated_time(self) -> typing.Optional[typing.AnyStr]:
+    def last_updated_time(self) -> typing.Optional[str]:
         if self._last_updated_time is not None:
             return self._last_updated_time.strftime(JSON_TIME_FORMAT)
         else:
@@ -443,53 +437,53 @@ class GEOMEChildTransformer(GEOMETransformer):
         self,
         source_record: typing.Dict,
         child_record: typing.Dict,
-        last_updated_time: datetime.datetime,
+        last_updated_time: Optional[datetime.datetime],
     ):
         self.source_record = source_record
         self.child_record = child_record
         self._last_updated_time = last_updated_time
 
-    def _id_minus_prefix(self) -> typing.AnyStr:
+    def _id_minus_prefix(self) -> str:
         return self.child_record["bcid"].removeprefix(self.ARK_PREFIX)
 
-    def sample_label(self) -> typing.AnyStr:
+    def sample_label(self) -> str:
         return self.child_record["tissueID"]
 
-    def sample_identifier_string(self) -> typing.AnyStr:
+    def sample_identifier_string(self) -> str:
         return self.child_record["bcid"]
 
-    def sample_description(self) -> typing.AnyStr:
+    def sample_description(self) -> str:
         # TODO
         return ""
 
-    def has_specimen_categories(self) -> typing.List[typing.AnyStr]:
+    def has_specimen_categories(self) -> typing.List[str]:
         return ["Organism part"]
 
-    def produced_by_label(self) -> typing.AnyStr:
+    def produced_by_label(self) -> str:
         return f"tissue subsample from {self._source_record_main_record()['materialSampleID']}"
 
-    def produced_by_description(self) -> typing.AnyStr:
-        description_pieces = []
+    def produced_by_description(self) -> str:
+        description_pieces: list[str] = []
         self._transform_key_to_label(
             "tissueCatalogNumber", self.child_record, description_pieces
         )
         return Transformer.DESCRIPTION_SEPARATOR.join(description_pieces)
 
-    def produced_by_feature_of_interest(self) -> typing.AnyStr:
+    def produced_by_feature_of_interest(self) -> str:
         return ""
 
-    def produced_by_responsibilities(self) -> typing.List[typing.AnyStr]:
+    def produced_by_responsibilities(self) -> typing.List[str]:
         # TODO: who did the tissue extract, if available -- where does this live, if anywhere?
         return []
 
-    def produced_by_result_time(self) -> typing.AnyStr:
+    def produced_by_result_time(self) -> str:
         # TODO: time the tissue extract was done, if available -- where does this live?
         return ""
 
-    def sample_sampling_purpose(self) -> typing.AnyStr:
+    def sample_sampling_purpose(self) -> str:
         return "genomic analysis"
 
-    def curation_location(self) -> typing.AnyStr:
+    def curation_location(self) -> str:
         curation_pieces = []
         tissue_well = self.child_record.get("tissueWell")
         if tissue_well is not None:
@@ -505,7 +499,7 @@ class GEOMEChildTransformer(GEOMETransformer):
         parent_dict = {}
         main_record = self._source_record_main_record()
         parent_dict["label"] = f"parent sample {main_record.get('materialSampleID')}"
-        parent_dict["target"] = main_record.get("bcid")
+        parent_dict["target"] = main_record.get("bcid", "")
         parent_dict["relationshipType"] = "derived_from"
         return [parent_dict]
 
@@ -514,7 +508,7 @@ class GEOMEChildTransformer(GEOMETransformer):
 # used for lookup
 def geome_transformer_for_identifier(
     identifier: str, source_record: typing.Dict
-) -> GEOMETransformer:
+) -> Optional[GEOMETransformer]:
     # Two possibilities:
     # (1) It's the sample, so instantiate the main one
     # (2) It's one of the children, so grab the child transformer
@@ -534,7 +528,7 @@ def geome_transformer_for_identifier(
     return None
 
 
-def _geo_location_float_value(content: typing.Dict, key: typing.AnyStr) -> typing.Optional[float]:
+def _geo_location_float_value(content: typing.Dict, key: str) -> typing.Optional[float]:
     parent_record = content.get("parent")
     if parent_record is not None:
         geo_location_str = parent_record.get(key)
