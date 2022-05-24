@@ -35,14 +35,14 @@ authority_ids = [
 
 
 def _get_things_with_authority(
-    rsession: requests.sessions,
-    hostname: typing.AnyStr,
+    rsession: requests.Session,
+    hostname: str,
     headers: typing.Dict,
-    authority_id: typing.AnyStr,
+    authority_id: str,
     limit: int,
 ) -> typing.List:
     url = f"{hostname}thing/"
-    params = {
+    params: dict = {
         "limit": limit,
         "authority": authority_id,
         "status": 200,
@@ -55,10 +55,10 @@ def _get_things_with_authority(
 
 @pytest.mark.parametrize("authority_id", authority_ids)
 def test_thing_list(
-    rsession: requests.sessions,
-    hostname: typing.AnyStr,
+    rsession: requests.Session,
+    hostname: str,
     headers: typing.Dict,
-    authority_id: typing.AnyStr,
+    authority_id: str,
 ):
     things = _get_things_with_authority(rsession, hostname, headers, authority_id, 10)
     for thing in things:
@@ -74,11 +74,11 @@ formats = ["original", "core"]
 @pytest.mark.parametrize("authority_id", authority_ids)
 @pytest.mark.parametrize("format", formats)
 def test_get_thing(
-    rsession: requests.sessions,
-    hostname: typing.AnyStr,
+    rsession: requests.Session,
+    hostname: str,
     headers: typing.Dict,
-    authority_id: typing.AnyStr,
-    format: typing.AnyStr,
+    authority_id: str,
+    format: str,
 ):
     first_thing = _get_things_with_authority(
         rsession, hostname, headers, authority_id, 1
@@ -92,8 +92,8 @@ def test_get_thing(
 
 
 def test_things_geojson_heatmap(
-    rsession: requests.sessions,
-    hostname: typing.AnyStr,
+    rsession: requests.Session,
+    hostname: str,
     headers: typing.Dict,
 ):
     params = {"min_lat": -1, "max_lat": 1, "min_lon": -1, "max_lon": 1}
@@ -105,8 +105,8 @@ def test_things_geojson_heatmap(
 
 
 def test_things_leaflet_heatmap(
-    rsession: requests.sessions,
-    hostname: typing.AnyStr,
+    rsession: requests.Session,
+    hostname: str,
     headers: typing.Dict,
 ):
     params = {"min_lat": -1, "max_lat": 1, "min_lon": -1, "max_lon": 1}

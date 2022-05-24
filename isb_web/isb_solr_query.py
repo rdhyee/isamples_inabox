@@ -1,4 +1,6 @@
 import typing
+from typing import Tuple
+
 import requests
 import geojson
 import fastapi
@@ -80,10 +82,10 @@ def get_solr_url(path_component: str):
 
 
 def _get_heatmap(
-    q: typing.AnyStr,
+    q: str,
     bb: typing.Dict,
     dist_err_pct: float,
-    fq: typing.AnyStr = "",
+    fq: str = "",
     grid_level=None,
 ) -> typing.Dict:
     # TODO: dealing with the antimeridian ("dateline") in the Solr request.
@@ -97,7 +99,7 @@ def _get_heatmap(
     bb[MAX_LON] = clip_float(bb[MAX_LON], -180.0, 180.0)
     # logging.warning(bb)
     headers = {"Accept": "application/json"}
-    params = {
+    params: dict = {
         "q": q,
         "rows": 0,
         "wt": "json",
@@ -563,7 +565,7 @@ def solr_records_for_stac_collection(
     authority_id: typing.Optional[str] = None,
     start_index: int = 0,
     batch_size: int = 1000,
-) -> (typing.List[typing.Dict], bool):
+) -> Tuple[list[dict], bool]:
     """
 
     Args:
@@ -612,7 +614,7 @@ class ISBCoreSolrRecordIterator:
         self.batch_size = batch_size
         self.offset = offset
         self.sort = sort
-        self._current_batch = []
+        self._current_batch: list[dict] = []
         self._current_batch_index = -1
 
     def __iter__(self):

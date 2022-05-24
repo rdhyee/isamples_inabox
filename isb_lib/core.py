@@ -59,7 +59,7 @@ LOG_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 LOG_FORMAT = "%(asctime)s %(name)s:%(levelname)s: %(message)s"
 
 
-def initialize_logging(verbosity: typing.AnyStr):
+def initialize_logging(verbosity: str):
     logging.basicConfig(
         level=LOG_LEVELS.get(verbosity, logging.INFO),
         format=LOG_FORMAT,
@@ -109,14 +109,15 @@ def relationAsSolrDoc(
     return doc
 
 
-def validate_resolved_content(authority_id: typing.AnyStr, thing: Thing):
+def validate_resolved_content(authority_id: str, thing: Thing) -> dict:
     if not isinstance(thing.resolved_content, dict):
         raise ValueError("Thing.resolved_content is not an object")
     if not thing.authority_id == authority_id:
         raise ValueError(f"Mismatched authority_id on Thing, expecting {authority_id}, received {thing.authority_id}")
+    return thing.resolved_content
 
 
-def _shouldAddMetadataValueToSolrDoc(metadata: typing.Dict, key: typing.AnyStr) -> bool:
+def _shouldAddMetadataValueToSolrDoc(metadata: typing.Dict, key: str) -> bool:
     shouldAdd = False
     value = metadata.get(key)
     if value is not None:
@@ -304,7 +305,7 @@ def parsed_datetime_from_isamples_format(raw_date_str) -> datetime.datetime:
     return lastmod_date
 
 
-def solr_delete_records(rsession, ids_to_delete: typing.List[typing.AnyStr], url):
+def solr_delete_records(rsession, ids_to_delete: typing.List[str], url):
     L = getLogger()
     headers = {"Content-Type": "application/json"}
     dicts_to_delete = []
@@ -385,7 +386,7 @@ def solrCommit(rsession, url):
 
 
 def solr_max_source_updated_time(
-    url: typing.AnyStr, authority_id: typing.AnyStr, rsession=requests.session()
+    url: str, authority_id: str, rsession=requests.session()
 ) -> typing.Optional[datetime.datetime]:
     headers = {"Content-Type": "application/json"}
     params = {
@@ -407,7 +408,7 @@ def solr_max_source_updated_time(
 
 
 def sesar_fetch_lowercase_igsn_records(
-    url: typing.AnyStr, rows: int, rsession=requests.session()
+    url: str, rows: int, rsession=requests.session()
 ) -> typing.List[typing.Dict]:
     headers = {"Content-Type": "application/json"}
     params = {
@@ -422,7 +423,7 @@ def sesar_fetch_lowercase_igsn_records(
 
 
 def opencontext_fetch_broken_id_records(
-    url: typing.AnyStr, rows: int, rsession=requests.session()
+    url: str, rows: int, rsession=requests.session()
 ) -> typing.List[typing.Dict]:
     headers = {"Content-Type": "application/json"}
     params = {
@@ -552,7 +553,7 @@ class ThingRecordIterator:
     def __init__(
         self,
         session,
-        authority_id: typing.AnyStr,
+        authority_id: str,
         status: int = 200,
         page_size: int = 5000,
         offset: int = 0,
@@ -592,11 +593,11 @@ class ThingRecordIterator:
 class CoreSolrImporter:
     def __init__(
         self,
-        db_url: typing.AnyStr,
-        authority_id: typing.AnyStr,
+        db_url: str,
+        authority_id: str,
         db_batch_size: int,
         solr_batch_size: int,
-        solr_url: typing.AnyStr,
+        solr_url: str,
         offset: int = 0,
         min_time_created: datetime.datetime = None,
     ):
@@ -616,7 +617,7 @@ class CoreSolrImporter:
 
     def run_solr_import(
         self, core_record_function: typing.Callable
-    ) -> typing.Set[typing.AnyStr]:
+    ) -> typing.Set[str]:
         getLogger().info(
             "importing solr records with db batch size: %s, solr batch size: %s",
             self._db_batch_size,

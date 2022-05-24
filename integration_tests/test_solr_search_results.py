@@ -33,9 +33,9 @@ authority_ids = [
 
 
 def _send_solr_query(
-    rsession: requests.sessions, solr_url: str, query: str
+    rsession: requests.Session, solr_url: str, query: str
 ) -> typing.List[typing.Dict]:
-    params = {
+    params: dict = {
         "start": 0,
         "limit": 10,
         "fl": "*",
@@ -58,7 +58,7 @@ def _value_in_search_text(value: str, doc: typing.Dict) -> bool:
 
 @pytest.mark.parametrize("authority_id", authority_ids)
 def test_solr_query_by_source(
-    rsession: requests.sessions, solr_url: str, authority_id: str
+    rsession: requests.Session, solr_url: str, authority_id: str
 ):
     docs = _send_solr_query(rsession, solr_url, authority_id)
     for doc in docs:
@@ -79,7 +79,7 @@ opencontext_projects = [
 
 @pytest.mark.parametrize("project_label", opencontext_projects)
 def test_opencontext_projects(
-    rsession: requests.sessions, solr_url: str, project_label: str
+    rsession: requests.Session, solr_url: str, project_label: str
 ):
     docs = _send_solr_query(rsession, solr_url, project_label)
     for doc in docs:
@@ -99,7 +99,7 @@ geome_search_terms = [
 
 @pytest.mark.parametrize("geome_search_term", geome_search_terms)
 def test_geome_search_terms(
-    rsession: requests.sessions, solr_url: str, geome_search_term: str
+    rsession: requests.Session, solr_url: str, geome_search_term: str
 ):
     docs = _send_solr_query(rsession, solr_url, geome_search_term)
     for doc in docs:
@@ -120,7 +120,7 @@ geographic_search_terms = [
 
 @pytest.mark.parametrize("geographic_search_term", geographic_search_terms)
 def test_geographic_search_terms(
-    rsession: requests.sessions, solr_url: str, geographic_search_term: str
+    rsession: requests.Session, solr_url: str, geographic_search_term: str
 ):
     docs = _send_solr_query(rsession, solr_url, geographic_search_term)
     for doc in docs:

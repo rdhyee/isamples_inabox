@@ -23,7 +23,7 @@ class ThingListEntry(SQLModel):
     tcreated: typing.Optional[datetime.datetime]
     resolved_status: int
     resolved_url: typing.Optional[str]
-    resolve_elapsed: float = None
+    resolve_elapsed: typing.Optional[float] = None
 
     class Config:
         orm_mode = True
@@ -41,7 +41,7 @@ class ThingType(pydantic.BaseModel):
     count: int
 
     class Config:
-        orm_mode: True
+        orm_mode = True
 
 
 class ThingListmetaStatus(pydantic.BaseModel):
@@ -49,7 +49,7 @@ class ThingListmetaStatus(pydantic.BaseModel):
     count: int
 
     class Config:
-        orm_mode: True
+        orm_mode = True
 
 
 class ThingListmetaAuth(pydantic.BaseModel):
@@ -57,7 +57,7 @@ class ThingListmetaAuth(pydantic.BaseModel):
     count: int
 
     class Config:
-        orm_mode: True
+        orm_mode = True
 
 
 class ThingListMeta(pydantic.BaseModel):
@@ -65,7 +65,7 @@ class ThingListMeta(pydantic.BaseModel):
     authority: typing.List[ThingListmetaAuth]
 
     class Config:
-        orm_mode: True
+        orm_mode = True
 
 
 class RelationListMeta(pydantic.BaseModel):

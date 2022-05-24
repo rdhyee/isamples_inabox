@@ -1,6 +1,8 @@
 import datetime
 import json
 import csv
+from typing import Optional
+
 import pytest
 import typing
 import re
@@ -35,7 +37,7 @@ def _run_transformer(
 
 
 def _assert_transformed_dictionary(
-    isamples_path: typing.AnyStr, transformed_to_isamples_record: typing.Dict
+    isamples_path: str, transformed_to_isamples_record: typing.Dict
 ):
     with open(isamples_path) as isamples_file:
         assert transformed_to_isamples_record.get("@id") is not None
@@ -173,7 +175,7 @@ def test_open_context_dicts_equal(open_context_source_path, isamples_path, times
     )
 
 
-def _get_record_with_id(record_id: typing.AnyStr) -> typing.Dict:
+def _get_record_with_id(record_id: str) -> typing.Dict:
     raw_csv = "./test_data/Smithsonian/DwC raw/DwC_occurrence_10.csv"
     with open(raw_csv, newline="") as csv_file:
         csv_reader = csv.reader(csv_file, delimiter="\t")
@@ -183,14 +185,14 @@ def _get_record_with_id(record_id: typing.AnyStr) -> typing.Dict:
                 column_headers = current_values
                 continue
             # Otherwise iterate over the keys and make source JSON
-            current_record = {}
+            current_record: Optional[dict] = {}
             for index, key in enumerate(column_headers):
                 if key == "id":
                     if record_id not in current_values[index]:
                         current_record = None
                         break
                 if len(key) > 0:
-                    current_record[key] = current_values[index]
+                    current_record[key] = current_values[index]  # type: ignore
             if current_record is not None:
                 return current_record
         print("Error, didn't find record with id: %s", record_id)

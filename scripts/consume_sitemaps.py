@@ -155,13 +155,13 @@ def construct_thing_futures(
     thing_futures: list,
     sitemap_file_iterator: Iterator,
     sitemap_file_url: str,
-    rsession: requests.sessions,
+    rsession: requests.Session,
     thing_executor: ThreadPoolExecutor,
     batch_size: int,
 ) -> bool:
     constructed_all_futures_for_sitemap_file = False
     while not constructed_all_futures_for_sitemap_file:
-        thing_ids = set()
+        thing_ids: set = set()
         things_url = None
         while len(thing_ids) < batch_size:
             try:
@@ -185,7 +185,7 @@ def construct_thing_futures(
             except StopIteration:
                 constructed_all_futures_for_sitemap_file = True
                 break
-        if len(thing_ids) > 0:
+        if len(thing_ids) > 0 and things_url is not None:
             things_fetcher = ThingsFetcher(
                 things_url, sitemap_file_url, thing_ids, rsession
             )
@@ -225,7 +225,7 @@ def fetch_sitemap_files(
         )
         sitemap_file_fetcher.fetch_sitemap_file()
         sitemap_file_iterator = sitemap_file_fetcher.url_iterator()
-        thing_futures = []
+        thing_futures: list = []
         # max_workers is 1 so that we may execute one request at a time in order to avoid overwhelming the server
         # We still gain benefits as the next things request executes while the local processing is occurring
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as thing_executor:

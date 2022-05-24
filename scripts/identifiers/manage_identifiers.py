@@ -1,9 +1,9 @@
 import datetime
 from io import BufferedReader
-from typing import Dict
 
 import click
 import click_config_file
+from click import Context
 
 import isb_lib.core
 import isb_lib.identifiers.datacite as datacite
@@ -49,7 +49,7 @@ def main(ctx, db_url):
 @click.password_option(hide_input=True)
 @click.pass_context
 def create_draft_dois(
-    ctx: Dict, num_dois: int, prefix: str, doi: str, igsn: bool, username: str, password: str
+    ctx: Context, num_dois: int, prefix: str, doi: str, igsn: bool, username: str, password: str
 ):
     # If the doi is specified, then num_identifiers can be only 1
     if doi is not None:
@@ -83,7 +83,7 @@ def create_draft_dois(
 )
 @click.password_option(hide_input=True)
 @click.pass_context
-def create_doi(ctx: Dict, file: BufferedReader, prefix: str, doi: str, igsn: bool, username: str, password: str):
+def create_doi(ctx: Context, file: BufferedReader, prefix: str, doi: str, igsn: bool, username: str, password: str):
     session = SQLModelDAO(ctx.obj["db_url"]).get_session()
     file_contents = file.read()
     file_contents_dict = json.loads(file_contents)
@@ -105,7 +105,7 @@ def create_doi(ctx: Dict, file: BufferedReader, prefix: str, doi: str, igsn: boo
         # TODO: pipe in authority -- from where?
         new_thing.authority_id = "AUTHORITY"
         new_thing.resolved_url = datacite.dois_url()
-        new_thing.resolved_content = file_contents
+        new_thing.resolved_content = file_contents_dict
         new_thing.tcreated = datetime.datetime.now()
         save_thing(session, new_thing)
         logging.info("Sucessfully saved thing with id %s", result)

@@ -1,6 +1,5 @@
 import json
 import datetime
-import typing
 import re
 
 
@@ -32,5 +31,5 @@ def jsonDumps(obj):
     return json.dumps(obj, indent=2, default=_jsonConverter, sort_keys=True)
 
 
-def normalized_id(raw_id: typing.AnyStr) -> typing.AnyStr:
+def normalized_id(raw_id: str) -> str:
     return n2t_regex.sub("", raw_id)

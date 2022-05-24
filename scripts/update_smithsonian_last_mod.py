@@ -7,7 +7,7 @@ SMITHSONIAN_TIMESTAMP = "2021-07-23T14:08:46Z"
 
 
 def smithsonian_fetch_solr_records(
-    url: typing.AnyStr = "http://localhost:8983/solr/isb_core_records/", rows: int = 50000, rsession=requests.session()
+    url: str = "http://localhost:8983/solr/isb_core_records/", rows: int = 50000, rsession=requests.session()
 ) -> typing.List[typing.Dict]:
     headers = {"Content-Type": "application/json"}
     params = {

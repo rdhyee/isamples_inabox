@@ -5,6 +5,8 @@ import logging
 import functools
 import datetime
 import typing
+from typing import Optional
+
 import dateparser
 
 import isamples_metadata.GEOMETransformer
@@ -321,7 +323,7 @@ def reparseThing(thing):
     return thing
 
 
-def loadThing(identifier: str, t_created: datetime.datetime, existing_thing: Thing) -> Thing:
+def loadThing(identifier: str, t_created: datetime.datetime, existing_thing: Optional[Thing]) -> Thing:
     L = getLogger()
     L.info("loadThing: %s", identifier)
     response = getGEOMEItem_json(identifier, verify=True)
@@ -363,10 +365,11 @@ def reloadThing(thing):
 def reparseAsCoreRecord(thing: Thing) -> typing.List[typing.Dict]:
     _validateResolvedContent(thing)
     core_records = []
-    transformer = isamples_metadata.GEOMETransformer.GEOMETransformer(thing.resolved_content, thing.tcreated)
-    parent_core_record = isb_lib.core.coreRecordAsSolrDoc(transformer)
-    core_records.append(parent_core_record)
-    for child_transfomer in transformer.child_transformers:
-        child_core_record = isb_lib.core.coreRecordAsSolrDoc(child_transfomer)
-        core_records.append(child_core_record)
+    if thing.resolved_content is not None:
+        transformer = isamples_metadata.GEOMETransformer.GEOMETransformer(thing.resolved_content, thing.tcreated)
+        parent_core_record = isb_lib.core.coreRecordAsSolrDoc(transformer)
+        core_records.append(parent_core_record)
+        for child_transfomer in transformer.child_transformers:
+            child_core_record = isb_lib.core.coreRecordAsSolrDoc(child_transfomer)
+            core_records.append(child_core_record)
     return core_records

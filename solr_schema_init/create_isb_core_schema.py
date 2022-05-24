@@ -72,24 +72,24 @@ def createCopyField(source, dest):
 def replaceFieldType(field_type_dict: typing.Dict):
     headers = {"Content-Type": MEDIA_JSON}
     data = {"replace-field-type": field_type_dict}
-    data = json.dumps(data).encode("utf-8")
-    res = requests.post(f"{SOLR_API}schema", headers=headers, data=data)
+    encoded_data = json.dumps(data).encode("utf-8")
+    res = requests.post(f"{SOLR_API}schema", headers=headers, data=encoded_data)
     pj(res.json())
 
 
 def addFieldType(field_type_dict: typing.Dict):
     headers = {"Content-Type": MEDIA_JSON}
     data = {"add-field-type": field_type_dict}
-    data = json.dumps(data).encode("utf-8")
-    res = requests.post(f"{SOLR_API}schema", headers=headers, data=data)
+    encoded_data = json.dumps(data).encode("utf-8")
+    res = requests.post(f"{SOLR_API}schema", headers=headers, data=encoded_data)
     pj(res.json())
 
 
 def addDynamicField(dynamic_field_dict: typing.Dict):
     headers = {"Content-Type": MEDIA_JSON}
     data = {"add-dynamic-field": dynamic_field_dict}
-    data = json.dumps(data).encode("utf-8")
-    res = requests.post(f"{SOLR_API}schema", headers=headers, data=data)
+    encoded_data = json.dumps(data).encode("utf-8")
+    res = requests.post(f"{SOLR_API}schema", headers=headers, data=encoded_data)
     pj(res.json())
 
 

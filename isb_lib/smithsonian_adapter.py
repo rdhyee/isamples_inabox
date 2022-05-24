@@ -1,5 +1,6 @@
 import typing
 import datetime
+from typing import Optional
 
 import isamples_metadata.SmithsonianTransformer
 
@@ -21,7 +22,7 @@ class SmithsonianItem(object):
 
     def as_thing(
         self,
-        t_created: datetime.datetime,
+        t_created: Optional[datetime.datetime],
         status: int,
         source_file_path: str,
         t_resolved: datetime.datetime,
@@ -50,7 +51,7 @@ class SmithsonianItem(object):
 
 
 def load_thing(
-    thing_dict: typing.Dict, t_resolved: datetime.datetime, file_path: typing.AnyStr
+    thing_dict: typing.Dict, t_resolved: datetime.datetime, file_path: str
 ) -> Thing:
     """
     Load a thing from its source.
@@ -93,13 +94,16 @@ def _validate_resolved_content(thing: Thing):
 def reparse_as_core_record(thing: Thing) -> typing.List[typing.Dict]:
     _validate_resolved_content(thing)
     try:
-        transformer = isamples_metadata.SmithsonianTransformer.SmithsonianTransformer(
-            thing.resolved_content
-        )
-        solr_doc = isb_lib.core.coreRecordAsSolrDoc(transformer)
-        # This isn't present in Smithsonian data.  Fall back to the value on Thing
-        solr_doc["sourceUpdatedTime"] = isb_lib.core.datetimeToSolrStr(thing.tstamp)
-        return [solr_doc]
+        if thing.resolved_content is not None:
+            transformer = isamples_metadata.SmithsonianTransformer.SmithsonianTransformer(
+                thing.resolved_content
+            )
+            solr_doc = isb_lib.core.coreRecordAsSolrDoc(transformer)
+            # This isn't present in Smithsonian data.  Fall back to the value on Thing
+            solr_doc["sourceUpdatedTime"] = isb_lib.core.datetimeToSolrStr(thing.tstamp)
+            return [solr_doc]
+        else:
+            return []
     except Exception:
         logging.fatal(
             "Failed trying to run transformer on %s", str(thing.resolved_content)

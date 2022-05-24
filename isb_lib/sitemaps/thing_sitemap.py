@@ -31,7 +31,7 @@ class UrlSetIterator:
         self,
         sitemap_index: int,
         max_length: int,
-        things: typing.List[typing.Dict[typing.AnyStr, typing.AnyStr]],
+        things: typing.List[typing.Dict[str, str]],
     ):
         self._things: list = things
         self._thing_index = 0

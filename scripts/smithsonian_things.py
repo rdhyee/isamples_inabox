@@ -74,11 +74,15 @@ def process_keys(column_headers, current_record, current_values, start_from):
 
 def thing_dict_for_db(resolved_content: typing.Dict, file_path: str, thing_id: str, primary_keys_by_id: typing.Dict):
     try:
-        t_created = datetime.datetime(
-            year=int(resolved_content.get("year")),
-            month=int(resolved_content.get("month")),
-            day=int(resolved_content.get("day")),
-        )
+        year = resolved_content.get("year")
+        month = resolved_content.get("month")
+        day = resolved_content.get("day")
+        if year is not None and month is not None and day is not None:
+            t_created = datetime.datetime(
+                year=int(year),
+                month=int(month),
+                day=int(day),
+            )
     except Exception:
         # In many cases, these don't seem to be populated.  There's nothing we can do if they aren't there, so just
         # leave it as None.

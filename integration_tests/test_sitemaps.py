@@ -25,7 +25,7 @@ def _assert_date_tag_text(date_tag: _Element):
     assert last_mod_date is not None
 
 
-def test_sitemap(rsession: requests.sessions, sitemap_index_url: str):
+def test_sitemap(rsession: requests.Session, sitemap_index_url: str):
     """
     General approach is as follows:
     (1) Hit the sitemap-index.xml, and choose one of the random sitemaps inside

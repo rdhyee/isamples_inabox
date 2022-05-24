@@ -4,6 +4,8 @@
 import logging
 import typing
 import datetime
+from typing import Optional
+
 import requests
 import sickle.oaiexceptions
 import sickle.utils
@@ -156,25 +158,32 @@ def _validateResolvedContent(thing: Thing):
 
 def reparseRelations(thing: Thing, as_solr: bool = False):
     _validateResolvedContent(thing)
-    item = SESARItem(thing.id, thing.resolved_content)
-    if as_solr:
-        return item.solrRelations()
-    return item.asRelations()
+    if thing.id is not None and thing.resolved_content is not None:
+        item = SESARItem(thing.id, thing.resolved_content)
+        if as_solr:
+            return item.solrRelations()
+        return item.asRelations()  # type: ignore
+    else:
+        return None
 
 
 def reparseThing(thing: Thing) -> Thing:
     """Reparse the resolved_content"""
     _validateResolvedContent(thing)
-    item = SESARItem(thing.resolved_content)
-    thing.item_type = item.getItemType()
-    thing.tstamp = igsn_lib.time.dtnow()
+    if thing.id is not None and thing.resolved_content is not None:
+        item = SESARItem(thing.id, thing.resolved_content)
+        thing.item_type = item.getItemType()
+        thing.tstamp = igsn_lib.time.dtnow()
     return thing
 
 
 def reparseAsCoreRecord(thing: Thing) -> typing.List[typing.Dict]:
     _validateResolvedContent(thing)
-    transformer = isamples_metadata.SESARTransformer.SESARTransformer(thing.resolved_content)
-    return [isb_lib.core.coreRecordAsSolrDoc(transformer)]
+    if thing.resolved_content is not None:
+        transformer = isamples_metadata.SESARTransformer.SESARTransformer(thing.resolved_content)
+        return [isb_lib.core.coreRecordAsSolrDoc(transformer)]
+    else:
+        return []
 
 
 def _sesar_last_updated(dict: typing.Dict) -> typing.Optional[datetime.datetime]:
@@ -189,7 +198,7 @@ def _sesar_last_updated(dict: typing.Dict) -> typing.Optional[datetime.datetime]
 
 
 def loadThing(
-        identifier: str, t_created: datetime.datetime, existing_thing: Thing
+        identifier: str, t_created: datetime.datetime, existing_thing: Optional[Thing]
 ) -> Thing:
     """
     Load a thing from its source.
@@ -219,9 +228,10 @@ def loadThing(
         L.warning(e)
     # Try and parse out the creation date from the JSON.  If not present, use the less precise version from
     # the sitemap
-    t_created_from_json = _sesar_last_updated(obj)
-    if t_created_from_json is not None:
-        t_created = t_created_from_json
+    if obj is not None:
+        t_created_from_json = _sesar_last_updated(obj)
+        if t_created_from_json is not None:
+            t_created = t_created_from_json
 
     if existing_thing is None:
         item = SESARItem(identifier, obj)

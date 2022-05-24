@@ -59,7 +59,7 @@ def getRelationsSolr(
     if len(q) == 0:
         q.append("*:*")
     headers = {"Accept": "application/json"}
-    params = {
+    params: dict = {
         "q": " AND ".join(q),
         "wt": "json",
         "rows": limit,

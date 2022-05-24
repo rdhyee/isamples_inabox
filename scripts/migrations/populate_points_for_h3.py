@@ -28,7 +28,7 @@ def main(ctx, db_url, verbosity):
 
 
 def populate_points(session: Session):
-    distinct_h3_select = select(Thing.h3).filter(Thing.h3.isnot(None)).distinct()
+    distinct_h3_select = select(Thing.h3).filter(Thing.h3.isnot(None)).distinct()  # type: ignore
     print("Will select distinct h3 values")
     h3_vals = session.exec(distinct_h3_select).all()
     print("Have distinct h3 values")

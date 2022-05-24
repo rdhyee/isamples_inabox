@@ -43,7 +43,7 @@ def countThings(session):
 
 async def _loadSesarEntries(session, max_count, start_from=None, manual_ids: typing.List[typing.List[str]] = None):  # noqa: C901 -- need to examine computational complexity
     L = getLogger()
-    futures = []
+    futures: list = []
     working = {}
     if manual_ids is not None:
         ids = iter(manual_ids)
