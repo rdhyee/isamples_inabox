@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iSamples JSON Page</title>
+  <link href='https://fonts.googleapis.com/css?family=Open Sans' rel='stylesheet'>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+    integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css"
+    integrity="sha512-hoalWLoI8r4UszCkZ5kL8vayOGVae1oxXe/2A4AO6J9+580uKHDO3JdHb7NzwwzK5xr/Fs0W40kiNHxM9vyTtQ=="
+    crossorigin="" />
+  </link>
+  <script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js"
+    integrity="sha512-BB3hKbKWOc9Ez/TAwyWxNXeoV9c1v6FIeYiBieIWkpLjauysF18NzgR1MBNBXf8/KABdlkX68nAhlwcDFLGPCQ=="
+    crossorigin=""></script>
+  <script type="application/ld+json">{{ thing_json|safe }}</script>
+  <link rel="stylesheet" type="text/css"
+    href="https://cdn.jsdelivr.net/gh/isamplesorg/isamples_webui@b28fd8cdc1ab5e9835d6d31ddc2333ed07884a0e/record-page/src/css/index.css">
+  </link>
+  <script type="module"
+    src="https://cdn.jsdelivr.net/gh/isamplesorg/isamples_webui@b28fd8cdc1ab5e9835d6d31ddc2333ed07884a0e/record-page/src/js/index.js"></script>
+</head>
+
+<body>
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <img src="https://isamplesorg.github.io/assets/isampleslogopetal.png" alt="iSamples Logo Petal" width="100"></img>
+    <span class="navbar-brand ms-2">Internet of Samples: iSamples</span>
+  </nav>
+  <div class="container-fluid p-3">
+    <div class="row">
+      <div class="col-sm-8">
+        <div class="card">
+          <div class="card-header"><b>Description</b></div>
+          <div id='TableView' class="card-body"></div>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="vstack gap-3">
+          <div class="card">
+            <div class="card-header">Citation</div>
+            <div id="citation" class="card-body"></div>
+          </div>
+          <div>
+            <h5>Map Data</h5>
+            <div id="map"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer>
+    <div class="d-flex flex-wrap justify-content-between align-items-center p-4 border-top">
+      <div class="text-center text-muted">© Copyright 2020, iSamples Project.This material is based upon work
+        supported
+        by the National Science Foundation under Grant Numbers <a
+          href="https://nsf.gov/awardsearch/showAward?AWD_ID=2004839">2004839</a>, <a
+          href="https://nsf.gov/awardsearch/showAward?AWD_ID=2004562">2004562</a>, <a
+          href="https://nsf.gov/awardsearch/showAward?AWD_ID=2004642">2004642</a>, and <a
+          href="https://nsf.gov/awardsearch/showAward?AWD_ID=2004815">2004815</a>. Any opinions, findings, and
+        conclusions or recommendations expressed in this material are those of the author(s) and do not
+        necessarily reflect the views of the <a href="https://nsf.gov/">National Science Foundation</a>.</div>
+    </div>
+  </footer>
+</body>
+
+</html>

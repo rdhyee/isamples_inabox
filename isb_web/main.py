@@ -11,6 +11,7 @@ import fastapi.templating
 import fastapi.middleware.cors
 import fastapi.responses
 import accept_types
+import json
 from fastapi.params import Query, Depends
 from pydantic import BaseModel
 from sqlmodel import Session
@@ -18,6 +19,7 @@ from sqlmodel import Session
 import isb_web
 import isamples_metadata.GEOMETransformer
 from isb_lib.core import MEDIA_GEO_JSON, MEDIA_JSON, MEDIA_NQUADS
+from isb_lib.models.thing import Thing
 from isb_web import sqlmodel_database, analytics
 from isb_web.analytics import AnalyticsEvent
 from isb_web import schemas
@@ -250,6 +252,24 @@ async def login():
     print(url)
     return RedirectResponse(url)
 """
+
+
+@app.get("/thingpage/{identifier:path}", include_in_schema=False)
+async def get_thing_page(request: fastapi.Request, identifier: str, session: Session = Depends(get_session)) -> templates.TemplateResponse:
+    # Retrieve record from the database
+    item = sqlmodel_database.get_thing_with_id(session, identifier)
+    if item is None:
+        raise fastapi.HTTPException(
+            status_code=404, detail=f"Thing not found: {identifier}"
+        )
+    content = await thing_resolved_content(identifier, item)
+    content_str = json.dumps(content)
+    return templates.TemplateResponse(
+        "thing.html", {
+            "request": request,
+            "thing_json": content_str
+        }
+    )
 
 
 @app.get(f"/{THING_URL_PATH}", response_model=schemas.ThingListMeta)
@@ -485,29 +505,34 @@ async def get_thing(
     if full or format == isb_format.ISBFormat.FULL:
         return item
     if format == isb_format.ISBFormat.CORE:
-        authority_id = item.authority_id
-        if authority_id == "SESAR":
-            content = SESARTransformer(item.resolved_content).transform()
-        elif authority_id == "GEOME":
-            content = (
-                isamples_metadata.GEOMETransformer.geome_transformer_for_identifier(
-                    identifier, item.resolved_content
-                ).transform()
-            )
-        elif authority_id == "OPENCONTEXT":
-            content = OpenContextTransformer(item.resolved_content).transform()
-        elif authority_id == "SMITHSONIAN":
-            content = SmithsonianTransformer(item.resolved_content).transform()
-        else:
-            raise fastapi.HTTPException(
-                status_code=400,
-                detail=f"Core format not available for authority_id: {authority_id}",
-            )
+        content = await thing_resolved_content(identifier, item)
     else:
         content = item.resolved_content
     return fastapi.responses.JSONResponse(
         content=content, media_type=item.resolved_media_type
     )
+
+
+async def thing_resolved_content(identifier: str, item: Thing) -> dict:
+    authority_id = item.authority_id
+    if authority_id == "SESAR":
+        content = SESARTransformer(item.resolved_content).transform()
+    elif authority_id == "GEOME":
+        content = (
+            isamples_metadata.GEOMETransformer.geome_transformer_for_identifier(
+                identifier, item.resolved_content
+            ).transform()
+        )
+    elif authority_id == "OPENCONTEXT":
+        content = OpenContextTransformer(item.resolved_content).transform()
+    elif authority_id == "SMITHSONIAN":
+        content = SmithsonianTransformer(item.resolved_content).transform()
+    else:
+        raise fastapi.HTTPException(
+            status_code=400,
+            detail=f"Core format not available for authority_id: {authority_id}",
+        )
+    return content
 
 
 @app.get(f"/{STAC_ITEM_URL_PATH}/{{identifier:path}}", response_model=typing.Any)
