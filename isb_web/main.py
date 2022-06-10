@@ -20,6 +20,7 @@ import isb_web
 import isamples_metadata.GEOMETransformer
 from isb_lib.core import MEDIA_GEO_JSON, MEDIA_JSON, MEDIA_NQUADS
 from isb_lib.models.thing import Thing
+from isb_lib.authorization import orcid
 from isb_web import sqlmodel_database, analytics
 from isb_web.analytics import AnalyticsEvent
 from isb_web import schemas
@@ -208,6 +209,30 @@ async def login(request: fastapi.Request):
     # url_for is returning http instead of https, it's a gunicorn issue
     # redirect_url = request.url_for("authorize")
     return await _cli.authorize_redirect(request, OAUTH_REDIRECT_URL, state=state)
+
+
+@app.get("/orcid_token", include_in_schema=False)
+def get_orcid_token(request: fastapi.Request, response: fastapi.Response):
+    """
+    Called by a browser as the redirect URI after successfully authenticating with orcid.  Immediately turns the orcid
+    provided code into an orcid token response, and sets cookies to store the token data.
+
+    Args:
+        request: starlette request instance
+
+    Returns:
+        For now, the raw token payload, though this is likely to change to a ReactJS-backed page of some sort.
+    """
+    code = request.query_params.get("code")
+    token_payload = orcid.exchange_code_for_token(code, requests.session())
+    if token_payload is not None:
+        expires = token_payload.get("expires_in")
+        response.set_cookie(key="access_token", value=token_payload.get("access_token"), expires=expires)
+        response.set_cookie(key="refresh_token", value=token_payload.get("refresh_token"), expires=expires)
+        response.set_cookie(key="orcid", value=token_payload.get("orcid"), expires=expires)
+        return token_payload
+    else:
+        return "Failure"
 
 
 @app.on_event("startup")
