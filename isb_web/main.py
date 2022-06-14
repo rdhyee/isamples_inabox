@@ -5,6 +5,7 @@ import typing
 import re
 import requests
 import fastapi
+from fastapi import HTTPException
 from fastapi.logger import logger as fastapi_logger
 import fastapi.staticfiles
 import fastapi.templating
@@ -19,6 +20,7 @@ from sqlmodel import Session
 import isb_web
 import isamples_metadata.GEOMETransformer
 from isb_lib.core import MEDIA_GEO_JSON, MEDIA_JSON, MEDIA_NQUADS
+from isb_lib.identifiers import datacite
 from isb_lib.models.thing import Thing
 from isb_lib.authorization import orcid
 from isb_web import sqlmodel_database, analytics
@@ -233,6 +235,32 @@ def get_orcid_token(request: fastapi.Request, response: fastapi.Response):
         return token_payload
     else:
         return "Failure"
+
+
+class MintIdentifierParams(BaseModel):
+    token: str
+    orcid_id: str
+    datacite_metadata: dict
+
+
+@app.post("/mint_identifier", include_in_schema=False, response_model=typing.Any)
+def mint_identifier(request: fastapi.Request, params: MintIdentifierParams):
+    """Mints an identifier using the datacite API
+    Args:
+        request: The fastapi request
+        params: Class that contains the credentials and the data to post to datacite
+    Return: The minted identifier
+    """
+    authorized = orcid.authorize_token_for_orcid_id(params.token, params.orcid_id)
+    if not authorized:
+        raise HTTPException(status_code=401, detail="Invalid orcid id or token")
+    post_data = json.dumps(params.datacite_metadata).encode("utf-8")
+    result = datacite.create_doi(requests.session(), post_data, config.Settings().datacite_username,
+                                 config.Settings().datacite_password)
+    if result is not None:
+        return result
+    else:
+        return "Error minting identifier"
 
 
 @app.on_event("startup")

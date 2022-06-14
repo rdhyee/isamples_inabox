@@ -63,14 +63,20 @@ class Settings(BaseSettings):
     # The URL to the datacite API
     datacite_url: str = "https://api.test.datacite.org/"
 
+    # This shouldn't be checked in.  Set by doing export DATACITE_USERNAME=foobar
+    datacite_username: str = ""
+
+    # This shouldn't be checked in.  Set by doing export DATACITE_PASSWORD=foobar
+    datacite_password: str = ""
+
     orcid_hostname: str = "pub.sandbox.orcid.org"
 
     orcid_token_redirect_uri: str = "http://localhost:8000/orcid_token"
 
-    # This shouldn't be checked in.  Set it by doing export export ORCID_CLIENT_ID=foobar
+    # This shouldn't be checked in.  Set it by doing export ORCID_CLIENT_ID=foobar
     orcid_client_id: str = ""
 
-    # This must not ever be checked in.  Set it by doing export export ORCID_CLIENT_SECRET=foobar
+    # This must not ever be checked in.  Set it by doing export ORCID_CLIENT_SECRET=foobar
     orcid_client_secret: str = ""
 
     class Config:

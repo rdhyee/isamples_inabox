@@ -25,10 +25,10 @@ def _dois_auth(password, username):
 
 def _validate_response(response) -> bool:
     if response.status_code < 200 or response.status_code >= 300:
+
         logging.error(
-            "Error requesting new DOI, status code: %s, response %s",
+            "Error requesting new DOI, status code: %s",
             response.status_code,
-            str(response.json()),
         )
         return False
     return True
