@@ -48,6 +48,15 @@ def test_headers():
     assert headers.get("Content-Type") is not None
 
 
+def test_authorization_preserves_bearer():
+    test_token = "foobar"
+    expected_token_value = f"Bearer {test_token}"
+    headers = orcid._orcid_auth_headers(test_token)
+    assert headers.get("Authorization") == expected_token_value
+    headers = orcid._orcid_auth_headers(expected_token_value)
+    assert headers.get("Authorization") == expected_token_value
+
+
 def test_post_body():
     code = "test_code"
     post_body = orcid._orcid_post_body(code)

@@ -24,7 +24,11 @@ def _orcid_auth_url(orcid_id: str) -> str:
 
 
 def _orcid_auth_headers(token: str) -> dict:
-    return {"Content-Type": ORCID_API_CONTENT_TYPE, "Authorization": f"Bearer {token}"}
+    # Be flexible about downstream clients including the Bearer prefix or not
+    bearer_prefix = "Bearer "
+    if not token.startswith(bearer_prefix):
+        token = f"{bearer_prefix}{token}"
+    return {"Content-Type": ORCID_API_CONTENT_TYPE, "Authorization": token}
 
 
 def _orcid_auth_response(

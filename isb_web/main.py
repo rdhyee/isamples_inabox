@@ -238,7 +238,6 @@ def get_orcid_token(request: fastapi.Request, response: fastapi.Response):
 
 
 class MintIdentifierParams(BaseModel):
-    token: str
     orcid_id: str
     datacite_metadata: dict
 
@@ -251,7 +250,10 @@ def mint_identifier(request: fastapi.Request, params: MintIdentifierParams):
         params: Class that contains the credentials and the data to post to datacite
     Return: The minted identifier
     """
-    authorized = orcid.authorize_token_for_orcid_id(params.token, params.orcid_id)
+    token = request.headers.get("Authorization")
+    authorized = False
+    if token is not None and params.orcid_id is not None:
+        authorized = orcid.authorize_token_for_orcid_id(token, params.orcid_id)
     if not authorized:
         raise HTTPException(status_code=401, detail="Invalid orcid id or token")
     post_data = json.dumps(params.datacite_metadata).encode("utf-8")
