@@ -546,4 +546,4 @@ def _content_longitude(content: typing.Dict) -> typing.Optional[float]:
 
 
 def geo_to_h3(content: typing.Dict) -> typing.Optional[str]:
-    return isamples_metadata.Transformer.geo_to_h3(_content_longitude(content), _content_longitude(content))
+    return isamples_metadata.Transformer.geo_to_h3(_content_latitude(content), _content_longitude(content))
