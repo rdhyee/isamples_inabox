@@ -250,6 +250,16 @@ def mint_identifier(request: fastapi.Request, params: MintIdentifierParams):
         params: Class that contains the credentials and the data to post to datacite
     Return: The minted identifier
     """
+    post_data = encode_datacite_post_data(params, request)
+    result = datacite.create_doi(requests.session(), post_data, config.Settings().datacite_username,
+                                 config.Settings().datacite_password)
+    if result is not None:
+        return result
+    else:
+        return "Error minting identifier"
+
+
+def encode_datacite_post_data(params, request):
     token = request.headers.get("Authorization")
     authorized = False
     if token is not None and params.orcid_id is not None:
@@ -257,12 +267,26 @@ def mint_identifier(request: fastapi.Request, params: MintIdentifierParams):
     if not authorized:
         raise HTTPException(status_code=401, detail="Invalid orcid id or token")
     post_data = json.dumps(params.datacite_metadata).encode("utf-8")
-    result = datacite.create_doi(requests.session(), post_data, config.Settings().datacite_username,
-                                 config.Settings().datacite_password)
-    if result is not None:
-        return result
-    else:
-        return "Error minting identifier"
+    return post_data
+
+
+class MintDraftIdentifierParams(MintIdentifierParams):
+    num_drafts: int
+
+
+@app.post("/mint_draft_identifiers", include_in_schema=False, response_model=typing.Any)
+async def mint_draft_identifiers(request: fastapi.Request, params: MintDraftIdentifierParams):
+    """Mints draft identifiers using the datacite API
+    Args:
+        request: The fastapi request
+        params: Class that contains the credentials, data to post to datacite, and the number of drafts to create
+    Return: A list of all the minted DOIs
+    """
+    post_data = encode_datacite_post_data(params, request)
+    dois = await datacite.async_create_draft_dois(params.num_drafts, None, None, post_data, False,
+                                                  config.Settings().datacite_username,
+                                                  config.Settings().datacite_password)
+    return dois
 
 
 @app.on_event("startup")

@@ -1,8 +1,13 @@
+import asyncio
+import aiohttp
+
 import datetime
 import json
 import typing
 import logging
+
 import requests
+from aiohttp import ClientResponse
 from requests import Response
 from requests.auth import HTTPBasicAuth
 
@@ -13,12 +18,12 @@ CONTENT_TYPE = "application/vnd.api+json"
 DATACITE_URL = "https://api.test.datacite.org"
 
 
-def _dois_headers():
+def _dois_headers() -> dict:
     headers = {"content-type": CONTENT_TYPE}
     return headers
 
 
-def _dois_auth(password, username):
+def _dois_auth(password, username) -> HTTPBasicAuth:
     auth = HTTPBasicAuth(username, password)
     return auth
 
@@ -50,6 +55,26 @@ def _doi_or_none(response: Response) -> typing.Optional[str]:
     if not _validate_response(response):
         return None
     json_response = response.json()
+    draft_id = json_response["data"]["id"]
+    # use the DOI prefix since we creating DOIs with datacite
+    return doi_from_id(draft_id)
+
+
+def _validate_client_response(response: ClientResponse) -> bool:
+    if response.status < 200 or response.status >= 300:
+
+        logging.error(
+            "Error requesting new DOI, status code: %s",
+            response.status,
+        )
+        return False
+    return True
+
+
+async def _doi_or_none_client_response(response: ClientResponse) -> typing.Optional[str]:
+    if not _validate_client_response(response):
+        return None
+    json_response = await response.json()
     draft_id = json_response["data"]["id"]
     # use the DOI prefix since we creating DOIs with datacite
     return doi_from_id(draft_id)
@@ -101,19 +126,59 @@ def create_draft_doi(
     username: str,
     password: str,
 ) -> typing.Optional[str]:
-    attribute_dict = _attribute_dict_with_doi_or_prefix(doi, prefix)
-    data_dict = {"type": "dois", "attributes": attribute_dict}
-    request_data = {"data": data_dict}
-    post_data_str = json.dumps(request_data).encode("utf-8")
+    post_data_str = _datacite_post_bytes(doi, prefix)
     response = _post_to_datacite(rsession, post_data_str, username, password)
     return _doi_or_none(response)
 
 
-def _attribute_dict_with_doi_or_prefix(doi, prefix):
+def _datacite_post_bytes(doi: typing.Optional[str], prefix: typing.Optional[str]) -> bytes:
+    attribute_dict = _attribute_dict_with_doi_or_prefix(doi, prefix)
+    data_dict = {"type": "dois", "attributes": attribute_dict}
+    request_data = {"data": data_dict}
+    post_data_str = json.dumps(request_data).encode("utf-8")
+    return post_data_str
+
+
+async def async_post_to_datacite(
+    session: aiohttp.ClientSession,
+    post_data_bytes: bytes,
+    username: str,
+    password: str
+) -> typing.Optional[str]:
+    auth = aiohttp.BasicAuth(login=username, password=password)
+    logging.debug("issuing post to datacite")
+    resp = await session.request('POST', url=dois_url(), headers=_dois_headers(), data=post_data_bytes, auth=auth)
+    # Note that this may raise an exception for non-2xx responses
+    # You can either handle that here, or pass the exception through
+    logging.debug("Received response from datacite")
+    return await _doi_or_none_client_response(resp)
+
+
+async def async_create_draft_dois(
+    num_drafts: int,
+    prefix: typing.Optional[str],
+    doi: typing.Optional[str],
+    post_data: typing.Optional[bytes],
+    igsn: bool,
+    username: str,
+    password: str,
+):
+    if post_data is None:
+        post_data = _datacite_post_bytes(doi, prefix)
+
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for i in range(num_drafts):
+            tasks.append(async_post_to_datacite(session, post_data, username, password))
+        doi_responses = await asyncio.gather(*tasks, return_exceptions=True)
+    return doi_responses
+
+
+def _attribute_dict_with_doi_or_prefix(doi: typing.Optional[str], prefix: typing.Optional[str]) -> dict:
     attribute_dict = {}
     if doi is not None:
         attribute_dict["doi"] = doi
-    else:
+    elif prefix is not None:
         attribute_dict["prefix"] = prefix
     return attribute_dict
 
