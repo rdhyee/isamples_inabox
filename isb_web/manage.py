@@ -133,7 +133,6 @@ oauth.register(
 
 
 class MintIdentifierParams(BaseModel):
-    orcid_id: str
     datacite_metadata: dict
 
 
@@ -205,7 +204,7 @@ async def auth(request: starlette.requests.Request):
     url = parse.urlparse(str(request.url))
     print(f"url path is {url.path}")
     base = url.scheme + "://" + url.netloc
-    joined = urljoin(base, '/isamples_central/ui/orcid_token')
+    joined = urljoin(base, config.Settings().auth_response_redirect_fragment)
     print(f"joined url is {joined}")
     return starlette.responses.RedirectResponse(url=joined)
 

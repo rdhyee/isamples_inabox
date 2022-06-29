@@ -53,6 +53,8 @@ class Settings(BaseSettings):
 
     session_middleware_key: str = "81987812-0cf8-459e-b27b-40dabcded856"
 
+    auth_response_redirect_fragment: str = "/isamples_central/ui/#/dois"
+
     class Config:
         env_file = "isb_web_config.env"
         case_sensitive = False
