@@ -25,7 +25,9 @@ heartrate = "^0.2.1"
 aiofile = "^3.7.2"
 
 sqlmodel = "^0.0.4"
-Authlib = "^0.15.5"
+Authlib = "^1.0.1"
+itsdangerous = "^2.1.2"
+starlette-oauth2-api = "^0.2.6"
 httpx = "^0.20.0"
 
 fasttext = "^0.9.2"

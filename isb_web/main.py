@@ -2,10 +2,8 @@ import os
 
 import uvicorn
 import typing
-import re
 import requests
 import fastapi
-from fastapi import HTTPException
 from fastapi.logger import logger as fastapi_logger
 import fastapi.staticfiles
 import fastapi.templating
@@ -20,10 +18,8 @@ from sqlmodel import Session
 import isb_web
 import isamples_metadata.GEOMETransformer
 from isb_lib.core import MEDIA_GEO_JSON, MEDIA_JSON, MEDIA_NQUADS
-from isb_lib.identifiers import datacite
 from isb_lib.models.thing import Thing
-from isb_lib.authorization import orcid
-from isb_web import sqlmodel_database, analytics
+from isb_web import sqlmodel_database, analytics, manage
 from isb_web.analytics import AnalyticsEvent
 from isb_web import schemas
 from isb_web import crud
@@ -33,9 +29,6 @@ from isb_web import isb_solr_query
 from isamples_metadata.SESARTransformer import SESARTransformer
 from isamples_metadata.OpenContextTransformer import OpenContextTransformer
 from isamples_metadata.SmithsonianTransformer import SmithsonianTransformer
-
-import authlib.integrations.starlette_client
-from starlette.middleware.sessions import SessionMiddleware
 
 import logging
 
@@ -54,42 +47,6 @@ except KeyError:
     pass
 L = logging.getLogger("ISB")
 
-# Cookie chaff
-COOKIE_SECRET = config.Settings().cookie_secret
-
-# OAuth2 application client id
-CLIENT_ID = config.Settings().client_id
-
-# OAuth2 application client secret
-CLIENT_SECRET = config.Settings().client_secret
-
-# OAuth2 endpoint for client authorization
-AUTHORIZE_ENDPOINT = config.Settings().authorize_endpoint
-
-# OAuth2 endpoint for retrieving a token after successful auth
-ACCESS_TOKEN_ENDPOINT = config.Settings().access_token_endpoint
-
-# OAuth redirect URL. This is set manually because of a
-# disparity between nginx protocol and the gunicorn protocol
-# advertised to fastAPI resulting in http instead of https
-OAUTH_REDIRECT_URL = config.Settings().oauth_redirect_url
-
-# An OAuth instance for generating the requests
-oauth_client = authlib.integrations.starlette_client.OAuth()
-
-# Register the GITHUB OAuth2 urls
-oauth_client.register(
-    name="github",
-    client_id=CLIENT_ID,
-    client_secret=CLIENT_SECRET,
-    access_token_url=ACCESS_TOKEN_ENDPOINT,
-    access_token_params=None,
-    authorize_url=AUTHORIZE_ENDPOINT,
-    authorize_params=None,
-    api_base_url="https://api.github.com/",
-    client_kwargs={"scope": "public_repo, user:email"},
-)
-
 tags_metadata = [
     {
         "name": "heatmaps",
@@ -102,15 +59,8 @@ STAC_ITEM_URL_PATH = config.Settings().stac_item_url_path
 STAC_COLLECTION_URL_PATH = config.Settings().stac_collection_url_path
 
 app = fastapi.FastAPI(openapi_tags=tags_metadata)
+manage_app = manage.manage_api
 dao = SQLModelDAO(None)
-
-app.add_middleware(
-    fastapi.middleware.cors.CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-app.add_middleware(SessionMiddleware, secret_key=COOKIE_SECRET)
 
 app.mount(
     "/static",
@@ -134,159 +84,7 @@ app.mount(
     ),
     name="ui",
 )
-
-
-def isAllowedReferer(referer):
-    """
-    Checks referer against oauth_allowed_origins patterns
-
-    Args:
-        referer: String from request referer header
-
-    Returns:
-        boolean, True if allowed, False otherwise
-
-    """
-    for allowed in config.Settings().oauth_allowed_origins:
-        m = re.match(allowed, referer)
-        if m is not None:
-            L.debug("Referer allowed: %s", referer)
-            return True
-    L.info("Login blocked for referer: %s", referer)
-    return False
-
-
-@app.get("/githubauth", include_in_schema=False)
-async def authorize(request: fastapi.Request):
-    """
-    Client is redirected here after authenticating.
-
-    The redirect includes parameters that are used to request a
-    token from the authentication provider.
-
-    Args:
-        request: Starlette request instance
-
-    Returns:
-        Opens page notifying outcome
-
-    """
-    state = request.query_params.get("state", None)
-    _cli = oauth_client.github
-    token = await _cli.authorize_access_token(request)
-    user = await _cli.get("user", token=token)
-    data = user.json()
-    data["origin"] = state
-    data["token"] = token["access_token"]
-    return templates.TemplateResponse(
-        "loggedin.html", {
-            "request": request,
-            "username": data["login"],
-            "name": data["name"],
-            "avatar_url": data["avatar_url"],
-            "info": data,
-        }
-    )
-
-
-@app.get("/login", include_in_schema=False)
-async def login(request: fastapi.Request):
-    """
-    Called by a browser when requesting to authenticate.
-
-    Args:
-        request: starlette request instance.
-
-    Returns:
-        Redirect to the authentication provider
-    """
-    referer = request.headers.get("referer", None)
-    if referer is None or not isAllowedReferer(referer):
-        raise fastapi.HTTPException(
-            status_code=fastapi.status.HTTP_401_UNAUTHORIZED,
-            detail="Please login from an authorized source."
-        )
-    state = referer
-    _cli = oauth_client.github
-    # url_for is returning http instead of https, it's a gunicorn issue
-    # redirect_url = request.url_for("authorize")
-    return await _cli.authorize_redirect(request, OAUTH_REDIRECT_URL, state=state)
-
-
-@app.get("/orcid_token", include_in_schema=False)
-def get_orcid_token(request: fastapi.Request, response: fastapi.Response):
-    """
-    Called by a browser as the redirect URI after successfully authenticating with orcid.  Immediately turns the orcid
-    provided code into an orcid token response, and sets cookies to store the token data.
-
-    Args:
-        request: starlette request instance
-
-    Returns:
-        For now, the raw token payload, though this is likely to change to a ReactJS-backed page of some sort.
-    """
-    code = request.query_params.get("code")
-    token_payload = orcid.exchange_code_for_token(code, requests.session())
-    if token_payload is not None:
-        expires = token_payload.get("expires_in")
-        response.set_cookie(key="access_token", value=token_payload.get("access_token"), expires=expires)
-        response.set_cookie(key="refresh_token", value=token_payload.get("refresh_token"), expires=expires)
-        response.set_cookie(key="orcid", value=token_payload.get("orcid"), expires=expires)
-        return token_payload
-    else:
-        return "Failure"
-
-
-class MintIdentifierParams(BaseModel):
-    orcid_id: str
-    datacite_metadata: dict
-
-
-@app.post("/mint_identifier", include_in_schema=False, response_model=typing.Any)
-def mint_identifier(request: fastapi.Request, params: MintIdentifierParams):
-    """Mints an identifier using the datacite API
-    Args:
-        request: The fastapi request
-        params: Class that contains the credentials and the data to post to datacite
-    Return: The minted identifier
-    """
-    post_data = encode_datacite_post_data(params, request)
-    result = datacite.create_doi(requests.session(), post_data, config.Settings().datacite_username,
-                                 config.Settings().datacite_password)
-    if result is not None:
-        return result
-    else:
-        return "Error minting identifier"
-
-
-def encode_datacite_post_data(params, request):
-    token = request.headers.get("Authorization")
-    authorized = False
-    if token is not None and params.orcid_id is not None:
-        authorized = orcid.authorize_token_for_orcid_id(token, params.orcid_id)
-    if not authorized:
-        raise HTTPException(status_code=401, detail="Invalid orcid id or token")
-    post_data = json.dumps(params.datacite_metadata).encode("utf-8")
-    return post_data
-
-
-class MintDraftIdentifierParams(MintIdentifierParams):
-    num_drafts: int
-
-
-@app.post("/mint_draft_identifiers", include_in_schema=False, response_model=typing.Any)
-async def mint_draft_identifiers(request: fastapi.Request, params: MintDraftIdentifierParams):
-    """Mints draft identifiers using the datacite API
-    Args:
-        request: The fastapi request
-        params: Class that contains the credentials, data to post to datacite, and the number of drafts to create
-    Return: A list of all the minted DOIs
-    """
-    post_data = encode_datacite_post_data(params, request)
-    dois = await datacite.async_create_draft_dois(params.num_drafts, None, None, post_data, False,
-                                                  config.Settings().datacite_username,
-                                                  config.Settings().datacite_password)
-    return dois
+app.mount(manage.MANAGE_PREFIX, manage_app)
 
 
 @app.on_event("startup")
