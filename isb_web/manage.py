@@ -41,7 +41,8 @@ class AuthenticateMiddleware(starlette_oauth2_api.AuthenticateMiddleware):
         send: starlette.types.Send,
     ) -> None:
         request = starlette.requests.HTTPConnection(scope)
-        if request.url.path in self._public_paths:
+        last_path_component = request.url.path.split("/")[-1]
+        if "/" + last_path_component in self._public_paths:
             return await self._app(scope, receive, send)
 
         token = None
@@ -101,7 +102,7 @@ manage_api.add_middleware(
             "audience": config.Settings().orcid_client_id,
         }
     },
-    public_paths={MANAGE_PREFIX, MANAGE_PREFIX + "/login", MANAGE_PREFIX + "/auth", MANAGE_PREFIX + "/logout"},
+    public_paths={"/login", "/auth", "/logout"},
 )
 
 manage_api.add_middleware(
