@@ -62,6 +62,12 @@ app = fastapi.FastAPI(openapi_tags=tags_metadata)
 manage_app = manage.manage_api
 dao = SQLModelDAO(None)
 
+app.add_middleware(
+    fastapi.middleware.cors.CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.mount(
     "/static",
     fastapi.staticfiles.StaticFiles(directory=os.path.join(THIS_PATH, "static")),
