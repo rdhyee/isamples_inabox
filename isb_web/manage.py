@@ -1,4 +1,6 @@
-from fastapi import FastAPI
+from typing import Optional
+
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from isb_lib.identifiers import datacite
@@ -219,3 +221,24 @@ async def logout(request: starlette.requests.Request):
     """
     request.session.pop("user", None)
     return starlette.responses.RedirectResponse(url="/")
+
+
+@manage_api.get("/userinfo")
+def userinfo(request: starlette.requests.Request):
+    user: Optional[dict] = request.session.get("user")
+    if user is not None:
+        auth_time = ""
+        user_info = user.get("userinfo")
+        if user_info is not None:
+            auth_time = user_info.get("auth_time")
+        response_dict = {
+            "name": user.get("name"),
+            "orcid": user.get("orcid"),
+            "id_token": user.get("id_token"),
+            "expires_at": user.get("expires_at"),
+            "auth_time": auth_time
+        }
+    else:
+        # I think the middleware should prevent this, but just in case…
+        raise HTTPException(404)
+    return response_dict
