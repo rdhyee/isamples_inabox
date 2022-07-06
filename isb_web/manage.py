@@ -15,12 +15,11 @@ import starlette.types
 import starlette.datastructures
 import starlette_oauth2_api
 import authlib.integrations.starlette_client
-from urllib import parse
-from urllib.parse import urljoin
 
-# The FastAPI app that mounts as a sub-app to the main FastAPI app
+from isb_lib.utilities import url_utilities
 from isb_web import config
 
+# The FastAPI app that mounts as a sub-app to the main FastAPI app
 manage_api = FastAPI()
 
 MANAGE_PREFIX = "/manage"
@@ -43,7 +42,7 @@ class AuthenticateMiddleware(starlette_oauth2_api.AuthenticateMiddleware):
         send: starlette.types.Send,
     ) -> None:
         request = starlette.requests.HTTPConnection(scope)
-        last_path_component = request.url.path.split("/")[-1]
+        last_path_component = url_utilities.last_path_component(request.url)
         if "/" + last_path_component in self._public_paths:
             return await self._app(scope, receive, send)
 
@@ -200,15 +199,8 @@ async def auth(request: starlette.requests.Request):
     """
     token = await oauth.orcid.authorize_access_token(request)
     request.session["user"] = dict(token)
-    # TODO: work this out dynamically -- need to test it out on mars to see what it looks like
-    # probably need to manipulate the paths a bit more, too
-    print(f"request url is {request.url}")
-    url = parse.urlparse(str(request.url))
-    print(f"url path is {url.path}")
-    base = url.scheme + "://" + url.netloc
-    joined = urljoin(base, config.Settings().auth_response_redirect_fragment)
-    print(f"joined url is {joined}")
-    return starlette.responses.RedirectResponse(url=joined)
+    redirect_url = url_utilities.joined_url(str(request.url), config.Settings().auth_response_redirect_fragment)
+    return starlette.responses.RedirectResponse(url=redirect_url)
 
 
 @manage_api.get("/logout")
@@ -220,7 +212,8 @@ async def logout(request: starlette.requests.Request):
     to be used. That's a "feature" of JWTs.
     """
     request.session.pop("user", None)
-    return starlette.responses.RedirectResponse(url="/")
+    redirect_url = url_utilities.joined_url(str(request.url), config.Settings().logout_redirect_fragment)
+    return starlette.responses.RedirectResponse(url=redirect_url)
 
 
 @manage_api.get("/userinfo")

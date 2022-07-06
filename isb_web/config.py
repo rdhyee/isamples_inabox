@@ -55,6 +55,8 @@ class Settings(BaseSettings):
 
     auth_response_redirect_fragment: str = "/isamples_central/ui/#/dois"
 
+    logout_redirect_fragment: str = "/isamples_central/ui"
+
     class Config:
         env_file = "isb_web_config.env"
         case_sensitive = False
