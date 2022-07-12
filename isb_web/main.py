@@ -59,8 +59,10 @@ STAC_ITEM_URL_PATH = config.Settings().stac_item_url_path
 STAC_COLLECTION_URL_PATH = config.Settings().stac_collection_url_path
 
 app = fastapi.FastAPI(openapi_tags=tags_metadata)
-manage_app = manage.manage_api
 dao = SQLModelDAO(None)
+manage_app = manage.manage_api
+# Avoid a circular dependency but share the db connection by pushing into the manage handler
+manage.dao = dao
 
 app.add_middleware(
     fastapi.middleware.cors.CORSMiddleware,
@@ -96,6 +98,12 @@ app.mount(manage.MANAGE_PREFIX, manage_app)
 @app.on_event("startup")
 def on_startup():
     dao.connect_sqlmodel(isb_web.config.Settings().database_url)
+    orcid_ids = sqlmodel_database.all_orcid_ids(dao.get_session())
+    # Superusers are allowed to mint identifiers as well, so make sure they're in the list.
+    orcid_ids.extend(isb_web.config.Settings().orcid_superusers)
+    # The main handler's startup is the guaranteed spot where we know we have a db connection.
+    # User the connected db session to push in to the manage handler's orcid_ids state.
+    manage.allowed_orcid_ids = orcid_ids
 
 
 def get_session():

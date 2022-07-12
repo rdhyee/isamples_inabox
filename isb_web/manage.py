@@ -1,7 +1,8 @@
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
+from sqlmodel import Session
 
 from isb_lib.identifiers import datacite
 import json
@@ -17,15 +18,26 @@ import starlette_oauth2_api
 import authlib.integrations.starlette_client
 
 from isb_lib.utilities import url_utilities
-from isb_web import config
+from isb_web import config, sqlmodel_database
+from isb_web.sqlmodel_database import SQLModelDAO
+
 
 # The FastAPI app that mounts as a sub-app to the main FastAPI app
 manage_api = FastAPI()
-
+dao: Optional[SQLModelDAO] = None
 MANAGE_PREFIX = "/manage"
 
 logging.basicConfig(level=logging.DEBUG)
 _L = logging.getLogger("manage")
+
+
+# use the same db connection from the main handler
+def get_session():
+    with dao.get_session() as session:
+        yield session
+
+
+allowed_orcid_ids: list = []
 
 
 class AuthenticateMiddleware(starlette_oauth2_api.AuthenticateMiddleware):
@@ -52,6 +64,15 @@ class AuthenticateMiddleware(starlette_oauth2_api.AuthenticateMiddleware):
         # Cookie set with auth info
         if user is not None:
             token = user.get("id_token", None)
+            orcid_id = user.get("orcid", None)
+            if orcid_id not in allowed_orcid_ids:
+                return await self._prepare_error_response(
+                    "orcid id is not authorized to manage identifiers",
+                    401,
+                    scope,
+                    receive,
+                    send,
+                )
 
         # check for authorization header and token on it.
         elif "authorization" in request.headers and request.headers[
@@ -229,9 +250,24 @@ def userinfo(request: starlette.requests.Request):
             "orcid": user.get("orcid"),
             "id_token": user.get("id_token"),
             "expires_at": user.get("expires_at"),
-            "auth_time": auth_time
+            "auth_time": auth_time,
         }
     else:
         # I think the middleware should prevent this, but just in case…
         raise HTTPException(404)
     return response_dict
+
+
+@manage_api.get("/add_orcid_id")
+def add_orcid_id(request: starlette.requests.Request, session: Session = Depends(get_session)):
+    user: Optional[dict] = request.session.get("user")
+    if user is not None:
+        orcid_id = request.query_params.get("orcid_id")
+        if user.get("orcid") not in config.Settings().orcid_superusers:
+            raise HTTPException(401, "orcid id not authorized to add users")
+        person = sqlmodel_database.save_person_with_orcid_id(session, orcid_id)
+        allowed_orcid_ids.append(orcid_id)
+        return person.primary_key
+    else:
+        # I think the middleware should prevent this, but just in case…
+        raise HTTPException(401, "no session")

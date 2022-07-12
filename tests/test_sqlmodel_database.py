@@ -18,7 +18,8 @@ from isb_web.sqlmodel_database import (
     mark_thing_not_found,
     save_or_update_thing,
     get_things_with_ids, insert_identifiers, all_thing_identifiers, get_thing_identifiers_for_thing,
-    h3_values_without_points, h3_to_height, all_thing_primary_keys, save_draft_thing_with_id,
+    h3_values_without_points, h3_to_height, all_thing_primary_keys, save_draft_thing_with_id, save_person_with_orcid_id,
+    all_orcid_ids,
 )
 from test_utils import _add_some_things
 
@@ -436,3 +437,22 @@ def test_save_draft_thing(session: Session):
     draft_thing = save_draft_thing_with_id(session, draft_id)
     assert draft_thing is not None
     assert draft_id == draft_thing.id
+
+
+def test_save_person(session: Session):
+    orcid_id = "0000-0003-2109-7692"
+    person = save_person_with_orcid_id(session, orcid_id)
+    assert person is not None
+    assert person.primary_key is not None
+    assert orcid_id == person.orcid_id
+
+
+def test_all_orcid_ids(session: Session):
+    orcid_id_1 = "1111-2222-3333-4444"
+    orcid_id_2 = "6666-7777-8888-9999"
+    save_person_with_orcid_id(session, orcid_id_1)
+    save_person_with_orcid_id(session, orcid_id_2)
+    orcid_ids = all_orcid_ids(session)
+    assert 2 == len(orcid_ids)
+    assert orcid_id_1 in orcid_ids
+    assert orcid_id_2 in orcid_ids

@@ -11,6 +11,7 @@ from sqlmodel import SQLModel, create_engine, Session, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 import isb_lib
+from isb_lib.models.person import Person
 from isb_lib.models.thing import Thing, ThingIdentifier, Point
 from isb_web.schemas import ThingPage
 
@@ -21,7 +22,7 @@ DRAFT_RESOLVED_STATUS = -1
 
 
 class SQLModelDAO:
-    def __init__(self, db_url: str, echo: bool = False):
+    def __init__(self, db_url: Optional[str], echo: bool = False):
         # This is a strange initializer, but FastAPI wants us to construct the object before we know we
         # want to use it.  So, separate out the object construction from the database connection.
         # In unit tests, this ends up getting swapped out and unused, which is the source of the confusion.
@@ -429,3 +430,20 @@ def mark_thing_not_found(session: Session, thing_id: str, resolved_url: str):
             .values(resolved_status=404)
             .values(resolved_url=resolved_url)
         )
+
+
+def save_person_with_orcid_id(session: Session, orcid_id: str) -> Person:
+    person = Person()
+    person.orcid_id = orcid_id
+    session.add(person)
+    session.commit()
+    return person
+
+
+def all_orcid_ids(session: Session) -> list[str]:
+    orcid_ids_select = select(Person.orcid_id)
+    orcid_id_rows = session.execute(orcid_ids_select).fetchall()
+    orcid_ids = []
+    for row in orcid_id_rows:
+        orcid_ids.append(row[0])
+    return orcid_ids
