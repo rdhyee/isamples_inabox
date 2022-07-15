@@ -6,7 +6,10 @@ import isb_lib
 from isb_lib.core import ThingRecordIterator
 from isb_web.sqlmodel_database import SQLModelDAO
 from create_label_hierarchy import getFullLabel, getHierarchyMapping
-from scripts.taxonomy.classification import get_classification_result, parse_SESAR_thing
+from scripts.taxonomy.classification import (
+    get_classification_result, parse_SESAR_thing
+)
+
 
 @click.command()
 @click.option(
@@ -45,8 +48,6 @@ def main(ctx, db_url: str, solr_url: str, max_records: int, verbosity: str):
     material_mapping = getHierarchyMapping("material")
     specimen_mapping = getHierarchyMapping("specimen")
 
-    idx = 0
-
     for thing in thing_iterator.yieldRecordsByPage():
         print(f"thing is {thing.id}")
         transformed = SESARTransformer.SESARTransformer(
@@ -64,19 +65,14 @@ def main(ctx, db_url: str, solr_url: str, max_records: int, verbosity: str):
         print(f"context: {full_context} material: {full_material} "
               f"specimen: {full_specimen}")
 
-        # conduct classification using model
+        # extract text and gold label from object
         text, gold_material, gold_sample = parse_SESAR_thing(
             thing.resolved_content
         )
 
-        if gold_material!= None:
-            print(text, gold_material, gold_sample)
-            print(get_classification_result(text))
-            print("------------")
-
-            idx+=1
-            if idx==1000:
-                break
+        # conduct classification using model
+        print(text, gold_material, gold_sample)
+        print(get_classification_result(text))
 
 
 if __name__ == "__main__":
