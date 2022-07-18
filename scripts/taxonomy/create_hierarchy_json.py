@@ -335,6 +335,5 @@ def main(url: str):
     print(json)
 
 
-
 if __name__ == "__main__":
     main()
