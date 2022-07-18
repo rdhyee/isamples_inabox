@@ -1,0 +1,22 @@
+{
+  "BERT_MODEL": "allenai/scibert_scivocab_uncased",
+  "FINE_TUNED_MODEL": "scripts/taxonomy/assets/SESAR_material_checkpoint",
+  "CLASS_NAMES": [
+    "Biology",
+    "Gas",
+    "Ice",
+    "Mineral",
+    "NotApplicable",
+    "Organic Material",
+    "Other",
+    "Particulate",
+    "Rock",
+    "Sediment",
+    "Soil",
+    "Synthetic",
+    "Tephra",
+    "aqueous",
+    "organic"
+  ],
+  "MAX_SEQUENCE_LEN": 256
+}
