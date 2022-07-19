@@ -62,7 +62,9 @@ def parse_SESAR_thing(thing):
 
 # output the classification result
 def get_classification_result(input, modelType, labelType):
-    # load the model
+    # model checkpoint can be downloaded at
+    # https://drive.google.com/drive/folders/1FreG1_ivysxPMXH0httxw4Ihftx-R2N6
+    # config file should have "FINE_TUNED_MODEL" : path/to/model/checkpoint
     if modelType == "SESAR" and labelType == "material":
         model = get_model("scripts/taxonomy/assets/SESAR_material_config.json")
     return model.predict(input)
