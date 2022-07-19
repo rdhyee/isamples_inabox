@@ -1,0 +1,140 @@
+{
+    "https://w3id.org/isample/vocabulary/specimentype/0.9/physicalspecimen": {
+        "label": {
+            "en": "Physical specimen"
+        },
+        "children": [
+            {
+                "https://w3id.org/isample/vocabulary/specimentype/0.9/anyaggregation": {
+                    "label": {
+                        "en": "Any aggregation specimen"
+                    },
+                    "children": [
+                        {
+                            "https://w3id.org/isample/vocabulary/specimentype/0.9/anthropogenicaggregation": {
+                                "label": {
+                                    "en": "Anthropogenic aggregation"
+                                },
+                                "children": []
+                            }
+                        },
+                        {
+                            "https://w3id.org/isample/vocabulary/specimentype/0.9/biomeaggregation": {
+                                "label": {
+                                    "en": "Biome aggregation specimen"
+                                },
+                                "children": []
+                            }
+                        },
+                        {
+                            "https://w3id.org/isample/vocabulary/specimentype/0.9/genericaggregation": {
+                                "label": {
+                                    "en": "Aggregation"
+                                },
+                                "children": []
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "https://w3id.org/isample/vocabulary/specimentype/0.9/artifact": {
+                    "label": {
+                        "en": "Artifact"
+                    },
+                    "children": []
+                }
+            },
+            {
+                "https://w3id.org/isample/vocabulary/specimentype/0.9/biologicalspecimen": {
+                    "label": {
+                        "en": "Any biological specimen"
+                    },
+                    "children": [
+                        {
+                            "https://w3id.org/isample/vocabulary/specimentype/0.9/biomeaggregation": {
+                                "label": {
+                                    "en": "Biome aggregation specimen"
+                                },
+                                "children": []
+                            }
+                        },
+                        {
+                            "https://w3id.org/isample/vocabulary/specimentype/0.9/organismpart": {
+                                "label": {
+                                    "en": "Organism part"
+                                },
+                                "children": []
+                            }
+                        },
+                        {
+                            "https://w3id.org/isample/vocabulary/specimentype/0.9/organismproduct": {
+                                "label": {
+                                    "en": "Organism product"
+                                },
+                                "children": []
+                            }
+                        },
+                        {
+                            "https://w3id.org/isample/vocabulary/specimentype/0.9/wholeorganism": {
+                                "label": {
+                                    "en": "Whole organism specimen"
+                                },
+                                "children": []
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "https://w3id.org/isample/vocabulary/specimentype/0.9/fossil": {
+                    "label": {
+                        "en": "Fossil"
+                    },
+                    "children": []
+                }
+            },
+            {
+                "https://w3id.org/isample/vocabulary/specimentype/0.9/liquidorgas": {
+                    "label": {
+                        "en": "Liquid or gas"
+                    },
+                    "children": []
+                }
+            },
+            {
+                "https://w3id.org/isample/vocabulary/specimentype/0.9/othersolidobject": {
+                    "label": {
+                        "en": "Other solid object"
+                    },
+                    "children": []
+                }
+            },
+            {
+                "https://w3id.org/isample/vocabulary/specimentype/0.9/researchproduct": {
+                    "label": {
+                        "en": "Research product"
+                    },
+                    "children": [
+                        {
+                            "https://w3id.org/isample/vocabulary/specimentype/0.9/analyticalpreparation": {
+                                "label": {
+                                    "en": "Analytical preparation"
+                                },
+                                "children": []
+                            }
+                        },
+                        {
+                            "https://w3id.org/isample/vocabulary/specimentype/0.9/experimentalproduct": {
+                                "label": {
+                                    "en": "Experiment product"
+                                },
+                                "children": []
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

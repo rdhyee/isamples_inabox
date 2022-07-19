@@ -1,0 +1,165 @@
+{
+    "https://w3id.org/isample/vocabulary/material/0.9/material": {
+        "label": {
+            "en": "Material"
+        },
+        "children": [
+            {
+                "https://w3id.org/isample/vocabulary/material/0.9/anyanthropogenicmaterial": {
+                    "label": {
+                        "en": "Any anthropogenic material"
+                    },
+                    "children": [
+                        {
+                            "https://w3id.org/isample/vocabulary/material/0.9/anthropogenicmetal": {
+                                "label": {
+                                    "en": "Anthropogenic metal material"
+                                },
+                                "children": []
+                            }
+                        },
+                        {
+                            "https://w3id.org/isample/vocabulary/material/0.9/otheranthropogenicmaterial": {
+                                "label": {
+                                    "en": "Anthropogenic material"
+                                },
+                                "children": []
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "https://w3id.org/isample/vocabulary/material/0.9/anyice": {
+                    "label": {
+                        "en": "Any ice"
+                    },
+                    "children": [
+                        {
+                            "https://w3id.org/isample/vocabulary/material/0.9/waterice": {
+                                "label": {
+                                    "en": "Frozen water"
+                                },
+                                "children": []
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "https://w3id.org/isample/vocabulary/material/0.9/biogenicnonorganicmaterial": {
+                    "label": {
+                        "en": "Biogenic non-organic material"
+                    },
+                    "children": []
+                }
+            },
+            {
+                "https://w3id.org/isample/vocabulary/material/0.9/dispersedmedia": {
+                    "label": {
+                        "en": "Dispersed media"
+                    },
+                    "children": []
+                }
+            },
+            {
+                "https://w3id.org/isample/vocabulary/material/0.9/earthmaterial": {
+                    "label": {
+                        "en": "Natural Solid Material"
+                    },
+                    "children": [
+                        {
+                            "https://w3id.org/isample/vocabulary/material/0.9/mineral": {
+                                "label": {
+                                    "en": "Mineral"
+                                },
+                                "children": []
+                            }
+                        },
+                        {
+                            "https://w3id.org/isample/vocabulary/material/0.9/mixedsoilsedimentrock": {
+                                "label": {
+                                    "en": "Mixed soil, sediment or rock"
+                                },
+                                "children": []
+                            }
+                        },
+                        {
+                            "https://w3id.org/isample/vocabulary/material/0.9/particulate": {
+                                "label": {
+                                    "en": "Particulate"
+                                },
+                                "children": []
+                            }
+                        },
+                        {
+                            "https://w3id.org/isample/vocabulary/material/0.9/rock": {
+                                "label": {
+                                    "en": "Rock"
+                                },
+                                "children": []
+                            }
+                        },
+                        {
+                            "https://w3id.org/isample/vocabulary/material/0.9/sediment": {
+                                "label": {
+                                    "en": "Sediment"
+                                },
+                                "children": []
+                            }
+                        },
+                        {
+                            "https://w3id.org/isample/vocabulary/material/0.9/soil": {
+                                "label": {
+                                    "en": "Soil"
+                                },
+                                "children": []
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "https://w3id.org/isample/vocabulary/material/0.9/fluid": {
+                    "label": {
+                        "en": "Fluid material"
+                    },
+                    "children": [
+                        {
+                            "https://w3id.org/isample/vocabulary/material/0.9/gas": {
+                                "label": {
+                                    "en": "Gaseous material"
+                                },
+                                "children": []
+                            }
+                        },
+                        {
+                            "https://w3id.org/isample/vocabulary/material/0.9/liquidwater": {
+                                "label": {
+                                    "en": "Liquid water"
+                                },
+                                "children": []
+                            }
+                        },
+                        {
+                            "https://w3id.org/isample/vocabulary/material/0.9/nonaqueousliquid": {
+                                "label": {
+                                    "en": "Non-aqueous liquid material"
+                                },
+                                "children": []
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "https://w3id.org/isample/vocabulary/material/0.9/organicmaterial": {
+                    "label": {
+                        "en": "Organic material"
+                    },
+                    "children": []
+                }
+            }
+        ]
+    }
+}
