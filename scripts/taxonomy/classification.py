@@ -6,68 +6,92 @@ import isb_lib
 from isb_lib.core import ThingRecordIterator
 from isb_web.sqlmodel_database import SQLModelDAO
 from create_hierarchy_json import getFullLabel, getHierarchyMapping
-from model import get_model
+from classification_helper import classify_by_machine, classify_by_rule
+
+# gold label field of SESAR
+SESAR_sample_field, SESAR_material_field = "sampleType", "material"
+
+
+def build_concatenated_text(description_map, labelType):
+    """Return the concatenated text of informative fields in the
+    description_map"""
+    concatenated_text = ""
+    for key, value in description_map.items():
+        if key == "igsnPrefix":
+            continue
+        elif labelType == "material" and key != SESAR_material_field:
+            concatenated_text += value + " , "
+        elif labelType == "sample" and key != SESAR_sample_field:
+            concatenated_text += value + " , "
+
+    return concatenated_text[:-2]  # remove the last comma
 
 
 def parse_SESAR_thing(thing):
-    """Return the concatenated_text of the object and its gold label
+    """Return a map that stores the informative fields,
+    the concatenated text versions for the material label classifier
+    and the sample label classifier, and the gold labels
     """
+    # define the informative fields to extract
     description_field = {
         "supplementMetadata": [
             "geologicalAge", "classificationComment",
             "purpose", "primaryLocationType", "geologicalUnit",
             "locality", "localityDescription", "fieldName",
-            "launchId", "purpose", "originalArchive", "cruiseFieldPrgrm",
-            "collector", "collectorDetail", "igsnPrefix"
+            "purpose", "cruiseFieldPrgrm",
         ],
+        "igsnPrefix": [],
         "collectionMethod": [],
         "material": [],
         "sampleType": [],
         "description": [],
         "collectionMethodDescr": [],
-        "contributors": ["contributor"]
     }
 
-    concatenated_text = ""
-    sample_field, material_field = "sampleType", "material"  # gold label field
+    description_map = {}  # saves value of description_field
 
-    gold_sample, gold_material = None, None  # gold label value
+    gold_sample, gold_material = None, None  # gold label default value
 
-    # extract data from informative fields
+    # parse the thing and extract data from informative fields
     for key, value in thing["description"].items():
         if key in description_field:
-            # key is a field we want to extract
-            # we don't have to look at subfields
-            if key == sample_field:
+            # gold label fields
+            if key == SESAR_sample_field:
                 gold_sample = value
-            elif key == material_field:
+            elif key == SESAR_material_field:
                 gold_material = value
-            elif len(description_field[key]) == 0:
-                concatenated_text += value + " , "
-            # we have to extract from subfields
+
+            # fields that do not have subfields
+            if len(description_field[key]) == 0:
+                description_map[key] = value
+
+            # fields that have subfields
             else:
-                # special case : contributors_contributor_name
-                if key == "contributors" and len(value) > 0:
-                    field = value[0][description_field[key][0]][0]["name"]
-                    concatenated_text += field + " , "
-                else:
-                    for sub_key in value:
-                        if sub_key in description_field[key]:
-                            concatenated_text += value[sub_key] + " , "
+                for sub_key in value:
+                    if sub_key in description_field[key]:
+                        description_map[key + "_" + sub_key] = value[sub_key]
 
-    concatenated_text = concatenated_text[:-2]  # remove last comma
+    # build the concatenated text from the description_map
+    material_text = build_concatenated_text(description_map, "material")
+    sample_text = build_concatenated_text(description_map, "sample")
 
-    return concatenated_text, gold_material, gold_sample
+    return (
+        description_map,
+        material_text, sample_text,
+        gold_material, gold_sample
+    )
 
 
-# output the classification result
-def get_classification_result(input, modelType, labelType):
-    # model checkpoint can be downloaded at
-    # https://drive.google.com/drive/folders/1FreG1_ivysxPMXH0httxw4Ihftx-R2N6
-    # config file should have "FINE_TUNED_MODEL" : path/to/model/checkpoint
-    if modelType == "SESAR" and labelType == "material":
-        model = get_model("scripts/taxonomy/assets/SESAR_material_config.json")
-    return model.predict(input)
+def get_classification_result(description_map, text, collection, labelType):
+    """Return the classification result"""
+    # first pass : see if the record falls in the defined rules
+    label = classify_by_rule(description_map, text, collection, labelType)
+    if label:
+        return (label, -1)  # set sentinel value as probability
+    else:
+        # second pass : pass the record to the model
+        machine_prediction = classify_by_machine(text, collection, labelType)
+        return machine_prediction  # (predicted label, probability)
 
 
 @click.command()
@@ -108,19 +132,27 @@ def main(ctx, db_url: str, solr_url: str, max_records: int, verbosity: str):
     specimen_mapping = getHierarchyMapping("specimen")
 
     for thing in thing_iterator.yieldRecordsByPage():
-        print(f"thing is {thing.id}")
+        # print(f"thing is {thing.id}")
         transformed = SESARTransformer.SESARTransformer(
             thing.resolved_content
         ).transform()
 
         # extract text and gold label from object
-        text, gold_material, gold_sample = parse_SESAR_thing(
-            thing.resolved_content
+        (
+            description_map,
+            material_text, sample_text,
+            gold_material, gold_sample
+        ) = parse_SESAR_thing(thing.resolved_content)
+        print(material_text)
+
+        # get the material label prediction result of the record
+        label, prob = get_classification_result(
+            description_map, material_text, "SESAR", "material"
         )
 
-        # conduct classification by using text as input to the model
-        print(text, gold_material, gold_sample)
-        print(get_classification_result(text, "SESAR", "material"))
+        print(
+            f"Predicted (probability, label) : {label}, {prob}"
+        )
 
         # print the gold label of the record
         context_label = transformed['hasContextCategory']
