@@ -154,7 +154,7 @@ def main(ctx, db_url: str, solr_url: str, max_records: int, verbosity: str):
             f"Predicted (probability, label) : {label}, {prob}"
         )
 
-        # print the gold label of the record
+        # gold label of the record
         context_label = transformed['hasContextCategory']
         material_label = transformed['hasMaterialCategory']
         specimen_label = transformed['hasSpecimenCategory']

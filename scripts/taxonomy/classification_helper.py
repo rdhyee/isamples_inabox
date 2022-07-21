@@ -114,6 +114,8 @@ def classify_by_rule(description_map, text, collection, labelType):
     if collection == "SESAR" and labelType == "material":
 
         # check if record does not have enough information
+        # if not enough information given,
+        # give "Material" label
         if not checkInformative(description_map, text, collection):
             return "Material"
 
@@ -130,6 +132,8 @@ def classify_by_rule(description_map, text, collection, labelType):
             if key in fields_to_check:
                 field_to_value[key] = value
 
+        # check if record is invalid
+        # i.e., not a sample
         if checkInvalid(field_to_value):
             return "Invalid"
 
