@@ -67,7 +67,6 @@ class SESARClassifierInput:
                             description_map[key + "_" + sub_key] = \
                                 value[sub_key]
 
-
         # build the concatenated text from the description_map
         self.material_text = self.build_text(description_map, "material")
         self.sample_text = self.build_text(description_map, "sample")
