@@ -3,8 +3,11 @@
   "FINE_TUNED_MODEL": "scripts/taxonomy/assets/SESAR_material_checkpoint",
   "CLASS_NAMES": [
     "Biology",
+    "EarthMaterial",
     "Gas",
     "Ice",
+    "Liquid",
+    "Material",
     "Mineral",
     "NotApplicable",
     "Organic Material",
@@ -13,10 +16,7 @@
     "Rock",
     "Sediment",
     "Soil",
-    "Synthetic",
-    "Tephra",
-    "aqueous",
-    "organic"
+    "experimentMaterial"
   ],
   "MAX_SEQUENCE_LEN": 256
 }
