@@ -40,6 +40,8 @@ rdflib = "^6.0.0"
 torchvision = "^0.2.2"
 transformers = "^4.20.1"
 
+connegp = "0.2"
+
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.3"
 jupyter = "^1.0.0"
