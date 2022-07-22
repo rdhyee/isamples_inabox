@@ -7,7 +7,7 @@ from isb_lib.core import ThingRecordIterator
 from isb_web.sqlmodel_database import SQLModelDAO
 from create_hierarchy_json import getFullLabel, getHierarchyMapping
 from classification_helper import classify_by_machine, classify_by_rule
-from scripts.taxonomy.SESARClassifierInput import SESARClassifierInput
+from SESARClassifierInput import SESARClassifierInput
 
 
 def get_classification_result(description_map, text, collection, labelType):
@@ -66,7 +66,7 @@ def main(ctx, db_url: str, solr_url: str, max_records: int, verbosity: str):
         ).transform()
 
         # parse the thing to classifier input form
-        parsed = SESARClassifierInput.parse_thing(thing.resolved_content)
+        parsed = SESARClassifierInput(thing.resolved_content).parse_thing()
 
         description_map = parsed.get_description_map()
         material_text = parsed.get_material_text()

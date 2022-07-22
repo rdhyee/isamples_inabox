@@ -1,7 +1,8 @@
 class SESARClassifierInput:
     """Takes thing object to convert it into data that the classifier
     requires as input"""
-    def __init__(self):
+    def __init__(self, thing):
+        self.thing = thing
         # gold label field of SESAR
         self.SESAR_material_field = "material"
         self.SESAR_sample_field = "sampleType"
@@ -24,7 +25,7 @@ class SESARClassifierInput:
 
         return concatenated_text[:-2]  # remove the last comma
 
-    def parse_thing(self, thing):
+    def parse_thing(self):
         """Return a map that stores the informative fields,
         the concatenated text versions for the material label classifier
         and the sample label classifier, and the gold labels
@@ -48,7 +49,7 @@ class SESARClassifierInput:
         description_map = {}  # saves value of description_field
 
         # parse the thing and extract data from informative fields
-        for key, value in thing["description"].items():
+        for key, value in self.thing["description"].items():
             if key in description_field:
                 # gold label fields
                 if key == self.SESAR_sample_field:
