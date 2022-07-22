@@ -7,79 +7,7 @@ from isb_lib.core import ThingRecordIterator
 from isb_web.sqlmodel_database import SQLModelDAO
 from create_hierarchy_json import getFullLabel, getHierarchyMapping
 from classification_helper import classify_by_machine, classify_by_rule
-
-# gold label field of SESAR
-SESAR_sample_field, SESAR_material_field = "sampleType", "material"
-
-
-def build_concatenated_text(description_map, labelType):
-    """Return the concatenated text of informative fields in the
-    description_map"""
-    concatenated_text = ""
-    for key, value in description_map.items():
-        if key == "igsnPrefix":
-            continue
-        elif labelType == "material" and key != SESAR_material_field:
-            concatenated_text += value + " , "
-        elif labelType == "sample" and key != SESAR_sample_field:
-            concatenated_text += value + " , "
-
-    return concatenated_text[:-2]  # remove the last comma
-
-
-def parse_SESAR_thing(thing):
-    """Return a map that stores the informative fields,
-    the concatenated text versions for the material label classifier
-    and the sample label classifier, and the gold labels
-    """
-    # define the informative fields to extract
-    description_field = {
-        "supplementMetadata": [
-            "geologicalAge", "classificationComment",
-            "purpose", "primaryLocationType", "geologicalUnit",
-            "locality", "localityDescription", "fieldName",
-            "purpose", "cruiseFieldPrgrm",
-        ],
-        "igsnPrefix": [],
-        "collectionMethod": [],
-        "material": [],
-        "sampleType": [],
-        "description": [],
-        "collectionMethodDescr": [],
-    }
-
-    description_map = {}  # saves value of description_field
-
-    gold_sample, gold_material = None, None  # gold label default value
-
-    # parse the thing and extract data from informative fields
-    for key, value in thing["description"].items():
-        if key in description_field:
-            # gold label fields
-            if key == SESAR_sample_field:
-                gold_sample = value
-            elif key == SESAR_material_field:
-                gold_material = value
-
-            # fields that do not have subfields
-            if len(description_field[key]) == 0:
-                description_map[key] = value
-
-            # fields that have subfields
-            else:
-                for sub_key in value:
-                    if sub_key in description_field[key]:
-                        description_map[key + "_" + sub_key] = value[sub_key]
-
-    # build the concatenated text from the description_map
-    material_text = build_concatenated_text(description_map, "material")
-    sample_text = build_concatenated_text(description_map, "sample")
-
-    return (
-        description_map,
-        material_text, sample_text,
-        gold_material, gold_sample
-    )
+from scripts.taxonomy.SESARClassifierInput import SESARClassifierInput
 
 
 def get_classification_result(description_map, text, collection, labelType):
@@ -137,13 +65,11 @@ def main(ctx, db_url: str, solr_url: str, max_records: int, verbosity: str):
             thing.resolved_content
         ).transform()
 
-        # extract text and gold label from object
-        (
-            description_map,
-            material_text, sample_text,
-            gold_material, gold_sample
-        ) = parse_SESAR_thing(thing.resolved_content)
-        print(material_text)
+        # parse the thing to classifier input form
+        parsed = SESARClassifierInput.parse_thing(thing.resolved_content)
+
+        description_map = parsed.get_description_map()
+        material_text = parsed.get_material_text()
 
         # get the material label prediction result of the record
         label, prob = get_classification_result(
@@ -166,7 +92,7 @@ def main(ctx, db_url: str, solr_url: str, max_records: int, verbosity: str):
         # print out the full hierarchy of the label
         print(f"context: {full_context} material: {full_material} "
               f"specimen: {full_specimen}")
-
+        print("-----------------")
     db_session.close()
 
 
