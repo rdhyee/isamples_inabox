@@ -205,9 +205,9 @@ class GEOMETransformer(Transformer):
         return keywords
 
     def produced_by_id_string(self) -> str:
-        parent_record = self._source_record_parent_record()
-        if parent_record is not None:
-            return parent_record["bcid"]
+        main_record = self._source_record_main_record()
+        if main_record is not None:
+            return main_record["bcid"]
         return Transformer.NOT_PROVIDED
 
     def produced_by_label(self) -> str:

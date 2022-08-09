@@ -13,9 +13,14 @@ from isamples_metadata.SESARTransformer import SESARTransformer
 from isamples_metadata.GEOMETransformer import GEOMETransformer, GEOMEChildTransformer, geo_to_h3 as geome_geo_to_h3
 from isamples_metadata.OpenContextTransformer import OpenContextTransformer
 from isamples_metadata.SmithsonianTransformer import SmithsonianTransformer
+from isb_lib import geome_adapter, sesar_adapter
+from isb_lib.geome_adapter import GEOMEItem
+from isb_lib.models.thing import Thing
 
 # Set this to True in order to actually compare example vs. actual run.
 # Otherwise, we'll assert that the transformer ran and had an id in the dictionary
+from isb_lib.sesar_adapter import SESARItem
+
 ASSERT_ON_OUTPUT = False
 
 
@@ -57,6 +62,11 @@ SESAR_test_values = [
         "./test_data/SESAR/test/iSamplesIEEJR000MBasic.json",
         "2021-01-19 04:32:44",
     ),
+    (
+        "./test_data/SESAR/raw/IE22301MWjson-ld.json",
+        "./test_data/SESAR/test/iSamplesIE22301MWBasic.json",
+        "2015-11-30 11:27:59"
+    )
 ]
 
 
@@ -65,6 +75,27 @@ def test_sesar_dicts_equal(sesar_source_path, isamples_path, timestamp):
     _run_transformer(
         isamples_path, sesar_source_path, SESARTransformer, None, timestamp
     )
+
+
+@pytest.mark.parametrize(
+    "sesar_source_path,isamples_path,timestamp", SESAR_test_values
+)
+def test_sesar_as_core_record(
+    sesar_source_path, isamples_path, timestamp
+):
+    with open(sesar_source_path) as source_file:
+        source_record = json.load(source_file)
+        test_thing = Thing()
+        test_thing.authority_id = SESARItem.AUTHORITY_ID
+        test_thing.resolved_content = source_record
+        solr_doc = sesar_adapter.reparseAsCoreRecord(test_thing)
+        if source_record.get("description").get("parentIdentifier") is not None:
+            # child should have a relation pointing back to the parent
+            child_doc = solr_doc[0]
+            relations = child_doc.get("relations")
+            assert len(relations) == 1
+            assert relations[0].get("relation_target") is not None
+            assert relations[0].get("relation_type") == "subsample"
 
 
 GEOME_test_values = [
@@ -101,6 +132,28 @@ def test_geome_dicts_equal(
         _run_transformer(
             isamples_path, geome_source_path, None, transformer, last_mod_str
         )
+
+
+@pytest.mark.parametrize(
+    "geome_source_path,isamples_path,last_mod,last_mod_str", GEOME_test_values
+)
+def test_geome_as_core_record(
+    geome_source_path, isamples_path, last_mod: datetime.datetime, last_mod_str: str
+):
+    with open(geome_source_path) as source_file:
+        source_record = json.load(source_file)
+        test_thing = Thing()
+        test_thing.authority_id = GEOMEItem.AUTHORITY_ID
+        test_thing.resolved_content = source_record
+        solr_docs = geome_adapter.reparseAsCoreRecord(test_thing)
+        if len(solr_docs) > 1:
+            # second one should be a child record
+            # and the child should have a relation pointing back to the parent
+            child_doc = solr_docs[1]
+            relations = child_doc.get("relations")
+            assert relations is not None and len(relations) == 1
+            assert relations[0].get("relation_target") is not None
+            assert relations[0].get("relation_type") == "subsample"
 
 
 GEOME_child_test_values = [

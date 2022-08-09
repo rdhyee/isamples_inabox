@@ -225,5 +225,17 @@ createField("producedBy_resultTimeRange", "date_range", True, True, None)
 
 createField("producedBy_samplingSite_location_h3", "string", True, True, None)
 createField("producedBy_samplingSite_location_cesium_height", "pfloat", True, True, None)
+# Nested document support
+# Note that the solr docs indicate we need these fields, but they already existed in our schema, keeping here for
+# reference purposes
+# createField("_root_", "string", False, True)
+# addFieldType({
+#     "name": "_nest_path_",
+#     "class": "solr.NestPathField",
+# })
+# createField("_nest_path_", "nest_path", True, True)
+createField("_nest_parent_", "string", True, True)
+createField("relation_target", "string", True, True)
+createField("relation_type", "string", True, True)
 
 pj(listFields())

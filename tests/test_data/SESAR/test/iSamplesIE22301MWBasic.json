@@ -1,0 +1,57 @@
+{
+  "$schema": "../../iSamplesSchemaBasic0.2.json",
+  "@id": "https://data.isamples.org/digitalsample/igsn/IE22301MW",
+  "label": "01-14A_19_X_4_87_117_136.17",
+  "sampleidentifier": "IGSN:IE22301MW",
+  "description": "Not Provided",
+  "hasContextCategory": [
+    "Not Provided"
+  ],
+  "hasMaterialCategory": [
+    "Sediment"
+  ],
+  "hasSpecimenCategory": [
+    "Other solid object"
+  ],
+  "informalClassification": [
+    "Not Provided"
+  ],
+  "keywords": [
+    "Core Sub-Piece"
+  ],
+  "producedBy": {
+    "@id": "IGSN:IE22301LL",
+    "label": "Coring>PistonCorer",
+    "description": "cruiseFieldPrgrm:NGHP01. Coring>PistonCorer. navigation type:GPS",
+    "hasFeatureOfInterest": "Not Provided",
+    "responsibility": [
+      "Evan Solomon,,Collector",
+      "Justine Sauvage,,Sample Owner"
+    ],
+    "resultTime": "2015-11-30 11:27:59",
+    "samplingSite": {
+      "description": "Not Provided",
+      "label": "Not Provided",
+      "location": {
+        "elevation": "Not Provided",
+        "latitude": 16.0593,
+        "longitude": 82.0937
+      },
+      "placeName": [
+
+      ]
+    }
+  },
+  "registrant": "Justine Sauvage",
+  "samplingPurpose": "",
+  "curation": {
+    "label": "Not Provided",
+    "description": "Not Provided",
+    "accessConstraints": "Not Provided",
+    "curationLocation": "Not Provided",
+    "responsibility": "Not Provided"
+  },
+  "relatedResource": [
+
+  ]
+}

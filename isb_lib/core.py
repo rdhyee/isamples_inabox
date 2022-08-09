@@ -248,7 +248,15 @@ def handle_produced_by_fields(coreMetadata: typing.Dict, doc: typing.Dict):  # n
             doc["producedBy_resultTime"] = solr_date_str
             doc["producedBy_resultTimeRange"] = solr_date_str
     if _shouldAddMetadataValueToSolrDoc(producedBy, "@id"):
-        doc["producedBy_isb_core_id"] = producedBy["@id"]
+        produced_by_id = producedBy["@id"]
+        doc["producedBy_isb_core_id"] = produced_by_id
+        doc["relations"] = [
+            {
+                "relation_target": produced_by_id,
+                "relation_type": "subsample",
+                "id": f"{doc['id']}_subsample_{produced_by_id}"
+            }
+        ]
     if "samplingSite" in producedBy:
         samplingSite = producedBy["samplingSite"]
         if _shouldAddMetadataValueToSolrDoc(samplingSite, "description"):
@@ -557,6 +565,7 @@ class ThingRecordIterator:
         status: int = 200,
         page_size: int = 5000,
         offset: int = 0,
+        limit: int = -1,
         min_time_created: datetime.datetime = None,
     ):
         self._session = session
@@ -566,6 +575,8 @@ class ThingRecordIterator:
         self._offset = offset
         self._min_time_created = min_time_created
         self._id = offset
+        self._limit = limit
+        self._total_selected = 0
 
     def yieldRecordsByPage(self):
         while True:
@@ -582,6 +593,10 @@ class ThingRecordIterator:
             max_id_in_page = 0
             for rec in things:
                 n += 1
+                self._total_selected += 1
+                if self._limit is not None and self._total_selected == self._limit:
+                    n = 0
+                    break
                 yield rec
                 max_id_in_page = rec.primary_key
             if n == 0:

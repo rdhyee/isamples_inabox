@@ -11,6 +11,7 @@ from isamples_metadata.Transformer import (
     StringEndsWithCategoryMapper,
     AbstractCategoryMetaMapper,
 )
+from isb_lib.sesar_adapter import fullIgsn
 
 
 class MaterialCategoryMetaMapper(AbstractCategoryMetaMapper):
@@ -293,7 +294,9 @@ class SESARTransformer(Transformer):
         return [self._source_record_description()["sampleType"]]
 
     def produced_by_id_string(self) -> str:
-        # TODO: this is present for GEOME, does anything make sense for SESAR?
+        parent_id = self._source_record_description().get("parentIdentifier")
+        if parent_id is not None:
+            return fullIgsn(parent_id)
         return ""
 
     def _contributor_name_with_role(self, role_name: str):
