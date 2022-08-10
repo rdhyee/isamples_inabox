@@ -475,6 +475,14 @@ class SESARTransformer(Transformer):
                     return record["timestamp"]
         return None
 
+    def authorized_by(self) -> typing.List[str]:
+        # Don't have this information
+        return []
+
+    def complies_with(self) -> typing.List[str]:
+        # Don't have this information
+        return []
+
 
 def _geo_location_float_value(source_record: typing.Dict, key_name: str) -> typing.Optional[float]:
     description = source_record.get("description")

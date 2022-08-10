@@ -100,6 +100,8 @@ class Transformer(ABC):
                 "responsibility": self.curation_responsibility(),
             },
             "relatedResource": self.related_resources(),
+            "authorizedBy": self.authorized_by(),
+            "compliesWith": self.complies_with(),
         }
         return transformed_record
 
@@ -243,6 +245,17 @@ class Transformer(ABC):
     @abstractmethod
     def last_updated_time(self) -> typing.Optional[str]:
         """Return the time the record was last modified in the source collection"""
+        pass
+
+    @abstractmethod
+    def authorized_by(self) -> typing.List[str]:
+        """Returns a pointer to the associated permit(s) authorizing the activity, ideally in the form of one or more
+        URIs."""
+        pass
+
+    @abstractmethod
+    def complies_with(self) -> typing.List[str]:
+        """Returns a pointer to the associated compliance documentation, ideally in the form of one or more URIs."""
         pass
 
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 import datetime
 import logging
 import typing
+import re
 from typing import Optional
 
 import isamples_metadata
@@ -9,8 +10,16 @@ from isamples_metadata.Transformer import (
     Transformer,
 )
 
+PERMIT_STRINGS_TO_IGNORE = ['nan', 'na', 'no data', 'unknown', 'none_required']
+
 TISSUE_ENTITY = "Tissue"
 JSON_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
+
+complies_with_str = r"complies(?:_| )?(?:with)?:([^\s]+)(\s+authorized(?:_| )?(?:by)?:(.*))?"
+PERMIT_STRUCTURED_TEXT_COMPLIES_WITH_PATTERN = re.compile(complies_with_str, re.IGNORECASE)
+
+authorized_by_str = r"authorized(?:_| )?(?:by)?:([^\s]+)(\s+complies(?:_| )?(?:with)?:(.*))?"
+PERMIT_STRUCTURED_TEXT_AUTHORIZED_BY_PATTERN = re.compile(authorized_by_str, re.IGNORECASE)
 
 
 class GEOMETransformer(Transformer):
@@ -429,6 +438,94 @@ class GEOMETransformer(Transformer):
         else:
             return None
 
+    def _parent_permit_information(self) -> Optional[str]:
+        parent_record = self._source_record_parent_record()
+        if parent_record is not None:
+            return parent_record.get("permitInformation", Transformer.NOT_PROVIDED)
+
+    def authorized_by(self) -> typing.List[str]:
+        permit_information = self._parent_permit_information()
+        if permit_information is not None:
+            parsed_permit_information = GEOMETransformer.parse_permit_freetext(permit_information)
+            return parsed_permit_information["authorizedBy"]
+        return []
+
+    def complies_with(self) -> typing.List[str]:
+        # Don't have this information
+        return []
+
+    @staticmethod
+    def _format_result_object(authorized_by: list[str]) -> dict[str, list[str]]:
+        return {"authorizedBy": authorized_by, "compliesWith": []}
+
+    @staticmethod
+    def parse_permit_text(text: str) -> dict[str, list[str]]:
+        structured_text = GEOMETransformer.parse_permit_structured_text(text)
+        if len(structured_text) > 0:
+            return structured_text
+        else:
+            return GEOMETransformer.parse_permit_freetext(text)
+
+    @staticmethod
+    def _split_delimited_text(text: str) -> list[str]:
+        return re.split(";|,", text)
+
+    @staticmethod
+    def parse_permit_structured_text(text: str) -> dict[str, list[str]]:
+        match = PERMIT_STRUCTURED_TEXT_AUTHORIZED_BY_PATTERN.match(text)
+        result = {}
+        authorized_by_str = None
+        complies_with_str = None
+        if match is not None:
+            authorized_by_str = match.group(1)
+            complies_with_str = match.group(3)
+        else:
+            match = PERMIT_STRUCTURED_TEXT_COMPLIES_WITH_PATTERN.match(text)
+            if match is not None:
+                complies_with_str = match.group(1)
+                authorized_by_str = match.group(3)
+        if authorized_by_str is not None:
+            authorized_by_list = GEOMETransformer._split_delimited_text(authorized_by_str)
+            result["authorizedBy"] = authorized_by_list
+        if complies_with_str is not None:
+            complies_with_list = GEOMETransformer._split_delimited_text(complies_with_str)
+            result["compliesWith"] = complies_with_list
+        return result
+
+    @staticmethod
+    def parse_permit_freetext(text: str) -> dict[str, list[str]]:
+        original_string = str(text)
+
+        # If the string is NA
+        if original_string.lower() in PERMIT_STRINGS_TO_IGNORE:
+            return GEOMETransformer._format_result_object([])
+
+        # Remove quotes
+        original_string = re.sub(r'\"', "", original_string)
+
+        slash_n = len(re.findall(r'/', original_string))
+        comma_n = len(re.findall(r'\,', original_string))
+
+        # e.g. DAFF/DEA
+        if slash_n == 1 and original_string.replace(" ", "") == original_string:
+            return GEOMETransformer._format_result_object(original_string.split("/"))
+
+        # If there are multiple slash "/", we need to split string by " and " or ", "
+        if slash_n > 1 and not comma_n > 1:
+            # replace typo error "/ " to "/"
+            original_string = re.sub("/ ", "/", original_string)
+
+            if re.findall(' and ', original_string):
+                return GEOMETransformer._format_result_object(original_string.split(" and "))
+            else:
+                return GEOMETransformer._format_result_object(original_string.split(", "))
+
+        # Split string by semicolon, ";" but ignore long string with multiple separator
+        if re.findall("; ", original_string) and not comma_n > 1:
+            return GEOMETransformer._format_result_object(original_string.split("; "))
+
+        return GEOMETransformer._format_result_object([original_string])
+
 
 class GEOMEChildTransformer(GEOMETransformer):
     """GEOME child record subclass transformer -- uses some fields from the parent and some from the child"""
@@ -502,6 +599,14 @@ class GEOMEChildTransformer(GEOMETransformer):
         parent_dict["target"] = main_record.get("bcid", "")
         parent_dict["relationshipType"] = "derived_from"
         return [parent_dict]
+
+    def authorized_by(self) -> typing.List[str]:
+        # If present, this information is stored on the parent record
+        return []
+
+    def complies_with(self) -> typing.List[str]:
+        # If present, this information is stored on the parent record
+        return []
 
 
 # Function to iterate through the identifiers and instantiate the proper GEOME Transformer based on the identifier

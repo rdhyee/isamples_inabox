@@ -289,6 +289,14 @@ class SmithsonianTransformer(Transformer):
         # This doesn't appear to be available in the Smithsonian DwC
         return None
 
+    def authorized_by(self) -> typing.List[str]:
+        # Don't have this information
+        return []
+
+    def complies_with(self) -> typing.List[str]:
+        # Don't have this information
+        return []
+
 
 def _content_latitude(source_record: typing.Dict) -> typing.Optional[float]:
     # noinspection PyProtectedMember

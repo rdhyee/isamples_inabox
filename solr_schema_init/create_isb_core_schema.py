@@ -237,5 +237,8 @@ createField("producedBy_samplingSite_location_cesium_height", "pfloat", True, Tr
 createField("_nest_parent_", "string", True, True)
 createField("relation_target", "string", True, True)
 createField("relation_type", "string", True, True)
+# permit information fields
+createField("compliesWith", "string", True, True, None, True)
+createField("authorizedBy", "string", True, True, None, True)
 
 pj(listFields())

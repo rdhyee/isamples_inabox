@@ -236,6 +236,14 @@ class OpenContextTransformer(Transformer):
     def last_updated_time(self) -> Optional[str]:
         return self.source_record.get("updated", None)
 
+    def authorized_by(self) -> typing.List[str]:
+        # Don't have this information
+        return []
+
+    def complies_with(self) -> typing.List[str]:
+        # Don't have this information
+        return []
+
 
 def _content_latitude(content: typing.Dict) -> Optional[float]:
     return content.get("latitude", None)
