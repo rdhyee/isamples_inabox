@@ -1,0 +1,78 @@
+{
+    "fields":[
+        {
+            "name":"id",
+            "title": "Identifier",
+            "type": "string",
+            "description":"Unique identifier for each row of the table"
+        },
+        {
+            "name":"label",
+            "title":"A label for the field",
+            "type": "string",
+            "description": "Label for the field, a value from a controlled vocabulary"
+        },
+        {
+            "name":"boolval",
+            "title":"Boolean value",
+            "type":"boolean",
+            "description":"Boolean value examples"
+        },
+        {
+            "name":"intval",
+            "title":"Int value",
+            "type":"integer",
+            "description":"Integer value examples"
+        },
+        {
+            "name":"floatval",
+            "title":"Float value",
+            "type":"number",
+            "description":"Floating point value examples"
+        },
+        {
+            "name": "dateval",
+            "title":"Time Created",
+            "type": "datetime",
+            "description": "Timestamp for when the record was created"
+        },
+        {
+            "name":"durationval",
+            "title":"Duration value",
+            "type":"duration",
+            "description":"Duration value examples"
+        },
+        {
+            "name":"arrayval",
+            "title":"Array value",
+            "type":"array",
+            "description":"Array value examples"
+        },
+        {
+            "name":"pointval",
+            "title":"Geopoint value",
+            "type":"geopoint",
+            "description":"Geopoint value examples"
+        },
+        {
+            "name": "geoval",
+            "title": "Geojson location value",
+            "type":"geojson",
+            "description":"GeoJSON entry for the location"
+        },
+        {
+            "name": "vocabval",
+            "title": "Controlled",
+            "type": "string",
+            "description": "Enumerated set of possible values",
+            "constraints":{
+                "enum": [
+                    "val1",
+                    "val2",
+                    "val3"
+                ]
+            }            
+        }
+    ],
+    "primaryKey":"id"
+}

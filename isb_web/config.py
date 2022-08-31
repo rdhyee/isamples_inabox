@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     # The list of orcid ids that are allowed to add other orcid ids to the iSB instance.
     orcid_superusers: list[str] = []
 
+    # The authority id used for samples directly created in the iSB instance
+    authority_id: str = "iSamples"
+
     class Config:
         env_file = "isb_web_config.env"
         case_sensitive = False

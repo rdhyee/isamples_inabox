@@ -1,0 +1,15 @@
+{
+    "name":"isamples01",
+    "title":"Prototype frictionless, iSamples01",
+    "id":"isamples01",
+    "resources":[
+        {
+            "name":"isamples01",
+            "path":"isamples_test_data.csv",
+            "description":"A simple data source with example field values for varous types",
+            "format": "csv",
+            "mediatype": "text/csv",
+            "schema": "isamples_simple_schema.json"
+        }
+    ]
+}

@@ -1,7 +1,7 @@
 .DS_Store
 *.env
 .idea/
-data/
+/data/
 scripts/*.cfg
 
 # Byte-compiled / optimized / DLL files

@@ -1,0 +1,15 @@
+{
+    "name":"prototyping-simple_01",
+    "title":"Prototype frictionless, simple_01",
+    "id":"simple-01",
+    "resources":[
+        {
+            "name":"source_01",
+            "path":"data/source_01.csv",
+            "description":"A simple data source with example field values for varous types",
+            "format": "csv",
+            "mediatype": "text/csv",
+            "schema": "schema_01.json"
+        }
+    ]
+}

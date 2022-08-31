@@ -41,6 +41,9 @@ torchvision = "^0.2.2"
 transformers = "^4.20.1"
 
 connegp = "0.2"
+frictionless = "^4.40.0"
+openpyxl = "3.0.10"
+xlrd = "2.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.3"
@@ -49,6 +52,8 @@ nbterm = "^0.0.7"
 heartrate = "^0.2.1"
 flake8 = "^4.0.1"
 pipdeptree = "2.2.1"
+coverage = "6.4.4"
+pytest-cov = "3.0.0"
 
 [tool.poetry.scripts]
 sesar_things = "scripts.sesar_things:main"

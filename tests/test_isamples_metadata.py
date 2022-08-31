@@ -10,7 +10,7 @@ import re
 import isamples_metadata.GEOMETransformer
 from isamples_metadata import Transformer
 from isamples_metadata.SESARTransformer import SESARTransformer
-from isamples_metadata.GEOMETransformer import GEOMETransformer, GEOMEChildTransformer, geo_to_h3 as geome_geo_to_h3
+from isamples_metadata.GEOMETransformer import GEOMETransformer, GEOMEChildTransformer
 from isamples_metadata.OpenContextTransformer import OpenContextTransformer
 from isamples_metadata.SmithsonianTransformer import SmithsonianTransformer
 from isb_lib import geome_adapter, sesar_adapter
@@ -280,5 +280,5 @@ def test_geome_geo_to_h3():
     test_file_path = "./test_data/GEOME/raw/ark-21547-Car2PIRE_0334.json"
     with open(test_file_path) as source_file:
         source_record = json.load(source_file)
-        h3 = geome_geo_to_h3(source_record)
+        h3 = GEOMETransformer.geo_to_h3(source_record)
         assert "8f65534b37a2c0d" == h3

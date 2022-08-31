@@ -1,0 +1,4 @@
+id,label,boolval,intval,floatval,dateval,durationval,arrayval,pointval,geoval,vocabval
+1,specimen,TRUE,55,104.553,2022-04-04T15:41:00.000Z,P0Y1347M0D,,,,val1
+2,some string,false,15,-104.553,1432-04-04T15:41:00.000Z,P5Y1347M0D,"[1,2,3]","-154.123,-17.443","{""type"":""FeatureCollection"",""features"":[{""type"":""Feature"",""properties"":{},""geometry"":{""type"":""Point"",""coordinates"":[-154.123,-17.443]}}]}",val3
+3,fail enum valdiation,false,15,-104.553,1432-04-04T15:41:00.000Z,P5Y1347M0D,"[1,2,3]","-154.123,-17.443","{""type"":""FeatureCollection"",""features"":[{""type"":""Feature"",""properties"":{},""geometry"":{""type"":""Point"",""coordinates"":[-154.123,-17.443]}}]}",val32

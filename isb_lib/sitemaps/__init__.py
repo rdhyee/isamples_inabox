@@ -3,6 +3,7 @@ Module for parsing sitemap.xml documents.
 
 Chunks of this code based on https://github.com/scrapy/scrapy/blob/master/scrapy/utils/sitemap.py
 """
+import asyncio
 import datetime
 import types
 import logging
@@ -10,16 +11,144 @@ import re
 import struct
 import io
 import gzip
+import typing
 import urllib.parse
 import lxml.etree
 import requests
 import dateparser
 import functools
+import os.path
+from aiofile import AIOFile, Writer
 
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 L = logging.getLogger("sitemaps")
+
+
+class SitemapIndexEntry:
+    """Individual sitemap file entry in the sitemap index"""
+
+    def __init__(self, sitemap_filename: str, last_mod: str):
+        self.sitemap_filename = sitemap_filename
+        self.last_mod_str = last_mod
+
+    def loc_suffix(self):
+        return self.sitemap_filename
+
+
+class ThingSitemapIndexEntry(SitemapIndexEntry):
+    def loc_suffix(self):
+        return f"sitemaps/{self.sitemap_filename}"
+
+
+class UrlSetEntry:
+    """Individual url entry in an urlset"""
+
+    def __init__(self, identifier: str, last_mod: str):
+        self.identifier = identifier
+        self.last_mod_str = last_mod
+
+    def loc_suffix(self):
+        return self.identifier
+
+
+class ThingUrlSetEntry(UrlSetEntry):
+    def loc_suffix(self):
+        return f"thing/{self.identifier}?full=false&format=core"
+
+
+table = str.maketrans(
+    {
+        "<": "&lt;",
+        ">": "&gt;",
+        "&": "&amp;",
+        "'": "&apos;",
+        '"': "&quot;",
+    }
+)
+
+
+def xmlesc(txt):
+    return txt.translate(table)
+
+
+# adapted from https://github.com/Haikson/sitemap-generator/blob/master/pysitemap/format_processors/xml.py
+async def write_urlset_file(dest_path: str, host: str, urls: typing.List[UrlSetEntry]):
+    async with AIOFile(dest_path, "w") as aiodf:
+        writer = Writer(aiodf)
+        header = """<?xml version="1.0" encoding="utf-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" \
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" \
+xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 \
+http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">\n"""
+        await writer(header)
+        await aiodf.fsync()
+        for entry in urls:
+            loc_str = xmlesc(
+                os.path.join(host, entry.loc_suffix())
+            )
+            lastmod_str = ""
+            if entry.last_mod_str is not None:
+                lastmod_str = f"\n    <lastmod>{xmlesc(entry.last_mod_str)}</lastmod>"
+            url_str = f"  <url>\n    <loc>{loc_str}</loc>{lastmod_str}\n  </url>\n"
+            await writer(url_str)
+        await aiodf.fsync()
+
+        await writer("</urlset>")
+        await aiodf.fsync()
+
+
+async def write_sitemap_index_file(
+    base_path: str, host: str, sitemap_index_entries: typing.List[SitemapIndexEntry]
+):
+    index_file_path = os.path.join(base_path, "sitemap-index.xml")
+    async with AIOFile(index_file_path, "w") as aiodf:
+        writer = Writer(aiodf)
+        header = """<?xml version="1.0" encoding="utf-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" \
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" \
+xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 \
+https://www.sitemaps.org/schemas/sitemap/0.9/siteindex.xsd">\n"""
+        await writer(header)
+        await aiodf.fsync()
+        for sitemap_index_entry in sitemap_index_entries:
+            loc_str = xmlesc(
+                os.path.join(host, sitemap_index_entry.loc_suffix())
+            )
+            lastmod_str = xmlesc(sitemap_index_entry.last_mod_str)
+            await writer(
+                f"  <sitemap>\n    <loc>{loc_str}</loc>\n    <lastmod>{lastmod_str}</lastmod>\n  </sitemap>\n"
+            )
+        await aiodf.fsync()
+
+        await writer("</sitemapindex>")
+        await aiodf.fsync()
+
+
+def build_sitemap(base_path: str, host: str, iterator: typing.Iterator):
+    loop = asyncio.get_event_loop()
+    future = asyncio.ensure_future(_build_sitemap(base_path, host, iterator))
+    loop.run_until_complete(future)
+
+
+async def _build_sitemap(base_path: str, host: str, iterator: typing.Iterator):
+    sitemap_index_entries = []
+    for urlset_iterator in iterator:
+        entries_for_urlset = []
+        for urlset_entry in urlset_iterator:
+            entries_for_urlset.append(urlset_entry)
+        sitemap_index_entry = urlset_iterator.sitemap_index_entry()
+        sitemap_index_entries.append(sitemap_index_entry)
+        urlset_dest_path = os.path.join(base_path, sitemap_index_entry.sitemap_filename)
+        await write_urlset_file(urlset_dest_path, host, entries_for_urlset)
+        logging.info(
+            "Done with urlset_iterator, wrote "
+            + str(urlset_iterator.num_urls)
+            + " records to "
+            + sitemap_index_entry.sitemap_filename
+        )
+    await write_sitemap_index_file(base_path, host, sitemap_index_entries)
 
 
 @functools.cache

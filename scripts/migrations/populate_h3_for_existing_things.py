@@ -43,7 +43,7 @@ def assign_h3(session: Session):
     authorities = {
         isb_lib.smithsonian_adapter.SmithsonianItem.AUTHORITY_ID: SmithsonianTransformer.geo_to_h3,
         isb_lib.sesar_adapter.SESARItem.AUTHORITY_ID: SESARTransformer.geo_to_h3,
-        isb_lib.geome_adapter.GEOMEItem.AUTHORITY_ID: GEOMETransformer.geo_to_h3,
+        isb_lib.geome_adapter.GEOMEItem.AUTHORITY_ID: GEOMETransformer.GEOMETransformer.geo_to_h3,
         isb_lib.opencontext_adapter.OpenContextItem.AUTHORITY_ID: OpenContextTransformer.geo_to_h3,
     }
     for authority, geo_to_h3 in authorities.items():
