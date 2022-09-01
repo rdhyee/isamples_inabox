@@ -14,7 +14,7 @@ def rsession():
 def hostname():
     hostname = os.getenv("INPUT_HOSTNAME")
     if hostname is None:
-        hostname = "https://mars.cyverse.org/"
+        hostname = "https://hyde.cyverse.org/isamples_central/"
     # ensure the hostname is properly ended, since we construct the URLs by hand
     if not hostname.endswith("/"):
         hostname = hostname + "/"
@@ -89,31 +89,3 @@ def test_get_thing(
     res = rsession.get(url, headers=headers, params=params)
     response_dict = res.json()
     assert len(response_dict) > 0
-
-
-def test_things_geojson_heatmap(
-    rsession: requests.Session,
-    hostname: str,
-    headers: typing.Dict,
-):
-    params = {"min_lat": -1, "max_lat": 1, "min_lon": -1, "max_lon": 1}
-    url = f"{hostname}things_geojson_heatmap"
-    res = rsession.get(url, headers=headers, params=params)
-    response_dict = res.json()
-    assert response_dict["type"] == "FeatureCollection"
-    assert len(response_dict["features"]) > 0
-
-
-def test_things_leaflet_heatmap(
-    rsession: requests.Session,
-    hostname: str,
-    headers: typing.Dict,
-):
-    params = {"min_lat": -1, "max_lat": 1, "min_lon": -1, "max_lon": 1}
-    url = f"{hostname}things_leaflet_heatmap"
-    res = rsession.get(url, headers=headers, params=params)
-    response_dict = res.json()
-    assert len(response_dict["data"]) > 0
-    assert response_dict.get("total") is not None
-    assert response_dict.get("max_value") is not None
-    assert response_dict.get("num_docs") is not None

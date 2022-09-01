@@ -13,7 +13,7 @@ def rsession():
 def solr_url():
     solr_url = os.getenv("INPUT_SOLR_URL")
     if solr_url is None:
-        solr_url = "https://mars.cyverse.org/thing/select"
+        solr_url = "https://hyde.cyverse.org/isamples_central/thing/select"
     return solr_url
 
 

@@ -16,7 +16,7 @@ def rsession():
 def sitemap_index_url():
     sitemap_index_url = os.getenv("INPUT_SITEMAP_INDEX_URL")
     if sitemap_index_url is None:
-        sitemap_index_url = "https://mars.cyverse.org/sitemaps/sitemap-index.xml"
+        sitemap_index_url = "https://hyde.cyverse.org/sitemaps/sitemap-index.xml"
     return sitemap_index_url
 
 
