@@ -1,5 +1,6 @@
 import json
 import logging
+import sys
 
 import click
 import click_config_file
@@ -53,6 +54,7 @@ def validate_isamples_package(file: str):
         print("Validation successful.")
     else:
         print_report_errors(report)
+        sys.exit(-1)
 
 
 def print_report_errors(report):
