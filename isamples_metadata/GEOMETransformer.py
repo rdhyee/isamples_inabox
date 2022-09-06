@@ -4,7 +4,7 @@ import logging
 import typing
 import re
 from typing import Optional
-
+import requests
 import isamples_metadata
 from isamples_metadata.Transformer import (
     Transformer,
@@ -139,9 +139,36 @@ class GEOMETransformer(Transformer):
         return Transformer.DESCRIPTION_SEPARATOR.join(description_pieces)
 
     def has_context_categories(self) -> typing.List[str]:
-        # TODO: implement
-        # ["[infer from locality and taxon names]"]
-        return []
+        ranks = ["kingdom", "phylum", "genus"]
+        ranks_to_value = {rank: None for rank in ranks}
+        for rank in ranks:
+            value = self._source_record_main_record().get(rank)
+            if value != "unidentified":
+                ranks_to_value[rank] = value
+        url = "https://api.gbif.org/v1/species/match?"
+        for rank, value in ranks_to_value.items():
+            if value:
+                url += rank + "=" + str(value) + "&"
+        url = url.strip("&")
+        # use GBIF api to get kingdom value
+        r = requests.get(url)
+        json = r.json()
+        kingdom = json["kingdom"]
+        if not kingdom:
+            # remove parameters
+            # from the most specific rank
+            for rank in reversed(ranks):
+                value = ranks_to_value[rank]
+                if value:
+                    query_param = rank + "=" + str(value) + "&"
+                    url = url[:-len(query_param)]  # remove query param
+                    r = requests.get(url)
+                    json = r.json()
+                    kingdom = json["kingdom"]
+                    if kingdom:
+                        break
+
+        return kingdom
 
     def has_material_categories(self) -> typing.List[str]:
         # TODO: implement

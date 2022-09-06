@@ -1,15 +1,82 @@
-class SESARClassifierInput:
-    """Takes thing object to convert it into data that the classifier
+from ClassifierInput import ClassifierInput
+
+
+class SESARClassifierInput(ClassifierInput):
+    """Takes SESAR thing object to convert it into data that the classifier
     requires as input"""
+
+    # SESAR test record igsn prefix
+    SESAR_test_igsn = [
+        "IEKTS",
+        "IEKCM",
+        "IEKEL",
+        "IESDE",
+        "MEG",
+        "MCT IEJKH",
+        "IESER",
+        "IELL2",
+        "IELL1",
+        "LLS",
+        "IEHS1",
+        "HSU",
+        "IECAO",
+        "IESBC"
+    ]
+
+    # material related words
+    SESAR_CV_words = [
+        'anthropogenic',
+        'biogenic',
+        'dispersed',
+        'fluid',
+        'frozen',
+        'gaseous',
+        'ice',
+        'liquid',
+        'material',
+        'media',
+        'metal',
+        'mineral',
+        'mixed',
+        'natural',
+        'non-aqueous',
+        'non-organic',
+        'organic',
+        'particulate',
+        'rock',
+        'sediment',
+        'soil',
+        'soil,',
+        'solid',
+        'water'
+    ]
+
+    # SESAR source labels to CV mapping
+    source_to_CV = {
+        "Biology": "Biogenic non-organic material",
+        "EarthMaterial": "Natural Solid Material",
+        "Gas": "Gaseous material",
+        "Ice": "Any Ice",
+        "Liquid": "Liquid water",
+        "Material": "Material",
+        "Mineral": "Mineral",
+        "Organic Material": "Organic Material",
+        "Other": "Material",
+        "Particulate": "Particulate",
+        "Rock": "Rock",
+        "Sediment": "Sediment",
+        "Soil": "Soil",
+        "experimentMaterial": "Material",
+        "Sediment or Rock": "Natural Solid Material",
+        "Natural Solid Material": "Natural Solid Material",
+        "Mixed soil, sediment or rock": "Mixed soil, sediment or rock"
+    }
+
     def __init__(self, thing):
-        self.thing = thing
+        super().__init__(thing)
         # gold label field of SESAR
         self.SESAR_material_field = "material"
         self.SESAR_sample_field = "sampleType"
-        # fields to fill in through parsing the thing object
-        self.description_map = {}
-        self.gold_material, self.gold_sample = None, None
-        self.material_text, self.sample_text = "", ""
 
     def build_text(self, description_map, labelType):
         """Return the concatenated text of informative fields in the
@@ -72,18 +139,3 @@ class SESARClassifierInput:
         self.material_text = self.build_text(description_map, "material")
         self.sample_text = self.build_text(description_map, "sample")
         self.description_map = description_map  # save the description_map
-
-    def get_material_text(self):
-        return self.material_text
-
-    def get_sample_text(self):
-        return self.sample_text
-
-    def get_gold_material(self):
-        return self.gold_material
-
-    def get_gold_sample(self):
-        return self.gold_sample
-
-    def get_description_map(self):
-        return self.description_map
