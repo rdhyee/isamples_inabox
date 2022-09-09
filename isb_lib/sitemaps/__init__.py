@@ -20,6 +20,8 @@ import functools
 import os.path
 from aiofile import AIOFile, Writer
 
+INDEX_XML = "sitemap-index.xml"
+
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
@@ -102,7 +104,7 @@ http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">\n"""
 async def write_sitemap_index_file(
     base_path: str, host: str, sitemap_index_entries: typing.List[SitemapIndexEntry]
 ):
-    index_file_path = os.path.join(base_path, "sitemap-index.xml")
+    index_file_path = os.path.join(base_path, INDEX_XML)
     async with AIOFile(index_file_path, "w") as aiodf:
         writer = Writer(aiodf)
         header = """<?xml version="1.0" encoding="utf-8"?>

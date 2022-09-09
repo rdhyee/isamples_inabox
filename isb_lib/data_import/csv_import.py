@@ -1,4 +1,5 @@
 import datetime
+from typing import Optional
 
 from frictionless import Package, Resource
 from pathlib import Path
@@ -79,7 +80,7 @@ def unflatten_csv_row(row: dict) -> dict:
     return unflattened_row
 
 
-def things_from_isamples_package(session: Session, package: Package, max_entries: int = -1) -> list[Thing]:
+def things_from_isamples_package(session: Optional[Session], package: Package, max_entries: int = -1) -> list[Thing]:
     first_resource: Resource = package.resources[0]
     num_things = 0
     url = f"file://{first_resource.path}"
@@ -95,7 +96,8 @@ def things_from_isamples_package(session: Session, package: Package, max_entries
         thing.resolved_url = url
         thing.authority_id = authority_id
         thing.resolved_content = unflatten_csv_row(row)
-        save_or_update_thing(session, thing)
+        if session is not None:
+            save_or_update_thing(session, thing)
         things.append(thing)
     return things
 

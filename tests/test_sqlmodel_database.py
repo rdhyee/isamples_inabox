@@ -275,6 +275,7 @@ def test_save_thing(session: Session) -> Thing:
     save_thing(session, sesar_thing)
     # we should have a ThingIdentifier now
     assert 1 == len(sesar_thing.identifiers)
+    assert len(sesar_thing.__repr__()) > 0
     return sesar_thing
 
 

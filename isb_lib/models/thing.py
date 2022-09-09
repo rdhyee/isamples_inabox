@@ -122,20 +122,6 @@ class Thing(SQLModel, table=True):
         }
         return res
 
-    def take_values_from_json_dict(self, json_dict: typing.Dict):
-        self.authority_id = json_dict["authority_id"]
-        self.id = json_dict["id"]
-        self.resolved_content = json_dict["resolved_content"]
-        self.tcreated = json_dict["tcreated"]
-        self.tresolved = json_dict["tresolved"]
-        self.resolved_url = json_dict["resolved_url"]
-        self.resolved_media_type = json_dict["resolved_media_type"]
-        self.item_type = json_dict["item_type"]
-        self.resolved_status = json_dict["resolved_status"]
-        self.resolve_elapsed = json_dict["resolve_elapsed"]
-        # Update the tstamp to now, to indicate this is the last modified date from an iSamples perspective
-        self.tstamp = datetime.now()
-
 
 class ThingIdentifier(SQLModel, table=True):
     guid: Optional[str] = Field(

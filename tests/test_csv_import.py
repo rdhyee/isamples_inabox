@@ -58,6 +58,13 @@ def test_unflatten_csv_row(csv_file_path: str, json_file_path: str):
     _check_serialized_json_dict(unflattened_row, json_contents)
 
 
+@pytest.mark.parametrize("csv_file_path,json_file_path", CSV_items)
+def test_things_from_isamples_package(csv_file_path: str, json_file_path: str):
+    records = csv_import.create_isamples_package(csv_file_path)
+    things = csv_import.things_from_isamples_package(None, records)
+    assert len(things) > 0
+
+
 def json_dict_from_file_path(json_file_path: str) -> dict:
     with open(json_file_path) as json_file:
         json_str = json_file.read()

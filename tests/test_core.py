@@ -1,7 +1,10 @@
+import click.core
 import pytest
 import isb_lib.core
 import json
 import requests
+
+from isb_lib.core import things_main
 
 TEST_LIVE_SERVER = 0
 
@@ -188,3 +191,7 @@ def test_isamples_date_with_ms():
     assert datetime.hour == 11
     assert datetime.minute == 25
     assert datetime.second == 16
+
+
+def test_things_main():
+    things_main(click.core.Context(click.core.Command("test")), None, None)

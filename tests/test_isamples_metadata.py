@@ -276,6 +276,11 @@ def test_geo_to_h3():
     assert h3 is not None
 
 
+def test_geo_to_h3_none():
+    h3 = Transformer.geo_to_h3(None, None)
+    assert h3 is None
+
+
 def test_geome_geo_to_h3():
     test_file_path = "./test_data/GEOME/raw/ark-21547-Car2PIRE_0334.json"
     with open(test_file_path) as source_file:

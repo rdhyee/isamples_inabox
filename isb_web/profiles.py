@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Mapping
 
 import connegp
 import fastapi
@@ -62,6 +62,23 @@ def get_profile_from_qsa(profiles_string: str = None) -> Optional[Profile]:
     return None
 
 
+def _get_profile_from_headers(headers: Mapping) -> Optional[Profile]:
+    if headers.get("Accept-Profile") is not None:
+        try:
+            ap = connegp.AcceptProfileHeaderParser(headers.get("Accept-Profile"))
+            if ap.valid:
+                for p in ap.profiles:
+                    # convert this valid URI/URN to a token
+                    for supported_profile in ALL_SUPPORTED_PROFILES:
+                        if supported_profile.uri == p["profile"]:
+                            return supported_profile
+            raise Exception("No profile found")
+        except Exception:
+            msg = "You have requested a profile using an Accept-Profile header that is incorrectly formatted."
+            raise ProfilesMediatypesException(msg)
+    return None
+
+
 # taken and adapted from https://github.com/RDFLib/pyLDAPI
 def get_profile_from_http(request: fastapi.Request) -> Optional[Profile]:
     """
@@ -70,21 +87,7 @@ def get_profile_from_http(request: fastapi.Request) -> Optional[Profile]:
     :return: The profile to use, or None if not found
     :rtype: Profile
     """
-    if request.headers.get("Accept-Profile") is not None:
-        try:
-            ap = connegp.AcceptProfileHeaderParser(request.headers.get("Accept-Profile"))
-            if ap.valid:
-                for p in ap.profiles:
-                    # convert this valid URI/URN to a token
-                    for supported_profile in ALL_SUPPORTED_PROFILES:
-                        if supported_profile.uri == p["profile"]:
-                            return supported_profile
-            else:
-                return None
-        except Exception:
-            msg = "You have requested a profile using an Accept-Profile header that is incorrectly formatted."
-            raise ProfilesMediatypesException(msg)
-    return None
+    return _get_profile_from_headers(request.headers)
 
 
 def get_all_profiles_response_headers(base_url_str: str) -> dict:
