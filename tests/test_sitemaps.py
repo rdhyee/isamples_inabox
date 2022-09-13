@@ -1,13 +1,17 @@
 import asyncio
+import datetime
 import json
 import os.path
 import tempfile
 
 import lxml
+import pytest
+import requests
 
 from isb_lib.sitemaps import SitemapIndexEntry, ThingSitemapIndexEntry, UrlSetEntry, ThingUrlSetEntry, \
-    write_urlset_file, write_sitemap_index_file, INDEX_XML, build_sitemap
+    write_urlset_file, write_sitemap_index_file, INDEX_XML, build_sitemap, SiteMap
 from isb_lib.sitemaps.gh_pages_sitemap import GHPagesSitemapIndexIterator
+from test_utils import LocalFileAdapter
 
 
 def test_sitemap_index_entry():
@@ -73,3 +77,19 @@ def test_build_sitemap():
         outfile.write(json_object)
         build_sitemap(path, "https://hyde.cyverse.org", GHPagesSitemapIndexIterator(path))
         _assert_file_exists_and_is_xml(os.path.join(path, INDEX_XML))
+
+
+@pytest.fixture
+def local_file_requests_session():
+    requests_session = requests.session()
+    requests_session.mount("file://", LocalFileAdapter())
+    return requests_session
+
+
+def test_sitemap_scan_items(local_file_requests_session):
+    local_url_path = f"file://{os.path.join(os.getcwd(), 'test_data/sitemaps')}"
+    file_url = os.path.join(local_url_path, "test_sitemap_index.xml")
+    sitemap = SiteMap(file_url, datetime.datetime(year=1900, month=1, day=1, hour=0, minute=0), None,
+                      local_file_requests_session, local_url_path)
+    for item in sitemap.scanItems():
+        assert item is not None
