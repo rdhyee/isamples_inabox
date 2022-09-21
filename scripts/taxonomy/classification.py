@@ -5,22 +5,10 @@ from isamples_metadata import SESARTransformer, OpenContextTransformer
 import isb_lib
 from isb_lib.core import ThingRecordIterator
 from isb_web.sqlmodel_database import SQLModelDAO
-from create_hierarchy_json import getFullLabel, getHierarchyMapping
-from classification_helper import classify_by_machine, classify_by_rule
-from SESARClassifierInput import SESARClassifierInput
-from OpenContextClassifierInput import OpenContextClassifierInput
-
-
-def get_classification_result(description_map, text, collection, labelType):
-    """Return the classification result"""
-    # first pass : see if the record falls in the defined rules
-    label = classify_by_rule(description_map, text, collection, labelType)
-    if label:
-        return (label, -1)  # set sentinel value as probability
-    else:
-        # second pass : pass the record to the model
-        machine_prediction = classify_by_machine(text, collection, labelType)
-        return machine_prediction  # (predicted label, probability)
+from scripts.taxonomy.create_hierarchy_json import getFullLabel, getHierarchyMapping
+from scripts.taxonomy.SESARClassifierInput import SESARClassifierInput
+from scripts.taxonomy.OpenContextClassifierInput import OpenContextClassifierInput
+from scripts.taxonomy.metadata_models import MetadataModelLoader, SESARMaterialPredictor
 
 
 @click.command()
@@ -68,6 +56,9 @@ def main(
     material_mapping = getHierarchyMapping("material")
     specimen_mapping = getHierarchyMapping("specimen")
 
+    MetadataModelLoader.initialize_models()
+    sesar_model = MetadataModelLoader.get_sesar_material_model()
+
     for thing in thing_iterator.yieldRecordsByPage():
         # print(f"thing is {thing.id}")
         if authority_id == "SESAR":
@@ -79,12 +70,13 @@ def main(
             sesar_input = SESARClassifierInput(thing.resolved_content)
             sesar_input.parse_thing()
 
-            description_map = sesar_input.get_description_map()
             material_text = sesar_input.get_material_text()
 
             # get the material label prediction result of the record
-            label, prob = get_classification_result(
-                description_map, material_text, "SESAR", "material"
+            # load the model predictor
+            smp = SESARMaterialPredictor(sesar_model)
+            label, prob = smp.predict_material_type(
+                thing.resolved_content
             )
 
             print(

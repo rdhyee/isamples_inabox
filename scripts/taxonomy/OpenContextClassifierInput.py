@@ -1,4 +1,4 @@
-from ClassifierInput import ClassifierInput
+from scripts.taxonomy.ClassifierInput import ClassifierInput
 
 
 class OpenContextClassifierInput(ClassifierInput):

@@ -37,6 +37,8 @@ from isb_web.schemas import ThingPage
 from isb_web.sqlmodel_database import SQLModelDAO
 import isb_lib.stac
 
+from scripts.taxonomy.metadata_models import MetadataModelLoader
+
 THIS_PATH = os.path.dirname(os.path.abspath(__file__))
 
 # Setup logging from the config, but don't
@@ -98,6 +100,8 @@ app.mount(manage.MANAGE_PREFIX, manage_app)
 
 @app.on_event("startup")
 def on_startup():
+    # method to initialize all of the available models in config
+    MetadataModelLoader.initialize_models()
     dao.connect_sqlmodel(isb_web.config.Settings().database_url)
     orcid_ids = sqlmodel_database.all_orcid_ids(dao.get_session())
     # Superusers are allowed to mint identifiers as well, so make sure they're in the list.
