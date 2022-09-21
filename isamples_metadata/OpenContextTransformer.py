@@ -8,6 +8,11 @@ from isamples_metadata.Transformer import (
     StringEqualityCategoryMapper,
     AbstractCategoryMapper,
 )
+from scripts.taxonomy.metadata_models import (
+    MetadataModelLoader,
+    OpenContextMaterialPredictor,
+    OpenContextSamplePredictor
+)
 
 
 class MaterialCategoryMetaMapper(AbstractCategoryMetaMapper):
@@ -162,10 +167,22 @@ class OpenContextTransformer(Transformer):
 
     def has_material_categories(self) -> typing.List[str]:
         item_category = self.source_record.get("item category") or ""
+        if item_category == "":
+            # TODO : need more specification on when to call the predict function
+            # call the classifier for prediction
+            ocm_model = MetadataModelLoader.get_oc_material_model()
+            ocmp = OpenContextMaterialPredictor(ocm_model)
+            return [ocmp.predict_material_type(self.source_record)]
         return MaterialCategoryMetaMapper.categories(item_category)
 
     def has_specimen_categories(self) -> typing.List[str]:
         item_category = self.source_record.get("item category") or ""
+        if item_category == "":
+            # TODO : need more specification on when to call the predict function
+            # call the classifier for prediction
+            ocm_model = MetadataModelLoader.get_oc_sample_model()
+            ocmp = OpenContextSamplePredictor(ocm_model)
+            return [ocmp.predict_sample_type(self.source_record)]
         return SpecimenCategoryMetaMapper.categories(item_category)
 
     def _context_label_pieces(self) -> typing.List[str]:
