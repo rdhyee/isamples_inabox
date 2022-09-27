@@ -37,8 +37,6 @@ from isb_web.schemas import ThingPage
 from isb_web.sqlmodel_database import SQLModelDAO
 import isb_lib.stac
 
-from isamples_metadata.taxonomy.metadata_models import MetadataModelLoader
-
 THIS_PATH = os.path.dirname(os.path.abspath(__file__))
 
 # Setup logging from the config, but don't
