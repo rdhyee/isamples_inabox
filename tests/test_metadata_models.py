@@ -1,4 +1,3 @@
-from urllib.request import proxy_bypass
 from isamples_metadata.taxonomy.metadata_models import (
     MetadataModelLoader,
     SESARMaterialPredictor,
