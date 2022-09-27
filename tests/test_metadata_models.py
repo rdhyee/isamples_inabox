@@ -130,5 +130,5 @@ def _test_opencontext_sample_model(opencontext_source_path):
     # load the model predictor
     ocmp = OpenContextSamplePredictor(oc_model)
     assert ocmp is not None
-    label, prob = ocmp.predict_material_type(oc_source_record)
+    label, prob = ocmp.predict_sample_type(oc_source_record)
     assert type(label) == str and type(prob) == int or type(prob) == float
