@@ -2,6 +2,7 @@ import collections
 import logging
 import json
 import os
+from typing import Tuple
 from isb_web import config
 
 from isamples_metadata.taxonomy.Model import Model
@@ -18,7 +19,7 @@ class MetadataModelLoader:
     _OPENCONTEXT_SAMPLE_MODEL = None
 
     @staticmethod
-    def load_model_from_path(collection, label_type):
+    def load_model_from_path(collection, label_type, config_json=None):
         """
             Set the pretrained models by loading them from the file system
             Prerequisite: In order to use this, make sure that there is a pydantic settings file on the
@@ -27,22 +28,25 @@ class MetadataModelLoader:
 
             :param collection : the collection type of the sample
             :param label_type : the field that we want to predict
+            :param config_json : passed config json, if not passed we use the default path set in the .env
         """
         # load the model config file
-        if collection == "SESAR" and label_type == "material":
-            config_path = config.Settings().sesar_material_config_path
-        elif collection == "OPENCONTEXT" and label_type == "material":
-            config_path = config.Settings().opencontext_material_config_path
-        elif collection == "OPENCONTEXT" and label_type == "sample":
-            config_path = config.Settings().opencontext_sample_config_path
-        # read the model config file
-        if not os.path.exists(config_path):
-            logging.error(
-                "Unable to locate pretrained models",
-            )
-            return
-        with open(config_path) as json_file:
-            config_json = json.load(json_file)
+        if not config_json:
+            if collection == "SESAR" and label_type == "material":
+                config_path = config.Settings().sesar_material_config_path
+            elif collection == "OPENCONTEXT" and label_type == "material":
+                config_path = config.Settings().opencontext_material_config_path
+            elif collection == "OPENCONTEXT" and label_type == "sample":
+                config_path = config.Settings().opencontext_sample_config_path
+            # read the model config file as json
+            if not os.path.exists(config_path):
+                logging.error(
+                    "Unable to locate pretrained models at %s",
+                    config_path
+                )
+                return
+            with open(config_path) as json_file:
+                config_json = json.load(json_file)
         # use the model config to get the pretrained model
         model = Model(config_json)
 
@@ -55,21 +59,28 @@ class MetadataModelLoader:
             MetadataModelLoader._OPENCONTEXT_SAMPLE_MODEL = model
 
     @staticmethod
-    def get_sesar_material_model():
+    def get_sesar_material_model(config_json: dict = None):
+        """
+            Getter method that returns the SESAR material model
+            If the config of the model is passed, we can load the model directly reading the config_json values
+            Otherwise, use the default config path of the model and read the model config values to load the model
+
+            :param config_json sesar material model config json in dict format
+        """
         if not MetadataModelLoader._SESAR_MATERIAL_MODEL:
-            MetadataModelLoader.load_model_from_path("SESAR", "material")
+            MetadataModelLoader.load_model_from_path("SESAR", "material", config_json)
         return MetadataModelLoader._SESAR_MATERIAL_MODEL
 
     @staticmethod
-    def get_oc_material_model():
+    def get_oc_material_model(config_json: dict = None):
         if not MetadataModelLoader._OPENCONTEXT_MATERIAL_MODEL:
-            MetadataModelLoader.load_model_from_path("OPENCONTEXT", "material")
+            MetadataModelLoader.load_model_from_path("OPENCONTEXT", "material", config_json)
         return MetadataModelLoader._OPENCONTEXT_MATERIAL_MODEL
 
     @staticmethod
-    def get_oc_sample_model():
+    def get_oc_sample_model(config_json: dict = None):
         if not MetadataModelLoader._OPENCONTEXT_SAMPLE_MODEL:
-            MetadataModelLoader.load_model_from_path("OPENCONTEXT", "sample")
+            MetadataModelLoader.load_model_from_path("OPENCONTEXT", "sample", config_json)
         return MetadataModelLoader._OPENCONTEXT_SAMPLE_MODEL
 
 
@@ -191,7 +202,7 @@ class SESARMaterialPredictor:
 
     def predict_material_type(
         self, source_record: dict
-    ):
+    ) -> Tuple[str, float]:
         """
         Invoke the pre-trained BERT model to predict the material type label for the specified string inputs.
 
@@ -237,7 +248,7 @@ class OpenContextMaterialPredictor:
 
     def predict_material_type(
         self, source_record: dict
-    ):
+    ) -> Tuple[str, float]:
         """
         Invoke the pre-trained BERT model to predict the material type label for the specified string inputs.
 
@@ -275,7 +286,7 @@ class OpenContextSamplePredictor:
 
     def predict_sample_type(
         self, source_record: dict
-    ):
+    ) -> Tuple[str, float]:
         """
         Invoke the pre-trained BERT model to predict the sample type label for the specified string inputs.
 

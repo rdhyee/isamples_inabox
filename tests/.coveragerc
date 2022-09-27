@@ -3,4 +3,3 @@ omit=
     tests/*
     integration_tests/*
 		test*
-    */isamples_metadata/taxonomy/*
