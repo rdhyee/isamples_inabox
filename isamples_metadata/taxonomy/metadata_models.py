@@ -4,10 +4,9 @@ import json
 import os
 from isb_web import config
 
-from isamples_metadata.Transformer import Transformer
-from scripts.taxonomy.Model import Model
-from scripts.taxonomy.SESARClassifierInput import SESARClassifierInput
-from scripts.taxonomy.OpenContextClassifierInput import OpenContextClassifierInput
+from isamples_metadata.taxonomy.Model import Model
+from isamples_metadata.taxonomy.SESARClassifierInput import SESARClassifierInput
+from isamples_metadata.taxonomy.OpenContextClassifierInput import OpenContextClassifierInput
 
 
 class MetadataModelLoader:
@@ -56,54 +55,50 @@ class MetadataModelLoader:
             MetadataModelLoader._OPENCONTEXT_SAMPLE_MODEL = model
 
     @staticmethod
-    def initialize_models():
-        """
-            Invokes the load_model function to load all of the possible models
-            that are available based on the config
-        """
-        MetadataModelLoader.load_model_from_path("SESAR", "material")
-        MetadataModelLoader.load_model_from_path("OPENCONTEXT", "material")
-        MetadataModelLoader.load_model_from_path("OPENCONTEXT", "sample")
-
-    @staticmethod
     def get_sesar_material_model():
+        if not MetadataModelLoader._SESAR_MATERIAL_MODEL:
+            MetadataModelLoader.load_model_from_path("SESAR", "material")
         return MetadataModelLoader._SESAR_MATERIAL_MODEL
 
     @staticmethod
     def get_oc_material_model():
+        if not MetadataModelLoader._OPENCONTEXT_MATERIAL_MODEL:
+            MetadataModelLoader.load_model_from_path("OPENCONTEXT", "material")
         return MetadataModelLoader._OPENCONTEXT_MATERIAL_MODEL
 
     @staticmethod
     def get_oc_sample_model():
+        if not MetadataModelLoader._OPENCONTEXT_SAMPLE_MODEL:
+            MetadataModelLoader.load_model_from_path("OPENCONTEXT", "sample")
         return MetadataModelLoader._OPENCONTEXT_SAMPLE_MODEL
 
 
 class SESARMaterialPredictor:
     """Material label predictor of SESAR collection"""
     def __init__(self, model: Model):
+        if not model:
+            raise TypeError("Model is required to be non-None")
         self._model = model
-        self._model_valid = model is not None
-        self._description_map = None
 
-    def checkInformative(self, text):
+    def check_informative(self, text: str, description_map: dict) -> bool:
         """Checks if the record is informative"""
         # if record does not have description field
         #   && no CV words in content
         #       && only contains sampleType
         informative = False
-        if "description" not in self._description_map:
+        if "description" not in description_map:
             for cv in SESARClassifierInput.SESAR_CV_words:
                 if cv in text:
                     informative = True
                     break
-        if not informative and "sampleType" in self._description_map and \
-                text == self._description_map["sampleType"]:
+        if not informative and "sampleType" in description_map and \
+                text == description_map["sampleType"]:
             informative = False
         else:
             informative = True
         return informative
 
-    def checkInvalid(self, field_to_value):
+    def check_invalid(self, field_to_value: dict):
         """Checks if the record is invalid (not a sample record)
 
         """
@@ -116,7 +111,7 @@ class SESARMaterialPredictor:
             return True
         return False
 
-    def classify_by_sampleType(self, field_to_value):
+    def classify_by_sample_type(self, field_to_value: dict):
         """
         Use the sampleType field in the SESAR record
         If falls into any of the rules -> return defined label
@@ -144,7 +139,7 @@ class SESARMaterialPredictor:
         # if the record cannot be classified by the defined rules
         return None
 
-    def classify_by_rule(self, text):
+    def classify_by_rule(self, text: str, description_map: dict):
         """ Checks if the record can be classified by rule
         If the record corresponds to a rule, returns the rule-defined label
         Else return None
@@ -152,7 +147,7 @@ class SESARMaterialPredictor:
         # 1. check if record does not have enough information
         # if not enough information given,
         # give "Material" label
-        if not self.checkInformative(text):
+        if not self.check_informative(text, description_map):
             return "Material"
 
         # 2. rule-based classification
@@ -166,25 +161,25 @@ class SESARMaterialPredictor:
         ]
         # build a map that stores the fields that we are interested
         field_to_value = collections.defaultdict(str)
-        for key, value in self._description_map.items():
+        for key, value in description_map.items():
             if key in fields_to_check:
                 field_to_value[key] = value
 
         # check if record is invalid
         # i.e., not a sample
-        if self.checkInvalid(field_to_value):
+        if self.check_invalid(field_to_value):
             return "Invalid"
 
         # check if the fields fall into the rules
         # if it does not, return None
-        result = self.classify_by_sampleType(field_to_value)
+        result = self.classify_by_sample_type(field_to_value)
         if result:
             # map to controlled vocabulary
             return SESARClassifierInput.source_to_CV[result]
         else:
             return None
 
-    def classify_by_machine(self, text):
+    def classify_by_machine(self, text: str):
         """ Returns the machine prediction on the given
         input record
         """
@@ -203,22 +198,15 @@ class SESARMaterialPredictor:
         :param source_record: the raw source of a record
         :return: iSamples CV that corresponds to the label that is the prediction result of the field
         """
-        if not self._model_valid:
-            logging.error(
-                "Returning Transformer.NOT_PROVIDED since we couldn't load the model at path %s.",
-                config.Settings().sesar_material_model_path
-            )
-            return Transformer.NOT_PROVIDED
-
         # extract the data that the model requires for classification
         sesar_input = SESARClassifierInput(source_record)
         sesar_input.parse_thing()
-        self._description_map = sesar_input.get_description_map()
+        description_map = sesar_input.get_description_map()
         # get the input string for prediction
         input_string = sesar_input.get_material_text()
         # get the prediction result
         # first pass : see if the record falls in the defined rules
-        label = self.classify_by_rule(input_string)
+        label = self.classify_by_rule(input_string, description_map)
         if label:
             return (label, -1)  # set sentinel value as probability
         else:
@@ -233,11 +221,11 @@ class SESARMaterialPredictor:
 class OpenContextMaterialPredictor:
     """Material label predictor of OpenContext collection"""
     def __init__(self, model: Model):
+        if not model:
+            raise TypeError("Model is required to be non-None")
         self._model = model
-        self._model_valid = model is not None
-        self._description_map = None
 
-    def classify_by_machine(self, text):
+    def classify_by_machine(self, text: str):
         """ Returns the machine prediction on the given
         input record
         """
@@ -256,17 +244,11 @@ class OpenContextMaterialPredictor:
         :param source_record: the raw source of a record
         :return: String label that is the prediction result of the field
         """
-        if not self._model_valid:
-            logging.error(
-                "Returning Transformer.NOT_PROVIDED since we couldn't load the model at path %s.",
-                config.Settings().opencontext_material_model_path
-            )
-            return Transformer.NOT_PROVIDED
-
         # extract the data that the model requires for classification
         oc_input = OpenContextClassifierInput(source_record)
         oc_input.parse_thing()
-        self.description_map = oc_input.get_description_map()
+        # TODO: use the description map to assist rule-based classification
+        # description_map = oc_input.get_description_map()
         input_string = oc_input.get_material_text()
 
         # get the prediction result with necessary fields provided
@@ -277,11 +259,11 @@ class OpenContextMaterialPredictor:
 class OpenContextSamplePredictor:
     """Sample label predictor of OpenContext collection"""
     def __init__(self, model: Model):
+        if not model:
+            raise TypeError("Model is required to be non-None")
         self._model = model
-        self._model_valid = model is not None
-        self._description_map = None
 
-    def classify_by_machine(self, text):
+    def classify_by_machine(self, text: str):
         """ Returns the machine prediction on the given
         input record
         """
@@ -300,17 +282,11 @@ class OpenContextSamplePredictor:
         :param source_record: the raw source of a record
         :return: String label that is the prediction result of the field
         """
-        if not self._model_valid:
-            logging.error(
-                "Returning Transformer.NOT_PROVIDED since we couldn't load the model at path %s.",
-                config.Settings().opencontext_sample_model_path
-            )
-            return Transformer.NOT_PROVIDED
-
         # extract the data that the model requires for classification
         oc_input = OpenContextClassifierInput(source_record)
         oc_input.parse_thing()
-        self.description_map = oc_input.get_description_map()
+        # TODO: use the description map to assist rule-based classification
+        # description_map = oc_input.get_description_map()
         input_string = oc_input.get_sample_text()
 
         # get the prediction result with necessary fields provided

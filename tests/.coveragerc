@@ -3,4 +3,4 @@ omit=
     tests/*
     integration_tests/*
 		test*
-    */scripts/*
+    */isamples_metadata/taxonomy/*

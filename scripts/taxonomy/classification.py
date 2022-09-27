@@ -6,9 +6,9 @@ import isb_lib
 from isb_lib.core import ThingRecordIterator
 from isb_web.sqlmodel_database import SQLModelDAO
 from scripts.taxonomy.create_hierarchy_json import getFullLabel, getHierarchyMapping
-from scripts.taxonomy.SESARClassifierInput import SESARClassifierInput
-from scripts.taxonomy.OpenContextClassifierInput import OpenContextClassifierInput
-from scripts.taxonomy.metadata_models import MetadataModelLoader, SESARMaterialPredictor
+from isamples_metadata.taxonomy.SESARClassifierInput import SESARClassifierInput
+from isamples_metadata.taxonomy.OpenContextClassifierInput import OpenContextClassifierInput
+from isamples_metadata.taxonomy.metadata_models import MetadataModelLoader, SESARMaterialPredictor
 
 
 @click.command()
@@ -56,7 +56,6 @@ def main(
     material_mapping = getHierarchyMapping("material")
     specimen_mapping = getHierarchyMapping("specimen")
 
-    MetadataModelLoader.initialize_models()
     sesar_model = MetadataModelLoader.get_sesar_material_model()
 
     for thing in thing_iterator.yieldRecordsByPage():

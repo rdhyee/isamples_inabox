@@ -1,4 +1,4 @@
-from scripts.taxonomy.ClassifierInput import ClassifierInput
+from isamples_metadata.taxonomy.ClassifierInput import ClassifierInput
 
 
 class SESARClassifierInput(ClassifierInput):

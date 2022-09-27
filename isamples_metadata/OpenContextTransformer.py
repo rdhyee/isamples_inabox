@@ -8,7 +8,7 @@ from isamples_metadata.Transformer import (
     StringEqualityCategoryMapper,
     AbstractCategoryMapper,
 )
-from scripts.taxonomy.metadata_models import (
+from isamples_metadata.taxonomy.metadata_models import (
     MetadataModelLoader,
     OpenContextMaterialPredictor,
     OpenContextSamplePredictor
