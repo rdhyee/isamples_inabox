@@ -2,12 +2,24 @@ import collections
 import logging
 import json
 import os
-from typing import Tuple
+from typing import Tuple, Optional
 from isb_web import config
 
 from isamples_metadata.taxonomy.Model import Model
 from isamples_metadata.taxonomy.SESARClassifierInput import SESARClassifierInput
 from isamples_metadata.taxonomy.OpenContextClassifierInput import OpenContextClassifierInput
+
+
+class PredictionResult:
+    """Class that represents the prediction result"""
+    def __init__(self, value: str, confidence: float):
+        """
+            Initialize the class values with the predicted label and probability logit value
+            :param value the predicted label
+            :param confidence the probability of the prediction 
+        """
+        self.value = value
+        self.confidence = confidence
 
 
 class MetadataModelLoader:
@@ -59,7 +71,7 @@ class MetadataModelLoader:
             MetadataModelLoader._OPENCONTEXT_SAMPLE_MODEL = model
 
     @staticmethod
-    def get_sesar_material_model(config_json: dict = None):
+    def get_sesar_material_model(config_json: dict = None) -> Optional[Model]:
         """
             Getter method that returns the SESAR material model
             If the config of the model is passed, we can load the model directly reading the config_json values
@@ -72,13 +84,13 @@ class MetadataModelLoader:
         return MetadataModelLoader._SESAR_MATERIAL_MODEL
 
     @staticmethod
-    def get_oc_material_model(config_json: dict = None):
+    def get_oc_material_model(config_json: dict = None) -> Optional[Model]:
         if not MetadataModelLoader._OPENCONTEXT_MATERIAL_MODEL:
             MetadataModelLoader.load_model_from_path("OPENCONTEXT", "material", config_json)
         return MetadataModelLoader._OPENCONTEXT_MATERIAL_MODEL
 
     @staticmethod
-    def get_oc_sample_model(config_json: dict = None):
+    def get_oc_sample_model(config_json: dict = None) -> Optional[Model]:
         if not MetadataModelLoader._OPENCONTEXT_SAMPLE_MODEL:
             MetadataModelLoader.load_model_from_path("OPENCONTEXT", "sample", config_json)
         return MetadataModelLoader._OPENCONTEXT_SAMPLE_MODEL
@@ -109,7 +121,7 @@ class SESARMaterialPredictor:
             informative = True
         return informative
 
-    def check_invalid(self, field_to_value: dict):
+    def check_invalid(self, field_to_value: dict) -> bool:
         """Checks if the record is invalid (not a sample record)
 
         """
@@ -122,7 +134,7 @@ class SESARMaterialPredictor:
             return True
         return False
 
-    def classify_by_sample_type(self, field_to_value: dict):
+    def classify_by_sample_type(self, field_to_value: dict) -> Optional[str]:
         """
         Use the sampleType field in the SESAR record
         If falls into any of the rules -> return defined label
@@ -150,7 +162,7 @@ class SESARMaterialPredictor:
         # if the record cannot be classified by the defined rules
         return None
 
-    def classify_by_rule(self, text: str, description_map: dict):
+    def classify_by_rule(self, text: str, description_map: dict) -> Optional[str]:
         """ Checks if the record can be classified by rule
         If the record corresponds to a rule, returns the rule-defined label
         Else return None
@@ -190,7 +202,7 @@ class SESARMaterialPredictor:
         else:
             return None
 
-    def classify_by_machine(self, text: str):
+    def classify_by_machine(self, text: str) -> Tuple[str, float]:
         """ Returns the machine prediction on the given
         input record
         """
@@ -202,7 +214,7 @@ class SESARMaterialPredictor:
 
     def predict_material_type(
         self, source_record: dict
-    ) -> Tuple[str, float]:
+    ) -> PredictionResult:
         """
         Invoke the pre-trained BERT model to predict the material type label for the specified string inputs.
 
@@ -219,14 +231,14 @@ class SESARMaterialPredictor:
         # first pass : see if the record falls in the defined rules
         label = self.classify_by_rule(input_string, description_map)
         if label:
-            return (label, -1)  # set sentinel value as probability
+            return PredictionResult(label, -1)  # set sentinel value as probability
         else:
             # second pass : deriving the prediction by machine
             # we pass the text to a pretrained model to get the prediction result
             # load the model
             machine_prediction = self.classify_by_machine(input_string)
             label, prob = machine_prediction
-            return (label, prob)
+            return PredictionResult(label, prob)
 
 
 class OpenContextMaterialPredictor:
@@ -236,19 +248,15 @@ class OpenContextMaterialPredictor:
             raise TypeError("Model is required to be non-None")
         self._model = model
 
-    def classify_by_machine(self, text: str):
+    def classify_by_machine(self, text: str) -> Tuple[str, float]:
         """ Returns the machine prediction on the given
         input record
         """
-        prediction, prob = self._model.predict(text)
-        return (
-            prediction,
-            prob
-        )
+        return self._model.predict(text)
 
     def predict_material_type(
         self, source_record: dict
-    ) -> Tuple[str, float]:
+    ) -> PredictionResult:
         """
         Invoke the pre-trained BERT model to predict the material type label for the specified string inputs.
 
@@ -264,7 +272,7 @@ class OpenContextMaterialPredictor:
 
         # get the prediction result with necessary fields provided
         label, prob = self.classify_by_machine(input_string)
-        return (label, prob)
+        return PredictionResult(label, prob)
 
 
 class OpenContextSamplePredictor:
@@ -274,7 +282,7 @@ class OpenContextSamplePredictor:
             raise TypeError("Model is required to be non-None")
         self._model = model
 
-    def classify_by_machine(self, text: str):
+    def classify_by_machine(self, text: str) -> Tuple[str, float]:
         """ Returns the machine prediction on the given
         input record
         """
@@ -302,4 +310,4 @@ class OpenContextSamplePredictor:
 
         # get the prediction result with necessary fields provided
         label, prob = self.classify_by_machine(input_string)
-        return (label, prob)
+        return PredictionResult(label, prob)
