@@ -172,7 +172,7 @@ class OpenContextTransformer(Transformer):
             # call the classifier for prediction
             ocm_model = MetadataModelLoader.get_oc_material_model()
             ocmp = OpenContextMaterialPredictor(ocm_model)
-            return [ocmp.predict_material_type(self.source_record)[0]]
+            return [ocmp.predict_material_type(self.source_record).value]
         return MaterialCategoryMetaMapper.categories(item_category)
 
     def has_specimen_categories(self) -> typing.List[str]:
@@ -182,7 +182,7 @@ class OpenContextTransformer(Transformer):
             # call the classifier for prediction
             ocm_model = MetadataModelLoader.get_oc_sample_model()
             ocmp = OpenContextSamplePredictor(ocm_model)
-            return [ocmp.predict_sample_type(self.source_record)[0]]
+            return [ocmp.predict_sample_type(self.source_record).value]
         return SpecimenCategoryMetaMapper.categories(item_category)
 
     def _context_label_pieces(self) -> typing.List[str]:

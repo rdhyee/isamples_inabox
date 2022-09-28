@@ -16,7 +16,7 @@ class PredictionResult:
         """
             Initialize the class values with the predicted label and probability logit value
             :param value the predicted label
-            :param confidence the probability of the prediction 
+            :param confidence the probability of the prediction
         """
         self.value = value
         self.confidence = confidence
@@ -98,7 +98,7 @@ class MetadataModelLoader:
 
 class SESARMaterialPredictor:
     """Material label predictor of SESAR collection"""
-    def __init__(self, model: Model):
+    def __init__(self, model: Optional[Model]):
         if not model:
             raise TypeError("Model is required to be non-None")
         self._model = model
@@ -243,7 +243,7 @@ class SESARMaterialPredictor:
 
 class OpenContextMaterialPredictor:
     """Material label predictor of OpenContext collection"""
-    def __init__(self, model: Model):
+    def __init__(self, model: Optional[Model]):
         if not model:
             raise TypeError("Model is required to be non-None")
         self._model = model
@@ -277,7 +277,7 @@ class OpenContextMaterialPredictor:
 
 class OpenContextSamplePredictor:
     """Sample label predictor of OpenContext collection"""
-    def __init__(self, model: Model):
+    def __init__(self, model: Optional[Model]):
         if not model:
             raise TypeError("Model is required to be non-None")
         self._model = model
@@ -294,7 +294,7 @@ class OpenContextSamplePredictor:
 
     def predict_sample_type(
         self, source_record: dict
-    ) -> Tuple[str, float]:
+    ) -> PredictionResult:
         """
         Invoke the pre-trained BERT model to predict the sample type label for the specified string inputs.
 

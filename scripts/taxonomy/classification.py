@@ -74,12 +74,12 @@ def main(
             # get the material label prediction result of the record
             # load the model predictor
             smp = SESARMaterialPredictor(sesar_model)
-            label, prob = smp.predict_material_type(
+            result = smp.predict_material_type(
                 thing.resolved_content
             )
 
             print(
-                f"Predicted (probability, label) : {label}, {prob}"
+                f"Predicted (probability, label) : {result.value}, {result.confidence}"
             )
 
             # gold label of the record

@@ -51,7 +51,8 @@ def _test_sesar_material_model(sesar_source_path):
     # load the model predictor
     smp = SESARMaterialPredictor(sesar_model)
     assert smp is not None
-    label, prob = smp.predict_material_type(sesar_source_record)
+    pred_result = smp.predict_material_type(sesar_source_record)
+    label , prob = pred_result.value, pred_result.confidence
     assert type(label) == str and type(prob) == int or type(prob) == float
 
 
@@ -96,7 +97,8 @@ def _test_opencontext_material_model(opencontext_source_path):
     # load the model predictor
     ocmp = OpenContextMaterialPredictor(oc_model)
     assert ocmp is not None
-    label, prob = ocmp.predict_material_type(oc_source_record)
+    pred_result = ocmp.predict_material_type(oc_source_record)
+    label , prob = pred_result.value, pred_result.confidence
     assert type(label) == str and type(prob) == int or type(prob) == float
 
 
@@ -127,7 +129,8 @@ def _test_opencontext_sample_model(opencontext_source_path):
     }
     oc_model = MetadataModelLoader.get_oc_material_model(oc_sample_config)
     # load the model predictor
-    ocmp = OpenContextSamplePredictor(oc_model)
-    assert ocmp is not None
-    label, prob = ocmp.predict_sample_type(oc_source_record)
+    ocsp = OpenContextSamplePredictor(oc_model)
+    assert ocsp is not None
+    pred_result = ocsp.predict_sample_type(oc_source_record)
+    label , prob = pred_result.value, pred_result.confidence
     assert type(label) == str and type(prob) == int or type(prob) == float
