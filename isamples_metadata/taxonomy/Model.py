@@ -1,4 +1,3 @@
-import json
 import torch
 from transformers import BertTokenizer, BertForSequenceClassification
 
@@ -39,11 +38,3 @@ class Model:
             self.config["CLASS_NAMES"][predicted_class],
             prob
         )
-
-
-def get_model(config: str):
-    # load the configuration of model
-    with open(config) as json_file:
-        config_json = json.load(json_file)
-    model = Model(config_json)
-    return model

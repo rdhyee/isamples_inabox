@@ -1,4 +1,4 @@
-from ClassifierInput import ClassifierInput
+from isamples_metadata.taxonomy.ClassifierInput import ClassifierInput
 
 
 class SESARClassifierInput(ClassifierInput):
@@ -114,7 +114,6 @@ class SESARClassifierInput(ClassifierInput):
         }
 
         description_map = {}  # saves value of description_field
-
         # parse the thing and extract data from informative fields
         for key, value in self.thing["description"].items():
             if key in description_field:

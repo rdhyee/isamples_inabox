@@ -5,7 +5,7 @@ import os.path
 import typing
 import re
 import logging
-from isamples_metadata import config
+from isb_web import config
 from fasttext.FastText import _FastText
 
 from isamples_metadata.Transformer import Transformer
@@ -35,7 +35,7 @@ class SampledFeaturePredictor:
         """
         Invoke the pre-trained fasttext model to predict the sampledFeature label for the specified string inputs.
         Prerequisite: In order to use this, make sure that there is a pydantic settings file on the
-        environment path, named "isamples_metadata.env" with at least this variable set:
+        environment path, named "isamples_web_config.env" with at least this variable set:
 
         FASTTEXT_MODEL_PATH = "/absolute/path/to/model"
 

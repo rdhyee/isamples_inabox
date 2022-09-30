@@ -12,6 +12,10 @@ from isamples_metadata.Transformer import (
     AbstractCategoryMetaMapper,
 )
 from isb_lib.sesar_adapter import fullIgsn
+from isamples_metadata.taxonomy.metadata_models import (
+    MetadataModelLoader,
+    SESARMaterialPredictor
+)
 
 
 class MaterialCategoryMetaMapper(AbstractCategoryMetaMapper):
@@ -283,6 +287,13 @@ class SESARTransformer(Transformer):
 
     def has_material_categories(self) -> typing.List[str]:
         material = self._material_type()
+        if not material:
+            # get the model
+            sesar_model = MetadataModelLoader.get_sesar_material_model()
+            # load the model predictor
+            smp = SESARMaterialPredictor(sesar_model)
+            categories = [smp.predict_material_type(self.source_record).value]
+            return categories
         return MaterialCategoryMetaMapper.categories(material)
 
     def has_specimen_categories(self) -> typing.List[str]:
