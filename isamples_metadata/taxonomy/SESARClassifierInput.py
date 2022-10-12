@@ -56,7 +56,7 @@ class SESARClassifierInput(ClassifierInput):
         "Biology": "Biogenic non-organic material",
         "EarthMaterial": "Natural Solid Material",
         "Gas": "Gaseous material",
-        "Ice": "Any Ice",
+        "Ice": "Ice",
         "Liquid": "Liquid water",
         "Material": "Material",
         "Mineral": "Mineral",
@@ -66,10 +66,10 @@ class SESARClassifierInput(ClassifierInput):
         "Rock": "Rock",
         "Sediment": "Sediment",
         "Soil": "Soil",
-        "experimentMaterial": "Material",
+        "experimentalMaterial": "Material",
         "Sediment or Rock": "Natural Solid Material",
         "Natural Solid Material": "Natural Solid Material",
-        "Mixed soil, sediment or rock": "Mixed soil, sediment or rock"
+        "Mixed soil, sediment, rock": "Mixed soil, sediment, rock"
     }
 
     def __init__(self, thing):
