@@ -1,0 +1,3 @@
+[submodule "isamples_frictionless"]
+	path = isamples_frictionless
+	url = git@github.com:isamplesorg/isamples_frictionless.git

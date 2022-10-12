@@ -1,22 +1,13 @@
 import datetime
 from typing import Optional
 
+import isamples_frictionless
 from frictionless import Package, Resource
-from pathlib import Path
-import os.path
-import json
-
 from sqlmodel import Session
 
 import isb_web.config
 from isb_lib.models.thing import Thing
 from isb_web.sqlmodel_database import save_or_update_thing
-
-p = Path(__file__)
-SCHEMA_JSON = {}
-schema_json_path = os.path.join(p.parent, "isamples_simple_schema.json")
-with open(schema_json_path) as schema_json_file:
-    SCHEMA_JSON = json.load(schema_json_file)
 
 
 def create_isamples_package(file_path: str) -> Package:
@@ -27,9 +18,7 @@ def create_isamples_package(file_path: str) -> Package:
 
     Returns: A list of dictionaries containing the records
     """
-    data_resource = Resource(source=file_path, schema=SCHEMA_JSON, trusted=True)
-    package = Package(resources=[data_resource], name="isamples", title="isamples", id="isamples", trusted=True)
-    return package
+    return isamples_frictionless.create_isamples_package(isamples_frictionless.isamples_simple_schema(), file_path)
 
 
 def unflatten_csv_row(row: dict) -> dict:

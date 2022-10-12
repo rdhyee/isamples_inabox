@@ -17,6 +17,7 @@ fastapi = "^0.65.1"
 uvicorn = {extras=["standard"], version="^0.13.4"}
 aiofiles = "^0.6.0"
 igsn-lib = {git = "https://github.com/isamplesorg/igsn_lib.git", rev = "main"}
+isamples_frictionless = { path = "isamples_frictionless", develop = true }
 accept-types = "^0.4.1"
 shapely = "^1.7.1"
 geojson = "^2.5.0"
@@ -41,7 +42,6 @@ torchvision = "^0.2.2"
 transformers = "^4.20.1"
 
 connegp = "0.2"
-frictionless = "^4.40.0"
 openpyxl = "3.0.10"
 xlrd = "2.0.1"
 
