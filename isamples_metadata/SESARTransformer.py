@@ -122,7 +122,7 @@ class SpecimenCategoryMetaMapper(AbstractCategoryMetaMapper):
             "Individual Sample>Gas",
             "Individual Sample>Liquid",
         ],
-        "Liquid or gas sample",
+        "Fluid in container",
     )
     _experimentalProductsMapper = StringEqualityCategoryMapper(
         ["Experimental Specimen"], "Experiment product"
