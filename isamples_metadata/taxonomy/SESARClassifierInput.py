@@ -69,7 +69,8 @@ class SESARClassifierInput(ClassifierInput):
         "experimentalMaterial": "Material",
         "Sediment or Rock": "Natural Solid Material",
         "Natural Solid Material": "Natural Solid Material",
-        "Mixed soil, sediment, rock": "Mixed soil, sediment, rock"
+        "Mixed soil, sediment, rock": "Mixed soil, sediment, rock",
+        "NotApplicable": "Material",
     }
 
     def __init__(self, thing):
@@ -84,6 +85,9 @@ class SESARClassifierInput(ClassifierInput):
         concatenated_text = ""
         for key, value in description_map.items():
             if key == "igsnPrefix":
+                continue
+            elif value == "":
+                # empty field
                 continue
             elif labelType == "material" and key != self.SESAR_material_field:
                 concatenated_text += value + " , "
@@ -136,5 +140,7 @@ class SESARClassifierInput(ClassifierInput):
 
         # build the concatenated text from the description_map
         self.material_text = self.build_text(description_map, "material")
+        print("description map: ", description_map)
+        print("material text : ", self.material_text)
         self.sample_text = self.build_text(description_map, "sample")
         self.description_map = description_map  # save the description_map
