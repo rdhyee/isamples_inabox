@@ -155,6 +155,13 @@ class SESARClassifierInput(ClassifierInput):
                                 value[sub_key]
 
         # build the concatenated text from the description_map
+<<<<<<< HEAD
         self.material_text = self.build_text(description_map, "material", field_order)
         self.sample_text = self.build_text(description_map, "sample", field_order)
+=======
+        self.material_text = self.build_text(description_map, "material")
+        print("description map: ", description_map)
+        print("material text : ", self.material_text)
+        self.sample_text = self.build_text(description_map, "sample")
+>>>>>>> ff09550 (updating script of rule based classification)
         self.description_map = description_map  # save the description_map
