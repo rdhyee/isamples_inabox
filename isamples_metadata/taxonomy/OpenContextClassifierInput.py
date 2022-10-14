@@ -17,11 +17,16 @@ class OpenContextClassifierInput(ClassifierInput):
         concatenated_text = ""
         for key, value in description_map.items():
             value = str(value)
-            if labelType == "material" and key != self.OC_material_field:
+            if value == "":
+                continue
+            elif key == "context label":
+                splitted = value.split("/")
+                splitted = " , ".join(splitted)
+                concatenated_text += splitted + " , "
+            elif labelType == "material" and key != self.OC_material_field:
                 concatenated_text += value + " , "
             elif labelType == "sample" and key != self.OC_sample_field:
                 concatenated_text += value + " , "
-
         return concatenated_text[:-2]  # remove the last comma
 
     def parse_thing(self):
