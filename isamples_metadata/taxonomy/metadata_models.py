@@ -109,7 +109,7 @@ class SESARMaterialPredictor:
         #   && no CV words in content
         #       && only contains sampleType
         # check descriptive
-        if "description" not in description_map or description_map["description"] == "":
+        if description_map.get("description", "") == "":
             descriptive = False
 
         # check if CV words are in content
