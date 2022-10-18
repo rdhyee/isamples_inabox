@@ -223,8 +223,8 @@ class SESARMaterialPredictor:
         """
         Invoke the pre-trained BERT model to predict the material type label for the specified string inputs.
 
-        :param source_record: the raw source of a record
-        :return: iSamples CV that corresponds to the label that is the prediction result of the field
+        :param source_record the raw source of a record
+        :return iSamples CV that corresponds to the label that is the prediction result of the field
         """
         # extract the data that the model requires for classification
         sesar_input = SESARClassifierInput(source_record)
@@ -253,10 +253,37 @@ class OpenContextMaterialPredictor:
             raise TypeError("Model is required to be non-None")
         self._model = model
 
+    def classify_by_rule(self, description_map: dict) -> Optional[str]:
+        """Check if record can be classified by rule
+        Rules are defined by using the item category field of the record
+        """
+        item_category = description_map["item category"].lower().strip()
+        # define map where key : item category value / value: material label
+        rule_map = {
+            "animal bone": "bone",
+            "plant remains": "plant material",
+            "pottery": "ceramic",
+            "shell": "shell",
+            "human bone": "bone",
+            "non diagnostic bone": "bone",
+            "glass": "glass",
+            "bulk ceramic": "ceramic",
+            "coin": "metal",
+            "groundstone": "rock",
+            "biological subject, ecofact": "biologic organic material "
+        }
+        if item_category in rule_map:
+            # TODO: map this into GettyAAT terms
+            return rule_map[item_category]
+        # falls back to the most general level
+        # requires future machine classification
+        return None
+
     def classify_by_machine(self, text: str) -> Tuple[str, float]:
         """ Returns the machine prediction on the given
         input record
         """
+        # return type will be a GettyAAT term
         return self._model.predict(text)
 
     def predict_material_type(
@@ -264,20 +291,22 @@ class OpenContextMaterialPredictor:
     ) -> PredictionResult:
         """
         Invoke the pre-trained BERT model to predict the material type label for the specified string inputs.
-
-        :param source_record: the raw source of a record
-        :return: String label that is the prediction result of the field
         """
         # extract the data that the model requires for classification
         oc_input = OpenContextClassifierInput(source_record)
         oc_input.parse_thing()
-        # TODO: use the description map to assist rule-based classification
-        # description_map = oc_input.get_description_map()
+        # use the description map to assist rule-based classification
         input_string = oc_input.get_material_text()
-
-        # get the prediction result with necessary fields provided
-        label, prob = self.classify_by_machine(input_string)
-        return PredictionResult(label, prob)
+        oc_description_map = oc_input.get_description_map()
+        label = self.classify_by_rule(oc_description_map)
+        if label:
+            return PredictionResult(label, -1)
+        else:
+            # second pass : deriving the prediction by machine
+            # we pass the text to a pretrained model to get the prediction result
+            # load the model
+            label, prob = self.classify_by_machine(input_string)
+            return PredictionResult(label, prob)
 
 
 class OpenContextSamplePredictor:
@@ -303,8 +332,8 @@ class OpenContextSamplePredictor:
         """
         Invoke the pre-trained BERT model to predict the sample type label for the specified string inputs.
 
-        :param source_record: the raw source of a record
-        :return: String label that is the prediction result of the field
+        :param source_record the raw source of a record
+        :return string label that is the prediction result of the field
         """
         # extract the data that the model requires for classification
         oc_input = OpenContextClassifierInput(source_record)

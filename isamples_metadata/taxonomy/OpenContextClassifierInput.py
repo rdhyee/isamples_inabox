@@ -17,7 +17,7 @@ class OpenContextClassifierInput(ClassifierInput):
         concatenated_text = ""
         for key, value in description_map.items():
             # key would be one of the description_field defined in parse_thing
-            # e.g. key : item category / value : record's key value such as "Animal Bone"
+            # e.g. key : item category / value : record's key field value such as "Animal Bone"
             value = str(value)
             if value == "":
                 continue
