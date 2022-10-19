@@ -56,7 +56,7 @@ class SESARClassifierInput(ClassifierInput):
         "Biology": "Biogenic non-organic material",
         "EarthMaterial": "Natural Solid Material",
         "Gas": "Gaseous material",
-        "Ice": "Any Ice",
+        "Ice": "Ice",
         "Liquid": "Liquid water",
         "Material": "Material",
         "Mineral": "Mineral",
@@ -66,10 +66,11 @@ class SESARClassifierInput(ClassifierInput):
         "Rock": "Rock",
         "Sediment": "Sediment",
         "Soil": "Soil",
-        "experimentMaterial": "Material",
+        "experimentalMaterial": "Material",
         "Sediment or Rock": "Natural Solid Material",
         "Natural Solid Material": "Natural Solid Material",
-        "Mixed soil, sediment or rock": "Mixed soil, sediment or rock"
+        "Mixed soil, sediment, rock": "Mixed soil, sediment, rock",
+        "NotApplicable": "Material",
     }
 
     def __init__(self, thing):
@@ -84,6 +85,9 @@ class SESARClassifierInput(ClassifierInput):
         concatenated_text = ""
         for key, value in description_map.items():
             if key == "igsnPrefix":
+                continue
+            elif value == "":
+                # empty field
                 continue
             elif labelType == "material" and key != self.SESAR_material_field:
                 concatenated_text += value + " , "

@@ -21,7 +21,7 @@ from isamples_metadata.taxonomy.metadata_models import (
 class MaterialCategoryMetaMapper(AbstractCategoryMetaMapper):
     _endsWithRockMapper = StringEndsWithCategoryMapper("Rock", "Rock")
     _endsWithMineralMapper = StringEndsWithCategoryMapper("Mineral", "Mineral")
-    _endsWithAqueousMapper = StringEndsWithCategoryMapper("aqueous", "Water")
+    _endsWithAqueousMapper = StringEndsWithCategoryMapper("aqueous", "Liquid water")
     _endsWithSedimentMapper = StringEndsWithCategoryMapper("Sediment", "Sediment")
     _endsWithSoilMapper = StringEndsWithCategoryMapper("Soil", "Soil")
     _endsWithParticulateMapper = StringEndsWithCategoryMapper(
@@ -71,6 +71,15 @@ class MaterialCategoryMetaMapper(AbstractCategoryMetaMapper):
     _equalsBiogenicMapper = StringEqualityCategoryMapper(
         ["Macrobiology>Coral>Biology", "Coral>Biology"], "Biogenic non-organic material"
     )
+    _equalsNaturalSolidMapper = StringEqualityCategoryMapper(
+        ["Natural Solid Material"], "Natural Solid Material"
+    )
+    _equalsMixedMapper = StringEqualityCategoryMapper(
+        ["Mixed soil, sediment, rock"], "Mixed soil, sediment, rock"
+    )
+    _equalsMaterialMapper = StringEqualityCategoryMapper(
+        ["Material"], "Material"
+    )
 
     @classmethod
     def categories_mappers(cls) -> typing.List[AbstractCategoryMapper]:
@@ -92,6 +101,9 @@ class MaterialCategoryMetaMapper(AbstractCategoryMetaMapper):
             cls._equalsIceMapper,
             cls._equalsGasMapper,
             cls._equalsBiogenicMapper,
+            cls._equalsNaturalSolidMapper,
+            cls._equalsMixedMapper,
+            cls._equalsMaterialMapper
         ]
 
 
@@ -122,7 +134,7 @@ class SpecimenCategoryMetaMapper(AbstractCategoryMetaMapper):
             "Individual Sample>Gas",
             "Individual Sample>Liquid",
         ],
-        "Liquid or gas sample",
+        "Fluid in container",
     )
     _experimentalProductsMapper = StringEqualityCategoryMapper(
         ["Experimental Specimen"], "Experiment product"

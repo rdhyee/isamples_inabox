@@ -8,7 +8,7 @@ from isb_web.sqlmodel_database import SQLModelDAO
 from scripts.taxonomy.create_hierarchy_json import getFullLabel, getHierarchyMapping
 from isamples_metadata.taxonomy.SESARClassifierInput import SESARClassifierInput
 from isamples_metadata.taxonomy.OpenContextClassifierInput import OpenContextClassifierInput
-from isamples_metadata.taxonomy.metadata_models import MetadataModelLoader, SESARMaterialPredictor
+from isamples_metadata.taxonomy.metadata_models import MetadataModelLoader, SESARMaterialPredictor, OpenContextMaterialPredictor
 
 
 @click.command()
@@ -57,6 +57,7 @@ def main(
     specimen_mapping = getHierarchyMapping("specimen")
 
     sesar_model = MetadataModelLoader.get_sesar_material_model()
+    oc_material_model = MetadataModelLoader.get_oc_material_model()
 
     for thing in thing_iterator.yieldRecordsByPage():
         # print(f"thing is {thing.id}")
@@ -116,6 +117,16 @@ def main(
             # print out the classifier input form of this record
             print(material_text)
             print(sample_text)
+
+            # get the classification result
+            ocm = OpenContextMaterialPredictor(oc_material_model)
+            result = ocm.predict_material_type(
+                thing.resolved_content
+            )
+
+            print(
+                f"Predicted (probability, label) : {result.value}, {result.confidence}"
+            )
 
     db_session.close()
 

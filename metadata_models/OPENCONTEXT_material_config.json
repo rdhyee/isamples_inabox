@@ -1,0 +1,14 @@
+{
+  "BERT_MODEL": "allenai/scibert_scivocab_uncased",
+  "FINE_TUNED_MODEL": "/app/iSamples/isamples_inabox/metadata_models/opencontext-material",
+  "CLASS_NAMES": [
+    "mat:anthropogenicmetal",
+    "mat:anyanthropogenicmeterial", 
+    "mat:biogenicnonorganicmaterial",
+    "mat:mineral",
+    "mat:organicmaterial",
+    "mat:otheranthropogenicmaterial",
+    "mat:rock"
+  ],
+  "MAX_SEQUENCE_LEN": 256
+}

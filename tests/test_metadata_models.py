@@ -43,7 +43,7 @@ def _test_sesar_material_model(sesar_source_path):
             "Rock",
             "Sediment",
             "Soil",
-            "experimentMaterial"
+            "experimentalMaterial"
         ],
         "MAX_SEQUENCE_LEN": 256
     }
@@ -85,11 +85,9 @@ def _test_opencontext_material_model(opencontext_source_path):
             "mat:anyanthropogenicmeterial",
             "mat:biogenicnonorganicmaterial",
             "mat:mineral",
+            "mat:organicmaterial",
             "mat:otheranthropogenicmaterial",
-            "mat:rock",
-            "ocmat:ceramicclay",
-            "ocmat:organicanimalproduct",
-            "ocmat:plantmaterial"
+            "mat:rock"
         ],
         "MAX_SEQUENCE_LEN": 256
     }

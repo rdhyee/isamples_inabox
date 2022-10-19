@@ -108,18 +108,23 @@ class SESARMaterialPredictor:
         # if record does not have description field
         #   && no CV words in content
         #       && only contains sampleType
-        informative = False
-        if "description" not in description_map:
-            for cv in SESARClassifierInput.SESAR_CV_words:
-                if cv in text:
-                    informative = True
-                    break
-        if not informative and "sampleType" in description_map and \
-                text == description_map["sampleType"]:
-            informative = False
-        else:
-            informative = True
-        return informative
+        # check descriptive
+        if description_map.get("description", "") == "":
+            descriptive = False
+
+        # check if CV words are in content
+        content_bearing = False
+        for cv in SESARClassifierInput.SESAR_CV_words:
+            if cv in text:
+                content_bearing = True
+                break
+
+        # only contains sampleType field
+        if "sampleType" in description_map and text == description_map["sampleType"]:
+            if not descriptive and not content_bearing:
+                # not informative as all three conditions are satisfied
+                return False
+        return True
 
     def check_invalid(self, field_to_value: dict) -> bool:
         """Checks if the record is invalid (not a sample record)
@@ -143,7 +148,7 @@ class SESARMaterialPredictor:
         if "IODP" in field_to_value["cruiseFieldPrgrm"] or \
                 "ODP" in field_to_value["cruiseFieldPrgrm"]:
             if "core" in field_to_value["sampleType"].lower():
-                return "Mixture of sediment and rock"
+                return "Mixed soil, sediment, rock"
             if field_to_value["sampleType"] == "Individual Sample":
                 return "Sediment or Rock"
             if "macrofossil" in field_to_value["description"].lower():
@@ -167,32 +172,27 @@ class SESARMaterialPredictor:
         If the record corresponds to a rule, returns the rule-defined label
         Else return None
         """
-        # 1. check if record does not have enough information
-        # if not enough information given,
-        # give "Material" label
-        if not self.check_informative(text, description_map):
-            return "Material"
-
-        # 2. rule-based classification
+        # 1. rule-based classification
         # extract fields that we need to consider for the rules
         fields_to_check = [
-            "sampleType",
+            "supplementMetadata_sampleType",
             "cruiseFieldPrgrm",
             "igsnPrefix",
             "description",
-            "primaryLocationType"
+            "supplementMetadata_primaryLocationType"
         ]
         # build a map that stores the fields that we are interested
         field_to_value = collections.defaultdict(str)
         for key, value in description_map.items():
             if key in fields_to_check:
+                # remove nested label
+                key = key.replace("supplementMetadata_", "")
                 field_to_value[key] = value
 
         # check if record is invalid
         # i.e., not a sample
         if self.check_invalid(field_to_value):
             return "Invalid"
-
         # check if the fields fall into the rules
         # if it does not, return None
         result = self.classify_by_sample_type(field_to_value)
@@ -200,7 +200,12 @@ class SESARMaterialPredictor:
             # map to controlled vocabulary
             return SESARClassifierInput.source_to_CV[result]
         else:
-            return None
+            # check if there is enough information to do classification
+            # give "Material" label
+            if not self.check_informative(text, description_map):
+                return "Material"
+            else:
+                return None
 
     def classify_by_machine(self, text: str) -> Tuple[str, float]:
         """ Returns the machine prediction on the given
