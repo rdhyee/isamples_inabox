@@ -18,6 +18,7 @@ import isamples_metadata.SESARTransformer
 import dateparser
 
 from isamples_metadata import SESARTransformer
+from isamples_metadata.SESARTransformer import fullIgsn
 from isb_lib.models.thing import Thing
 
 HTTP_TIMEOUT = 10.0  # seconds
@@ -32,10 +33,6 @@ MEDIA_JSON_LD = "application/ld+json"
 
 def getLogger():
     return logging.getLogger("isb_lib.sesar_adapter")
-
-
-def fullIgsn(v):
-    return f"IGSN:{igsn_lib.normalize(v)}"
 
 
 def getSesarItem_app(igsn_value, verify=False):

@@ -447,3 +447,18 @@ def all_orcid_ids(session: Session) -> list[str]:
     for row in orcid_id_rows:
         orcid_ids.append(row[0])
     return orcid_ids
+
+
+THING_EXPORT_FIELD_LIST = "id, tstamp, tcreated, item_type, authority_id, related, log, resolved_url, resolved_status, tresolved, resolve_elapsed, resolved_content, resolved_media_type, _id, identifiers, h3   "
+
+
+def dump_things_with_ids_to_file(session: Session, identifiers: list[str], file_path: str):
+    quoted_identifiers = [f"'{identifier}'" for identifier in identifiers]
+    sql = f"copy (select {THING_EXPORT_FIELD_LIST} from thing where id in ({','.join(quoted_identifiers)})) to '{file_path}'"
+    session.execute(sql)
+
+
+def load_things_from_file(session: Session, file_path: str):
+    sql = f"copy thing ({THING_EXPORT_FIELD_LIST}) from '{file_path}'"
+    session.execute(sql)
+    session.commit()

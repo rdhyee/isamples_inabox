@@ -17,6 +17,7 @@ import typing
 from isb_lib.models.thing import Thing
 from isb_web import sqlmodel_database
 from isb_web.sqlmodel_database import SQLModelDAO, save_thing
+from isamples_metadata.SESARTransformer import fullIgsn
 
 CONCURRENT_DOWNLOADS = 10
 BACKLOG_SIZE = 40
@@ -69,7 +70,7 @@ async def _loadSesarEntries(session, max_count, start_from=None, manual_ids: typ
                 try:
                     _id = next(ids)
                     igsn = igsn_lib.normalize(_id[0])
-                    existing_thing = sqlmodel_database.get_thing_with_id(session, isb_lib.sesar_adapter.fullIgsn(igsn))
+                    existing_thing = sqlmodel_database.get_thing_with_id(session, fullIgsn(igsn))
                     if existing_thing is not None:
                         logging.info("Already have %s at %s", igsn, existing_thing)
                         future = executor.submit(wrapLoadThing, igsn, _id[1], existing_thing)

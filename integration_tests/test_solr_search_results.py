@@ -2,6 +2,7 @@ import pytest
 import requests
 import typing
 import os
+import json
 
 
 @pytest.fixture
@@ -39,7 +40,7 @@ def _send_solr_query(
         "start": 0,
         "limit": 10,
         "fl": "*",
-        "q": f"searchText:({query})",
+        "q": query,
     }
     res = rsession.get(solr_url, headers=headers(), params=params)
     response_dict = res.json()
@@ -56,11 +57,15 @@ def _value_in_search_text(value: str, doc: typing.Dict) -> bool:
     return appears_in_search_text
 
 
+def search_text_query(search_text: str) -> str:
+    return f"searchText:({search_text})"
+
+
 @pytest.mark.parametrize("authority_id", authority_ids)
 def test_solr_query_by_source(
     rsession: requests.Session, solr_url: str, authority_id: str
 ):
-    docs = _send_solr_query(rsession, solr_url, authority_id)
+    docs = _send_solr_query(rsession, solr_url, search_text_query(authority_id))
     for doc in docs:
         appears_in_search_text = _value_in_search_text(authority_id, doc)
         assert appears_in_search_text
@@ -81,7 +86,7 @@ opencontext_projects = [
 def test_opencontext_projects(
     rsession: requests.Session, solr_url: str, project_label: str
 ):
-    docs = _send_solr_query(rsession, solr_url, project_label)
+    docs = _send_solr_query(rsession, solr_url, search_text_query(project_label))
     for doc in docs:
         for word in project_label.split():
             appears_in_search_text = _value_in_search_text(word, doc)
@@ -101,7 +106,7 @@ geome_search_terms = [
 def test_geome_search_terms(
     rsession: requests.Session, solr_url: str, geome_search_term: str
 ):
-    docs = _send_solr_query(rsession, solr_url, geome_search_term)
+    docs = _send_solr_query(rsession, solr_url, search_text_query(geome_search_term))
     for doc in docs:
         for word in geome_search_term.split():
             appears_in_search_text = _value_in_search_text(word, doc)
@@ -122,7 +127,61 @@ geographic_search_terms = [
 def test_geographic_search_terms(
     rsession: requests.Session, solr_url: str, geographic_search_term: str
 ):
-    docs = _send_solr_query(rsession, solr_url, geographic_search_term)
+    docs = _send_solr_query(rsession, solr_url, search_text_query(geographic_search_term))
     for doc in docs:
         appears_in_search_text = _value_in_search_text(geographic_search_term, doc)
         assert appears_in_search_text
+
+
+def _transformed_json_to_test_tuples() -> list[tuple]:
+    """
+    We start with this structure:
+
+      "IGSN:ODP02CV44": {
+        "material": {
+          "values": [
+            "Natural Solid Material"
+          ],
+          "confidence": [
+            -1
+          ]
+        }
+      }
+
+    We want to end up with this structure:
+
+    solr_test_values = [
+        (
+            "IGSN:NHB002GWT",
+            {
+                "hasContextCategory": ["Earth interior"],
+                "hasMaterialCategory": ["Mineral"],
+                "hasSpecimenCategory": ["Other solid object"]
+            }
+        )
+    ]
+    """
+    transformed_json: list[tuple] = []
+
+    with open("test_model_values.json", "r") as schema_json_file:
+        test_model_values_dict = json.load(schema_json_file)
+        for key, value in test_model_values_dict.items():
+            current_tuple = (
+                key,
+                {
+                    "hasMaterialCategory": value.get("material").get("values")
+                }
+            )
+            transformed_json.append(current_tuple)
+    return transformed_json
+
+
+@pytest.mark.skipif(False, reason="Only run this test manually, not intended to be automated.  Manually flip the True to False to run.")
+@pytest.mark.parametrize("id,params", _transformed_json_to_test_tuples())
+def test_solr_integration_test(rsession: requests.Session, solr_url: str, id: str, params: dict):
+    solr_query = f"id:\"{id}\""
+    docs = _send_solr_query(rsession, solr_url, solr_query)
+    assert len(docs) > 0
+    test_doc = docs[0]
+    for key, value in params.items():
+        assert test_doc.get(key) == value

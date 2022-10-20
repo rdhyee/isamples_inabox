@@ -7,7 +7,8 @@ from sqlmodel import Session
 
 import isb_lib.core
 import isb_web.config
-from isb_lib.sesar_adapter import fullIgsn
+import isb_lib.sesar_adapter
+from isamples_metadata.SESARTransformer import fullIgsn
 from isb_web.isb_solr_query import ISBCoreSolrRecordIterator
 from isb_web.sqlmodel_database import SQLModelDAO
 
