@@ -12,7 +12,6 @@ from isamples_metadata.Transformer import (
     StringEndsWithCategoryMapper,
     AbstractCategoryMetaMapper,
 )
-# from isb_lib.sesar_adapter import fullIgsn
 from isamples_metadata.taxonomy.metadata_models import (
     MetadataModelLoader,
     SESARMaterialPredictor

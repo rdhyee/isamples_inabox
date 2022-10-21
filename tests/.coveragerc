@@ -3,3 +3,11 @@ omit=
     tests/*
     integration_tests/*
 		test*
+		../scripts/geome_things.py
+		../scripts/opencontext_things.py
+		../scripts/sesar_things.py
+		../scripts/smithsonian_things.py
+		../isb_lib/geome_adapter.py
+		../isb_lib/opencontext_adapter.py		
+		../isb_lib/sesar_adapter.py
+		../isb_lib/smithsonian_adapter.py
