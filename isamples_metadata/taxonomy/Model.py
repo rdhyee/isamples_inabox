@@ -29,12 +29,13 @@ class Model:
         attention_mask = encoded_text["attention_mask"].to(self.device)
         with torch.no_grad():
             logits = self.classifier(input_ids, attention_mask)[0]
-
-        prob, predicted_class = torch.max(logits, dim=1)
-
-        predicted_class = predicted_class.cpu().item()
-        prob = logits.softmax(dim=-1)[0][predicted_class].item()
-        return (
-            self.config["CLASS_NAMES"][predicted_class],
-            prob
-        )
+        # convert logits into probability
+        prob = logits.softmax(dim=-1)[0]
+        # get the top 3 high confidence predictions
+        top_probs, indices = torch.topk(prob, 3)
+        # convert integer labels to text labels
+        indices = [x.item() for x in indices]
+        labels = [self.config["CLASS_NAMES"][x] for x in indices]
+        # convert torch tensor to float type
+        probs = [x.item() for x in top_probs]
+        return [(label, prob) for label, prob in zip(labels, probs)]

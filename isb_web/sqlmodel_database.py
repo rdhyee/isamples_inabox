@@ -449,7 +449,7 @@ def all_orcid_ids(session: Session) -> list[str]:
     return orcid_ids
 
 
-THING_EXPORT_FIELD_LIST = "id, tstamp, tcreated, item_type, authority_id, related, log, resolved_url, resolved_status, tresolved, resolve_elapsed, resolved_content, resolved_media_type, _id, identifiers, h3   "
+THING_EXPORT_FIELD_LIST = "id, tstamp, tcreated, item_type, authority_id, resolved_url, resolved_status, tresolved, resolve_elapsed, resolved_content, resolved_media_type, _id, identifiers, h3"
 
 
 def dump_things_with_ids_to_file(session: Session, identifiers: list[str], file_path: str):

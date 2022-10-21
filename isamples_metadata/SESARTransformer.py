@@ -309,7 +309,7 @@ class SESARTransformer(Transformer):
             sesar_model = MetadataModelLoader.get_sesar_material_model()
             # load the model predictor
             smp = SESARMaterialPredictor(sesar_model)
-            categories = [smp.predict_material_type(self.source_record).value]
+            categories = [prediction.value for prediction in smp.predict_material_type(self.source_record)]
             return categories
         return MaterialCategoryMetaMapper.categories(material)
 

@@ -52,15 +52,16 @@ def main(
         authority_id=authority_id,
         page_size=max_records
     )
+
     context_mapping = getHierarchyMapping("context")
     material_mapping = getHierarchyMapping("material")
     specimen_mapping = getHierarchyMapping("specimen")
 
     sesar_model = MetadataModelLoader.get_sesar_material_model()
     oc_material_model = MetadataModelLoader.get_oc_material_model()
-
     for thing in thing_iterator.yieldRecordsByPage():
         # print(f"thing is {thing.id}")
+        igsn = thing.resolved_content["igsn"]
         if authority_id == "SESAR":
             transformed = SESARTransformer.SESARTransformer(
                 thing.resolved_content
@@ -71,17 +72,17 @@ def main(
             sesar_input.parse_thing()
 
             material_text = sesar_input.get_material_text()
-
+            print(igsn, material_text)
             # get the material label prediction result of the record
             # load the model predictor
             smp = SESARMaterialPredictor(sesar_model)
-            result = smp.predict_material_type(
+            results = smp.predict_material_type(
                 thing.resolved_content
             )
-
-            print(
-                f"Predicted (probability, label) : {result.value}, {result.confidence}"
-            )
+            for result in results:
+                print(
+                    f"Predicted (probability, label) : {result.value}, {result.confidence}"
+                )
 
             # gold label of the record
             context_label = transformed['hasContextCategory']
@@ -112,22 +113,20 @@ def main(
             oc_input.parse_thing()
 
             material_text = oc_input.get_material_text()
-            sample_text = oc_input.get_sample_text()
+            # sample_text = oc_input.get_sample_text()
 
             # print out the classifier input form of this record
             print(material_text)
-            print(sample_text)
 
             # get the classification result
             ocm = OpenContextMaterialPredictor(oc_material_model)
-            result = ocm.predict_material_type(
+            results = ocm.predict_material_type(
                 thing.resolved_content
             )
-
-            print(
-                f"Predicted (probability, label) : {result.value}, {result.confidence}"
-            )
-
+            for result in results:
+                print(
+                    f"Predicted (probability, label) : {result.value}, {result.confidence}"
+                )
     db_session.close()
 
 
