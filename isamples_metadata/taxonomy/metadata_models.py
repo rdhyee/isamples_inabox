@@ -175,7 +175,7 @@ class SESARMaterialPredictor:
         # 1. rule-based classification
         # extract fields that we need to consider for the rules
         fields_to_check = [
-            "sampleType",
+            "supplementMetadata_sampleType",
             "supplementMetadata_cruiseFieldPrgrm",
             "igsnPrefix",
             "description",
