@@ -175,7 +175,7 @@ class SESARMaterialPredictor:
         # 1. rule-based classification
         # extract fields that we need to consider for the rules
         fields_to_check = [
-            "supplementMetadata_sampleType",
+            "sampleType",
             "supplementMetadata_cruiseFieldPrgrm",
             "igsnPrefix",
             "description",
@@ -269,21 +269,20 @@ class OpenContextMaterialPredictor:
         """
         item_category = description_map["item category"].lower().strip()
         # define map where key : item category value / value: material label
+        # rule is defined when the item category value has only one possible material label
         rule_map = {
-            "animal bone": "bone",
-            "plant remains": "plant material",
-            "pottery": "ceramic",
-            "shell": "shell",
-            "human bone": "bone",
-            "non diagnostic bone": "bone",
-            "glass": "glass",
-            "bulk ceramic": "ceramic",
-            "coin": "metal",
+            "animal bone": "biogenic non-organic material",
+            "plant remains": "organic material",
+            "shell": "biogenic non-organic material",
+            "human bone": "biogenic non-organic material",
+            "non diagnostic bone": "biogenic non-organic material",
+            "glass": "anthropogenic material",
+            "bulk ceramic": "anthropogenic material",
+            "coin": "anthropogenic metal material",
             "groundstone": "rock",
-            "biological subject, ecofact": "biologic organic material "
+            "biological subject, ecofact": "material"
         }
         if item_category in rule_map:
-            # TODO: map this into GettyAAT terms
             return rule_map[item_category]
         # falls back to the most general level
         # requires future machine classification
@@ -301,7 +300,7 @@ class OpenContextMaterialPredictor:
         # use the description map to assist rule-based classification
         input_string = oc_input.get_material_text()
         oc_description_map = oc_input.get_description_map()
-        label = self.classify_by_rule(input_string, oc_description_map)
+        label = self.classify_by_rule(oc_description_map)
         if label:
             return [PredictionResult(label, -1)]  # set sentinel value as probability
         else:
@@ -328,6 +327,35 @@ class OpenContextSamplePredictor:
             label, prob
         ) for (label, prob) in predictions]
 
+    def classify_by_rule(self, description_map: dict) -> Optional[str]:
+        """Check if record can be classified by rule
+        Rules are defined by using the item category field of the record
+        """
+        item_category = description_map["item category"].lower().strip()
+        # define map where key : item category value / value: material label
+        # rule is defined when the item category value has only one possible material label
+        rule_map = {
+            "architectural element": "artifact",
+            "sculpture": "artifact",
+            "biological subject, ecofact": "artifact",
+            "bulk ceramic": "artifact",
+            "coin": "artifact",
+            "glass": "artifact",
+            "groundstone": "artifact",
+            "human bone": "organism part",
+            "non diagnostic bone": "organism part",
+            "plant remains": "any biological specimen",
+            "pottery": "artifact",
+            "sample, collection, or aggregation": "physical specimen",
+            "sculpture": "artifact",
+            "shell": "organism product",
+        }
+        if item_category in rule_map:
+            return rule_map[item_category]
+        # falls back to the most general level
+        # requires future machine classification
+        return None
+
     def predict_sample_type(
         self, source_record: dict
     ) -> List[PredictionResult]:
@@ -340,11 +368,15 @@ class OpenContextSamplePredictor:
         # extract the data that the model requires for classification
         oc_input = OpenContextClassifierInput(source_record)
         oc_input.parse_thing()
-        # TODO: use the description map to assist rule-based classification
-        # description_map = oc_input.get_description_map()
         input_string = oc_input.get_sample_text()
-
-        # get the prediction result with necessary fields provided
-        # get the prediction result with necessary fields provided
-        machine_predictions = self.classify_by_machine(input_string)
-        return [PredictionResult(label, prob) for label, prob in machine_predictions]
+        # use the description map to assist rule-based classification
+        oc_description_map = oc_input.get_description_map()
+        label = self.classify_by_rule(oc_description_map)
+        if label:
+            return [PredictionResult(label, -1)]  # set sentinel value as probability
+        else:
+            # second pass : deriving the prediction by machine
+            # we pass the text to a pretrained model to get the prediction result
+            # load the model
+            machine_predictions = self.classify_by_machine(input_string)
+            return [PredictionResult(label, prob) for label, prob in machine_predictions]
