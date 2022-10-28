@@ -24,6 +24,10 @@ class Transformer(ABC):
 
     N2T_ARK_NO_HTTPS_PREFIX = f"{N2T_NO_HTTPS_PREFIX}ark:/"
 
+    RULE_BASED_CONFIDENCE = 1.0
+
+    HUMAN_ENTERED_CONFIDENCE = 2.0
+
     @staticmethod
     def _transform_key_to_label(
         key: str,
@@ -61,15 +65,21 @@ class Transformer(ABC):
         Return value:
             The provider record transformed into an iSamples record
         """
+        context_categories = self.has_context_categories()
+        material_categories = self.has_material_categories()
+        specimen_categories = self.has_specimen_categories()
         transformed_record = {
             "$schema": "../../iSamplesSchemaBasic0.2.json",
             "@id": self.id_string(),
             "label": self.sample_label(),
             "sampleidentifier": self.sample_identifier_string(),
             "description": self.sample_description(),
-            "hasContextCategory": self.has_context_categories(),
-            "hasMaterialCategory": self.has_material_categories(),
-            "hasSpecimenCategory": self.has_specimen_categories(),
+            "hasContextCategory": context_categories,
+            "hasContextCategoryConfidence": self.has_context_category_confidences(context_categories),
+            "hasMaterialCategory": material_categories,
+            "hasMaterialCategoryConfidence": self.has_material_category_confidences(material_categories),
+            "hasSpecimenCategory": specimen_categories,
+            "hasSpecimenCategoryConfidence": self.has_specimen_category_confidences(specimen_categories),
             "informalClassification": self.informal_classification(),
             "keywords": self.keywords(),
             "producedBy": {
@@ -134,20 +144,41 @@ class Transformer(ABC):
         """The samplingPurpose of the sample registrant in source_record"""
         pass
 
+    @staticmethod
+    def _rule_based_confidence_list_for_categories_list(category_list: list) -> typing.Optional[list]:
+        if category_list is None:
+            return None
+        confidences = []
+        for _ in category_list:
+            confidences.append(Transformer.RULE_BASED_CONFIDENCE)
+        return confidences
+
     @abstractmethod
     def has_context_categories(self) -> typing.List[str]:
         """Map from the source record into an iSamples context category"""
         pass
+
+    def has_context_category_confidences(self, context_categories: list[str]) -> typing.Optional[typing.List[float]]:
+        """If a machine-predicted label is used for context, subclasses should return non-None confidence values"""
+        return Transformer._rule_based_confidence_list_for_categories_list(context_categories)
 
     @abstractmethod
     def has_material_categories(self) -> typing.List[str]:
         """Map from the source record into an iSamples material category"""
         pass
 
+    def has_material_category_confidences(self, material_categories: list[str]) -> typing.Optional[typing.List[float]]:
+        """If a machine-predicted label is used for material, subclasses should return non-None confidence values"""
+        return Transformer._rule_based_confidence_list_for_categories_list(material_categories)
+
     @abstractmethod
     def has_specimen_categories(self) -> typing.List[str]:
         """Map from the source record into an iSamples specimen category"""
         pass
+
+    def has_specimen_category_confidences(self, specimen_categories: list[str]) -> typing.Optional[typing.List[float]]:
+        """If a machine-predicted label is used for specimen, subclasses should return non-None confidence values"""
+        return Transformer._rule_based_confidence_list_for_categories_list(specimen_categories)
 
     @abstractmethod
     def informal_classification(self) -> typing.List[str]:

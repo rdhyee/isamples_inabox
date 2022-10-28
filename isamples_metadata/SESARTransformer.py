@@ -14,7 +14,7 @@ from isamples_metadata.Transformer import (
 )
 from isamples_metadata.taxonomy.metadata_models import (
     MetadataModelLoader,
-    SESARMaterialPredictor
+    SESARMaterialPredictor, PredictionResult
 )
 
 
@@ -247,6 +247,10 @@ class ContextCategoryMetaMapper(AbstractCategoryMetaMapper):
 class SESARTransformer(Transformer):
     """Concrete transformer class for going from a SESAR record to an iSamples record"""
 
+    def __init__(self, source_record: typing.Dict):
+        super().__init__(source_record)
+        self._material_prediction_results: typing.Optional[list] = None
+
     def _source_record_description(self) -> typing.Dict:
         return self.source_record["description"]
 
@@ -301,16 +305,38 @@ class SESARTransformer(Transformer):
             material_type, primary_location_type
         )
 
-    def has_material_categories(self) -> typing.List[str]:
-        material = self._material_type()
-        if not material:
+    def _compute_material_prediction_results(self) -> typing.Optional[typing.List[PredictionResult]]:
+        if self._material_type() is not None:
+            # Have specified value, won't predict
+            return None
+        elif self._material_prediction_results is not None:
+            # Have already computed, don't predict again
+            return self._material_prediction_results
+        else:
+            # Need to predict
             # get the model
             sesar_model = MetadataModelLoader.get_sesar_material_model()
             # load the model predictor
             smp = SESARMaterialPredictor(sesar_model)
-            categories = [prediction.value for prediction in smp.predict_material_type(self.source_record)]
-            return categories
+            self._material_prediction_results = smp.predict_material_type(self.source_record)
+            return self._material_prediction_results
+
+    def has_material_categories(self) -> typing.List[str]:
+        material = self._material_type()
+        if not material:
+            prediction_results = self._compute_material_prediction_results()
+            if prediction_results is not None:
+                return [prediction.value for prediction in prediction_results]
+            else:
+                return []
         return MaterialCategoryMetaMapper.categories(material)
+
+    def has_material_category_confidences(self, material_categories: list[str]) -> typing.Optional[typing.List[float]]:
+        prediction_results = self._compute_material_prediction_results()
+        if prediction_results is None:
+            return None
+        else:
+            return [prediction.confidence for prediction in prediction_results]
 
     def has_specimen_categories(self) -> typing.List[str]:
         sample_type = self._source_record_description()["sampleType"]
