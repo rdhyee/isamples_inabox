@@ -1,4 +1,3 @@
-from tokenize import String
 import typing
 from typing import Optional
 
@@ -27,9 +26,7 @@ class MaterialCategoryMetaMapper(AbstractCategoryMetaMapper):
     )
 
     _anthropogenicMetalMapper = StringEqualityCategoryMapper(
-        [
-            "Coin",
-        ],
+        ["Coin"],
         "Anthropogenic metal",
     )
 
@@ -39,40 +36,35 @@ class MaterialCategoryMetaMapper(AbstractCategoryMetaMapper):
     )
 
     _organicMapper = StringEqualityCategoryMapper(
-        [
-           "Plant remains",
-        ],
+        ["Plant remains"],
         "Organic material",
     )
-    
+
     _materialMapper = StringEqualityCategoryMapper(
-        [
-            "Biological subject, Ecofact",
-        ],
+        ["Biological subject, Ecofact"],
         "Material",
     )
 
     _rockMapper = StringEqualityCategoryMapper(["Groundstone"], "Rock")
-    
+
+    _naturalSolidMaterialMapper = StringEqualityCategoryMapper(
+        ["Natural solid material"],
+        "Natural solid material"
+    )
+
+    _mineralMapper = StringEqualityCategoryMapper(
+        ["Mineral"],
+        "Mineral"
+    )
+
     _notSampleMapper = StringEqualityCategoryMapper(
         [
-           "Sample, Collection, or Aggregation",
-           "Human Subject",
-           "Reference Collection"
+            "Sample, Collection, or Aggregation",
+            "Human Subject",
+            "Reference Collection",
         ],
         Transformer.NOT_PROVIDED
     )
-    
-    _naturalSolidMaterialMapper = StringEqualityCategoryMapper(
-        [ "Natural solid material" ],
-        "Natural solid material"
-    )
-    
-    _mineralMapper = StringEqualityCategoryMapper(
-        [ "Mineral" ],
-        "Mineral"
-    )
-        
 
     @classmethod
     def categories_mappers(cls) -> typing.List[AbstractCategoryMapper]:
@@ -98,31 +90,36 @@ class SpecimenCategoryMetaMapper(AbstractCategoryMetaMapper):
     )
     _artifactMapper = StringEqualityCategoryMapper(
         [
-            "Architectural Element", 
+            "Architectural Element",
             "Bulk Ceramic",
             "Biological subject, Ecofact",
             "Coin",
-            "Glass", 
+            "Glass",
             "Groundstone",
-            "Pottery", 
-            "Sculpture"
-         ],
+            "Pottery",
+            "Sculpture",
+            "Sample",
+        ],
         "Artifact",
     )
     _biologicalSpecimenMapper = StringEqualityCategoryMapper(
         ["Plant remains"], "Biological specimen"
     )
     _physicalSpecimenMapper = StringEqualityCategoryMapper(
-        ["Sample, Collection, or Aggregation"], "Physical specimen"
+        [
+            "Sample, Collection, or Aggregation",
+            "Object"
+        ],
+        "Physical specimen"
     )
     _organismProductMapper = StringEqualityCategoryMapper(
-        ["Shell"] , "Organism product"
+        ["Shell"], "Organism product"
     )
     _notSampleMapper = StringEqualityCategoryMapper(
         [
-           "Sample, Collection, or Aggregation",
-           "Human Subject",
-           "Reference Collection"
+            "Sample, Collection, or Aggregation",
+            "Human Subject",
+            "Reference Collection",
         ],
         Transformer.NOT_PROVIDED
     )
@@ -202,9 +199,9 @@ class OpenContextTransformer(Transformer):
         item_category = self.source_record.get("item category", "")
         to_classify_items = ["Object", "Pottery", "Sample", "Sculpture"]
         if item_category in to_classify_items:
-            # we assume item category value exists for every record  
+            # we assume item category value exists for every record
             # if item category value is ambiguous (has multiple possible material labels)
-            # invoke the machine learning model 
+            # invoke the machine learning model
             ocm_model = MetadataModelLoader.get_oc_material_model()
             ocmp = OpenContextMaterialPredictor(ocm_model)
             return [prediction.value for prediction in ocmp.predict_material_type(self.source_record)]
@@ -212,12 +209,11 @@ class OpenContextTransformer(Transformer):
 
     def has_specimen_categories(self) -> typing.List[str]:
         item_category = self.source_record.get("item category", "")
-        to_classify_items = ["Animal Bone", "Object", "Sample"] 
+        to_classify_items = ["Animal Bone"]
         if item_category in to_classify_items:
-            # we assume item category value exists for every record  
+            # we assume item category value exists for every record
             # if item category value is ambiguous (has multiple possible material labels)
-            # use the rule that is defined using triplet of (item category, consists_of, has_type)
-            # or invoke the machine learning model 
+            # invoke the machine learning model
             ocm_model = MetadataModelLoader.get_oc_sample_model()
             ocsp = OpenContextSamplePredictor(ocm_model)
             return [prediction.value for prediction in ocsp.predict_sample_type(self.source_record)]
