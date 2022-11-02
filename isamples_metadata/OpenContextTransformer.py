@@ -192,6 +192,16 @@ class OpenContextTransformer(Transformer):
             )
         return Transformer.DESCRIPTION_SEPARATOR.join(description_pieces)
 
+    def _material_type(self) -> typing.Optional[str]:
+        for consists_of_dict in self.source_record.get("Consists of", []):
+            return consists_of_dict.get("label")
+        return None
+
+    def _specimen_type(self) -> typing.Optional[str]:
+        for has_type_dict in self.source_record.get("Has type", []):
+            return has_type_dict.get("label")
+        return None
+
     def sample_registrant(self) -> str:
         pass
 
@@ -204,7 +214,6 @@ class OpenContextTransformer(Transformer):
     def _compute_material_prediction_results(self) -> typing.Optional[typing.List[PredictionResult]]:
         item_category = self.source_record.get("item category", "")
         to_classify_items = ["Object", "Pottery", "Sample", "Sculpture"]
-
         if item_category not in to_classify_items:
             # Have specified mapping, won't predict
             return None
@@ -231,7 +240,7 @@ class OpenContextTransformer(Transformer):
                 return []
         return MaterialCategoryMetaMapper.categories(item_category)
 
-    def has_material_category_confidences(self, material_categories: list[str]) -> typing.Optional[typing.List[float]]:
+    def has_material_category_confidences(self, material_categories: typing.List[str]) -> typing.Optional[typing.List[float]]:
         prediction_results = self._compute_material_prediction_results()
         if prediction_results is None:
             return None
@@ -267,7 +276,7 @@ class OpenContextTransformer(Transformer):
                 return []
         return SpecimenCategoryMetaMapper.categories(item_category)
 
-    def has_specimen_category_confidences(self, specimen_categories: list[str]) -> typing.Optional[typing.List[float]]:
+    def has_specimen_category_confidences(self, specimen_categories: typing.List[str]) -> typing.Optional[typing.List[float]]:
         prediction_results = self._compute_specimen_prediction_results()
         if prediction_results is None:
             return None
