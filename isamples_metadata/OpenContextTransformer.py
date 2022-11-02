@@ -1,3 +1,4 @@
+from tokenize import String
 import typing
 from typing import Optional
 
@@ -21,12 +22,6 @@ class MaterialCategoryMetaMapper(AbstractCategoryMetaMapper):
             "Architectural Element",
             "Bulk Ceramic",
             "Glass",
-            "Object",
-            "Pottery",
-            "Sample",
-            "Sample, Collection, or Aggregation",
-            "Sculpture",
-            "Stela",
         ],
         "Anthropogenic material",
     )
@@ -45,13 +40,39 @@ class MaterialCategoryMetaMapper(AbstractCategoryMetaMapper):
 
     _organicMapper = StringEqualityCategoryMapper(
         [
-            "Biological subject, Ecofact",
-            "Plant remains",
+           "Plant remains",
         ],
         "Organic material",
     )
+    
+    _materialMapper = StringEqualityCategoryMapper(
+        [
+            "Biological subject, Ecofact",
+        ],
+        "Material",
+    )
 
     _rockMapper = StringEqualityCategoryMapper(["Groundstone"], "Rock")
+    
+    _notSampleMapper = StringEqualityCategoryMapper(
+        [
+           "Sample, Collection, or Aggregation",
+           "Human Subject",
+           "Reference Collection"
+        ],
+        Transformer.NOT_PROVIDED
+    )
+    
+    _naturalSolidMaterialMapper = StringEqualityCategoryMapper(
+        [ "Natural solid material" ],
+        "Natural solid material"
+    )
+    
+    _mineralMapper = StringEqualityCategoryMapper(
+        [ "Mineral" ],
+        "Mineral"
+    )
+        
 
     @classmethod
     def categories_mappers(cls) -> typing.List[AbstractCategoryMapper]:
@@ -61,48 +82,60 @@ class MaterialCategoryMetaMapper(AbstractCategoryMetaMapper):
             cls._biogenicMapper,
             cls._organicMapper,
             cls._rockMapper,
+            cls._naturalSolidMaterialMapper,
+            cls._mineralMapper,
+            cls._notSampleMapper
         ]
 
 
 class SpecimenCategoryMetaMapper(AbstractCategoryMetaMapper):
     _organismPartMapper = StringEqualityCategoryMapper(
         [
-            "Animal Bone",
             "Human Bone",
             "Non Diagnostic Bone",
         ],
         "Organism part",
     )
-    _anthropogenicAggregationMapper = StringEqualityCategoryMapper(
-        ["Architectural Element", "Basket", "Bulk Ceramic", "Lot"],
-        "Anthropogenic aggregation",
-    )
-    _biomeAggregationMapper = StringEqualityCategoryMapper(
-        ["Biological subject, Ecofact", "Plant remains"], "Biome aggregation"
-    )
     _artifactMapper = StringEqualityCategoryMapper(
-        ["Coin", "Glass", "Groundstone", "Object", "Pottery", "Sculpture", "Stela"],
+        [
+            "Architectural Element", 
+            "Bulk Ceramic",
+            "Biological subject, Ecofact",
+            "Coin",
+            "Glass", 
+            "Groundstone",
+            "Pottery", 
+            "Sculpture"
+         ],
         "Artifact",
     )
-    _otherSolidObjectMapper = StringEqualityCategoryMapper(
-        ["Sample", "Sample, Collection, or Aggregation"], "Other solid object"
+    _biologicalSpecimenMapper = StringEqualityCategoryMapper(
+        ["Plant remains"], "Biological specimen"
+    )
+    _physicalSpecimenMapper = StringEqualityCategoryMapper(
+        ["Sample, Collection, or Aggregation"], "Physical specimen"
     )
     _organismProductMapper = StringEqualityCategoryMapper(
+        ["Shell"] , "Organism product"
+    )
+    _notSampleMapper = StringEqualityCategoryMapper(
         [
-            "Shell",
+           "Sample, Collection, or Aggregation",
+           "Human Subject",
+           "Reference Collection"
         ],
-        "Organism product",
+        Transformer.NOT_PROVIDED
     )
 
     @classmethod
     def categories_mappers(cls) -> typing.List[AbstractCategoryMapper]:
         return [
             cls._organismPartMapper,
-            cls._anthropogenicAggregationMapper,
-            cls._biomeAggregationMapper,
             cls._artifactMapper,
-            cls._otherSolidObjectMapper,
+            cls._biologicalSpecimenMapper,
+            cls._physicalSpecimenMapper,
             cls._organismProductMapper,
+            cls._notSampleMapper
         ]
 
 
@@ -166,20 +199,25 @@ class OpenContextTransformer(Transformer):
         return ["Site of past human activities"]
 
     def has_material_categories(self) -> typing.List[str]:
-        item_category = self.source_record.get("item category") or ""
-        if item_category == "":
-            # TODO : need more specification on when to call the predict function
-            # call the classifier for prediction
+        item_category = self.source_record.get("item category", "")
+        to_classify_items = ["Object", "Pottery", "Sample", "Sculpture"]
+        if item_category in to_classify_items:
+            # we assume item category value exists for every record  
+            # if item category value is ambiguous (has multiple possible material labels)
+            # invoke the machine learning model 
             ocm_model = MetadataModelLoader.get_oc_material_model()
             ocmp = OpenContextMaterialPredictor(ocm_model)
             return [prediction.value for prediction in ocmp.predict_material_type(self.source_record)]
         return MaterialCategoryMetaMapper.categories(item_category)
 
     def has_specimen_categories(self) -> typing.List[str]:
-        item_category = self.source_record.get("item category") or ""
-        if item_category == "":
-            # TODO : need more specification on when to call the predict function
-            # call the classifier for prediction
+        item_category = self.source_record.get("item category", "")
+        to_classify_items = ["Animal Bone", "Object", "Sample"] 
+        if item_category in to_classify_items:
+            # we assume item category value exists for every record  
+            # if item category value is ambiguous (has multiple possible material labels)
+            # use the rule that is defined using triplet of (item category, consists_of, has_type)
+            # or invoke the machine learning model 
             ocm_model = MetadataModelLoader.get_oc_sample_model()
             ocsp = OpenContextSamplePredictor(ocm_model)
             return [prediction.value for prediction in ocsp.predict_sample_type(self.source_record)]
