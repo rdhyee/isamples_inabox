@@ -3,6 +3,8 @@ import logging
 import json
 import os
 from typing import Tuple, Optional, List
+
+from isamples_metadata.Transformer import Transformer
 from isb_web import config
 
 from isamples_metadata.taxonomy.Model import Model
@@ -238,7 +240,7 @@ class SESARMaterialPredictor:
         if label:
             # map the label to iSamples CV
             label = SESARClassifierInput.source_to_CV[label]
-            return [PredictionResult(label, -1)]  # set sentinel value as probability
+            return [PredictionResult(label, Transformer.RULE_BASED_CONFIDENCE)]  # set sentinel value as probability
         else:
             # second pass : deriving the prediction by machine
             # we pass the text to a pretrained model to get the prediction result

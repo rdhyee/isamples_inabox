@@ -1,3 +1,5 @@
+import math
+
 import pytest
 import requests
 import typing
@@ -169,7 +171,8 @@ def _transformed_json_to_test_tuples() -> list[tuple]:
             current_tuple = (
                 key,
                 {
-                    "hasMaterialCategory": value.get("material").get("values")
+                    "hasMaterialCategory": value.get("material").get("values"),
+                    "hasMaterialCategoryConfidence": value.get("material").get("confidence")
                 }
             )
             transformed_json.append(current_tuple)
@@ -184,4 +187,12 @@ def test_solr_integration_test(rsession: requests.Session, solr_url: str, id: st
     assert len(docs) > 0
     test_doc = docs[0]
     for key, value in params.items():
-        assert test_doc.get(key) == value
+        other_array = test_doc.get(key)
+        assert other_array is not None
+        index = 0
+        for item in value:
+            if type(item) is float:
+                assert math.isclose(other_array[index], item, abs_tol=0.001)
+            else:
+                assert test_doc.get(key) == value
+            index += 1

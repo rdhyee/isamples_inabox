@@ -64,6 +64,17 @@ brew services start postgres
 brew services start solr
 ```
 
+### Running the iSamples Central Postgres db locally
+Given that the iSamples Central database is pretty large, you'll want to start with a dump of the existing iSamples Central database rather than attempting to recreate it by hand.  Note that these steps do take quite some time to run, so don't be alarmed if it seems like nothing is happening.
+
+The first thing you'll want to do is dump the postgres database (or grab it from `/var/local/data/` on mars.cyverse.org).  The following command will dump an existing iSC postgres database and create a `.sql` file that you will load up in your local database:
+
+`pg_dump -a -U isb_writer -h localhost -d isb_1 > isamples_data_only.sql` -- note that the `-a` switch specifies data-only.  Given the history of the project and the rate at which things change, it is safer to *not* include the table creation statements in the dumped .sql file.
+
+Then, you'll want to transfer that dumped file to your local machine.  It's likely faster to gzip it first on the server and gunzip it locally.  Once you've transferred to your local machine, bringing up a local Docker iSB container will create the necessary tables and indexes so that the load may proceed.  After you've done that (and created the necessary tables and indexes), you may load up the postgres dump like so:
+
+`psql -d isb_1 -f isamples_data_only.sql`
+
 ### Python virtual environment creation
 
 Create a python virtual environment, checkout the source, and run poetry install.

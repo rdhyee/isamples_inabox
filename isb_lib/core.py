@@ -158,10 +158,16 @@ def _coreRecordAsSolrDoc(coreMetadata: typing.Dict) -> typing.Dict:  # noqa: C90
         doc["description"] = coreMetadata["description"]
     if _shouldAddMetadataValueToSolrDoc(coreMetadata, "hasContextCategory"):
         doc["hasContextCategory"] = coreMetadata["hasContextCategory"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "hasContextCategoryConfidence"):
+        doc["hasContextCategoryConfidence"] = coreMetadata["hasContextCategoryConfidence"]
     if _shouldAddMetadataValueToSolrDoc(coreMetadata, "hasMaterialCategory"):
         doc["hasMaterialCategory"] = coreMetadata["hasMaterialCategory"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "hasMaterialCategoryConfidence"):
+        doc["hasMaterialCategoryConfidence"] = coreMetadata["hasMaterialCategoryConfidence"]
     if _shouldAddMetadataValueToSolrDoc(coreMetadata, "hasSpecimenCategory"):
         doc["hasSpecimenCategory"] = coreMetadata["hasSpecimenCategory"]
+    if _shouldAddMetadataValueToSolrDoc(coreMetadata, "hasSpecimenCategoryConfidence"):
+        doc["hasSpecimenCategoryConfidence"] = coreMetadata["hasSpecimenCategoryConfidence"]
     if _shouldAddMetadataValueToSolrDoc(coreMetadata, "keywords"):
         doc["keywords"] = coreMetadata["keywords"]
     if _shouldAddMetadataValueToSolrDoc(coreMetadata, "informalClassification"):
