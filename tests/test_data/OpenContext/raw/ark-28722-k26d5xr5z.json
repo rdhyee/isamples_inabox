@@ -1,0 +1,32 @@
+{
+    "uri":"http://opencontext.org/subjects/17D98EE9-3EB6-4DEB-12CA-2493CBF29438",
+    "label":"Arch. Frag. 16511",
+    "Creator":[
+       {
+          "id":"http://opencontext.org/persons/1EFB20BC-BE05-486A-C434-988892277ED5",
+          "label":"Martha Sharp Joukowsky"
+       }
+    ],
+    "updated":"2017-02-09T02:38:47Z",
+    "latitude":30.3287,
+    "longitude":35.4421,
+    "published":"2007-11-11T00:00:00Z",
+    "Contributor":[
+       {
+          "id":"http://opencontext.org/persons/A753753F-025A-4930-4F6A-5DEC08BDAEB0",
+          "label":"Eleanor A. Power"
+       },
+       {
+          "id":"http://opencontext.org/persons/A67D3050-C58F-4DC2-C061-867A64428A2A",
+          "label":"Marshall C. Agnew"
+       }
+    ],
+    "context uri":"http://opencontext.org/subjects/2B1A44C6-E055-4D02-B2DA-F90A7F0F667C",
+    "late bce/ce":360.0,
+    "project uri":"http://opencontext.org/projects/A5DDBEA2-B3C8-43F9-8151-33343CBDC857",
+    "citation uri":"http://n2t.net/ark:/28722/k26d5xr5z",
+    "early bce/ce":-200.0,
+    "context label":"Jordan/Petra Great Temple/Upper Temenos/Trench 105-106/Locus 22",
+    "item category":"Architectural Element",
+    "project label":"Petra Great Temple Excavations"
+ }

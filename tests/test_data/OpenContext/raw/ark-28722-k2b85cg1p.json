@@ -1,0 +1,28 @@
+{
+    "uri":"http://opencontext.org/subjects/76218330-3248-4231-D12E-BD494038AE9E",
+    "label":"Arch. Frag. 5109",
+    "Creator":[
+       {
+          "id":"http://opencontext.org/persons/1EFB20BC-BE05-486A-C434-988892277ED5",
+          "label":"Martha Sharp Joukowsky"
+       }
+    ],
+    "updated":"2017-02-09T02:41:00Z",
+    "latitude":30.3287,
+    "longitude":35.4421,
+    "published":"2007-11-11T00:00:00Z",
+    "Contributor":[
+       {
+          "id":"http://opencontext.org/persons/E0385159-90C5-4A71-C0FC-56B6545B699E",
+          "label":"Katrina M. Haile"
+       }
+    ],
+    "context uri":"http://opencontext.org/subjects/F12B7253-8745-4837-7E5F-8AF8C6FA2C00",
+    "late bce/ce":360.0,
+    "project uri":"http://opencontext.org/projects/A5DDBEA2-B3C8-43F9-8151-33343CBDC857",
+    "citation uri":"http://n2t.net/ark:/28722/k2b85cg1p",
+    "early bce/ce":-200.0,
+    "context label":"Jordan/Petra Great Temple/Propylaeum/Trench 51/Locus 2",
+    "item category":"Architectural Element",
+    "project label":"Petra Great Temple Excavations"
+ }

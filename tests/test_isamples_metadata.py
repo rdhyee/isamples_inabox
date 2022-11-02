@@ -202,19 +202,19 @@ def test_geome_transformer_for_identifier():
 
 OPENCONTEXT_test_values = [
     (
-        "./test_data/OpenContext/raw/ark-28722-k2b570022.json",
-        "./test_data/OpenContext/test/ark-28722-k2b570022-test.json",
-        "2021-06-27T19:54:46Z",
+        "./test_data/OpenContext/raw/ark-28722-k2b85cg1p.json",
+        "./test_data/OpenContext/test/ark-28722-k2b85cg1p-test.json",
+        "2017-02-09T02:41:00Z",
     ),
     (
-        "./test_data/OpenContext/raw/ark-28722-k2m61xj9b.json",
-        "./test_data/OpenContext/test/ark-28722-k2m61xj9b-test.json",
-        "2021-06-27T21:34:12Z",
+        "./test_data/OpenContext/raw/ark-28722-k26d5xr5z.json",
+        "./test_data/OpenContext/test/ark-28722-k26d5xr5z-test.json",
+        "2017-02-09T02:38:47Z",
     ),
     (
-        "./test_data/OpenContext/raw/ark-28722-k2qj7np9g.json",
-        "./test_data/OpenContext/test/ark-28722-k2m61xj9b-test.json",
-        "2021-01-27T03:57:23Z",
+        "./test_data/OpenContext/raw/ark-28722-k2vq31x46.json",
+        "./test_data/OpenContext/test/ark-28722-k2vq31x46-test.json",
+        "2017-02-09T02:42:21Z",
     ),
 ]
 
