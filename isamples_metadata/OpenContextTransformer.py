@@ -11,7 +11,8 @@ from isamples_metadata.Transformer import (
 from isamples_metadata.taxonomy.metadata_models import (
     MetadataModelLoader,
     OpenContextMaterialPredictor,
-    OpenContextSamplePredictor
+    OpenContextSamplePredictor,
+    PredictionResult
 )
 
 
@@ -138,6 +139,11 @@ class SpecimenCategoryMetaMapper(AbstractCategoryMetaMapper):
 
 class OpenContextTransformer(Transformer):
 
+    def __init__(self, source_record: typing.Dict):
+        super().__init__(source_record)
+        self._material_prediction_results: typing.Optional[list] = None
+        self._specimen_prediction_results: typing.Optional[list] = None
+
     def _citation_uri(self) -> str:
         return self.source_record.get("citation uri") or ""
 
@@ -195,29 +201,78 @@ class OpenContextTransformer(Transformer):
     def has_context_categories(self) -> typing.List[str]:
         return ["Site of past human activities"]
 
+    def _compute_material_prediction_results(self) -> typing.Optional[typing.List[PredictionResult]]:
+        item_category = self.source_record.get("item category", "")
+        to_classify_items = ["Object", "Pottery", "Sample", "Sculpture"]
+
+        if item_category not in to_classify_items:
+            # Have specified mapping, won't predict
+            return None
+        elif self._material_prediction_results is not None:
+            # Have already computed, don't predict again
+            return self._material_prediction_results
+        else:
+            # Need to predict
+            # get the model
+            ocm_model = MetadataModelLoader.get_oc_material_model()
+            # load the model predictor
+            ocmp = OpenContextMaterialPredictor(ocm_model)
+            self._material_prediction_results = ocmp.predict_material_type(self.source_record)
+            return self._material_prediction_results
+
     def has_material_categories(self) -> typing.List[str]:
         item_category = self.source_record.get("item category", "")
         to_classify_items = ["Object", "Pottery", "Sample", "Sculpture"]
         if item_category in to_classify_items:
-            # we assume item category value exists for every record
-            # if item category value is ambiguous (has multiple possible material labels)
-            # invoke the machine learning model
-            ocm_model = MetadataModelLoader.get_oc_material_model()
-            ocmp = OpenContextMaterialPredictor(ocm_model)
-            return [prediction.value for prediction in ocmp.predict_material_type(self.source_record)]
+            prediction_results = self._compute_material_prediction_results()
+            if prediction_results is not None:
+                return [prediction.value for prediction in prediction_results]
+            else:
+                return []
         return MaterialCategoryMetaMapper.categories(item_category)
+
+    def has_material_category_confidences(self, material_categories: list[str]) -> typing.Optional[typing.List[float]]:
+        prediction_results = self._compute_material_prediction_results()
+        if prediction_results is None:
+            return None
+        else:
+            return [prediction.confidence for prediction in prediction_results]
+
+    def _compute_specimen_prediction_results(self) -> typing.Optional[typing.List[PredictionResult]]:
+        item_category = self.source_record.get("item category", "")
+        to_classify_items = ["Animal Bone"]
+        if item_category not in to_classify_items:
+            # Have specified mapping, won't predict
+            return None
+        elif self._specimen_prediction_results is not None:
+            # Have already computed, don't predict again
+            return self._specimen_prediction_results
+        else:
+            # Need to predict
+            # get the model
+            ocs_model = MetadataModelLoader.get_oc_sample_model()
+            # load the model predictor
+            ocsp = OpenContextSamplePredictor(ocs_model)
+            self._specimen_prediction_results = ocsp.predict_sample_type(self.source_record)
+            return self._specimen_prediction_results
 
     def has_specimen_categories(self) -> typing.List[str]:
         item_category = self.source_record.get("item category", "")
         to_classify_items = ["Animal Bone"]
         if item_category in to_classify_items:
-            # we assume item category value exists for every record
-            # if item category value is ambiguous (has multiple possible material labels)
-            # invoke the machine learning model
-            ocm_model = MetadataModelLoader.get_oc_sample_model()
-            ocsp = OpenContextSamplePredictor(ocm_model)
-            return [prediction.value for prediction in ocsp.predict_sample_type(self.source_record)]
+            prediction_results = self._compute_specimen_prediction_results()
+            if prediction_results is not None:
+                return [prediction.value for prediction in prediction_results]
+            else:
+                return []
         return SpecimenCategoryMetaMapper.categories(item_category)
+
+    def has_specimen_category_confidences(self, specimen_categories: list[str]) -> typing.Optional[typing.List[float]]:
+        prediction_results = self._compute_specimen_prediction_results()
+        if prediction_results is None:
+            return None
+        else:
+            return [prediction.confidence for prediction in prediction_results]
 
     def _context_label_pieces(self) -> typing.List[str]:
         context_label = self.source_record.get("context label")
