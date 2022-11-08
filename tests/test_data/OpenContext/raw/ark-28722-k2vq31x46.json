@@ -1,0 +1,28 @@
+{
+   "uri":"http://opencontext.org/subjects/6A086ADA-08B6-4B24-4896-578D4A7C7FE5",
+   "label":"Arch. Frag. 1564",
+   "Creator":[
+      {
+         "id":"http://opencontext.org/persons/1EFB20BC-BE05-486A-C434-988892277ED5",
+         "label":"Martha Sharp Joukowsky"
+      }
+   ],
+   "updated":"2017-02-09T02:42:21Z",
+   "latitude":30.3287,
+   "longitude":35.4421,
+   "published":"2007-11-11T00:00:00Z",
+   "Contributor":[
+      {
+         "id":"http://opencontext.org/persons/B2917D64-13E2-4EC5-3E4D-A9B5D42355BA",
+         "label":"Elizabeth E. Payne"
+      }
+   ],
+   "context uri":"http://opencontext.org/subjects/F747E463-AD6C-47D2-B5C6-F5D54849B30C",
+   "late bce/ce":360.0,
+   "project uri":"http://opencontext.org/projects/A5DDBEA2-B3C8-43F9-8151-33343CBDC857",
+   "citation uri":"http://n2t.net/ark:/28722/k2vq31x46",
+   "early bce/ce":-200.0,
+   "context label":"Jordan/Petra Great Temple/Upper Temenos/Surface/Locus 0",
+   "item category":"Architectural Element",
+   "project label":"Petra Great Temple Excavations"
+}

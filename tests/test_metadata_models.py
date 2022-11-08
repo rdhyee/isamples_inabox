@@ -59,9 +59,9 @@ def _test_sesar_material_model(sesar_source_path):
 
 
 OpenContext_test_values = [
-    "./test_data/OpenContext/raw/ark-28722-k2b570022.json",
-    "./test_data/OpenContext/raw/ark-28722-k2m61xj9b.json",
-    "./test_data/OpenContext/raw/ark-28722-k2m61xj9b.json",
+    "./test_data/OpenContext/raw/ark-28722-k2b85cg1p.json",
+    "./test_data/OpenContext/raw/ark-28722-k26d5xr5z.json",
+    "./test_data/OpenContext/raw/ark-28722-k2vq31x46.json",
 ]
 
 

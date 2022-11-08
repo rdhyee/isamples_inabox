@@ -1,0 +1,76 @@
+{
+   "$schema":"../../iSamplesSchemaBasic0.2.json",
+   "@id":"metadata/http://n2t.net/ark:/28722/k2vq31x46",
+   "label":"Arch. Frag. 1564",
+   "sampleidentifier":"http://n2t.net/ark:/28722/k2vq31x46",
+   "description":"early bce/ce: -200.0 | late bce/ce: 360.0 | updated: 2017-02-09T02:42:21Z",
+   "hasContextCategory":[
+      "Site of past human activities"
+   ],
+   "hasContextCategoryConfidence":[
+      1.0
+   ],
+   "hasMaterialCategory":[
+      "Anthropogenic material"
+   ],
+   "hasMaterialCategoryConfidence":"None",
+   "hasSpecimenCategory":[
+      "Artifact"
+   ],
+   "hasSpecimenCategoryConfidence":"None",
+   "informalClassification":[
+      
+   ],
+   "keywords":[
+      "Jordan",
+      "Petra Great Temple",
+      "Upper Temenos",
+      "Surface",
+      "Locus 0"
+   ],
+   "producedBy":{
+      "@id":"Not Provided",
+      "label":"Petra Great Temple Excavations",
+      "description":"http://opencontext.org/projects/A5DDBEA2-B3C8-43F9-8151-33343CBDC857",
+      "hasFeatureOfInterest":"Not Provided",
+      "responsibility":[
+         "creator: Martha Sharp Joukowsky",
+         "collector: Elizabeth E. Payne"
+      ],
+      "resultTime":"2007-11-11T00:00:00Z",
+      "samplingSite":{
+         "description":"Not Provided",
+         "label":"Jordan/Petra Great Temple/Upper Temenos/Surface/Locus 0",
+         "location":{
+            "elevation":"Not Provided",
+            "latitude":30.3287,
+            "longitude":35.4421
+         },
+         "placeName":[
+            "Jordan",
+            "Petra Great Temple",
+            "Upper Temenos",
+            "Surface",
+            "Locus 0"
+         ]
+      }
+   },
+   "registrant":"None",
+   "samplingPurpose":"None",
+   "curation":{
+      "label":"Not Provided",
+      "description":"Not Provided",
+      "accessConstraints":"Not Provided",
+      "curationLocation":"Not Provided",
+      "responsibility":"Not Provided"
+   },
+   "relatedResource":[
+      
+   ],
+   "authorizedBy":[
+      
+   ],
+   "compliesWith":[
+      
+   ]
+}

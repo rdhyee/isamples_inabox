@@ -11,7 +11,8 @@ from isamples_metadata.Transformer import (
 from isamples_metadata.taxonomy.metadata_models import (
     MetadataModelLoader,
     OpenContextMaterialPredictor,
-    OpenContextSamplePredictor
+    OpenContextSamplePredictor,
+    PredictionResult
 )
 
 
@@ -21,20 +22,12 @@ class MaterialCategoryMetaMapper(AbstractCategoryMetaMapper):
             "Architectural Element",
             "Bulk Ceramic",
             "Glass",
-            "Object",
-            "Pottery",
-            "Sample",
-            "Sample, Collection, or Aggregation",
-            "Sculpture",
-            "Stela",
         ],
         "Anthropogenic material",
     )
 
     _anthropogenicMetalMapper = StringEqualityCategoryMapper(
-        [
-            "Coin",
-        ],
+        ["Coin"],
         "Anthropogenic metal",
     )
 
@@ -44,14 +37,35 @@ class MaterialCategoryMetaMapper(AbstractCategoryMetaMapper):
     )
 
     _organicMapper = StringEqualityCategoryMapper(
-        [
-            "Biological subject, Ecofact",
-            "Plant remains",
-        ],
+        ["Plant remains"],
         "Organic material",
     )
 
+    _materialMapper = StringEqualityCategoryMapper(
+        ["Biological subject, Ecofact"],
+        "Material",
+    )
+
     _rockMapper = StringEqualityCategoryMapper(["Groundstone"], "Rock")
+
+    _naturalSolidMaterialMapper = StringEqualityCategoryMapper(
+        ["Natural solid material"],
+        "Natural solid material"
+    )
+
+    _mineralMapper = StringEqualityCategoryMapper(
+        ["Mineral"],
+        "Mineral"
+    )
+
+    _notSampleMapper = StringEqualityCategoryMapper(
+        [
+            "Sample, Collection, or Aggregation",
+            "Human Subject",
+            "Reference Collection",
+        ],
+        Transformer.NOT_PROVIDED
+    )
 
     @classmethod
     def categories_mappers(cls) -> typing.List[AbstractCategoryMapper]:
@@ -61,52 +75,74 @@ class MaterialCategoryMetaMapper(AbstractCategoryMetaMapper):
             cls._biogenicMapper,
             cls._organicMapper,
             cls._rockMapper,
+            cls._naturalSolidMaterialMapper,
+            cls._mineralMapper,
+            cls._notSampleMapper
         ]
 
 
 class SpecimenCategoryMetaMapper(AbstractCategoryMetaMapper):
     _organismPartMapper = StringEqualityCategoryMapper(
         [
-            "Animal Bone",
             "Human Bone",
             "Non Diagnostic Bone",
         ],
         "Organism part",
     )
-    _anthropogenicAggregationMapper = StringEqualityCategoryMapper(
-        ["Architectural Element", "Basket", "Bulk Ceramic", "Lot"],
-        "Anthropogenic aggregation",
-    )
-    _biomeAggregationMapper = StringEqualityCategoryMapper(
-        ["Biological subject, Ecofact", "Plant remains"], "Biome aggregation"
-    )
     _artifactMapper = StringEqualityCategoryMapper(
-        ["Coin", "Glass", "Groundstone", "Object", "Pottery", "Sculpture", "Stela"],
+        [
+            "Architectural Element",
+            "Bulk Ceramic",
+            "Biological subject, Ecofact",
+            "Coin",
+            "Glass",
+            "Groundstone",
+            "Pottery",
+            "Sculpture",
+            "Sample",
+        ],
         "Artifact",
     )
-    _otherSolidObjectMapper = StringEqualityCategoryMapper(
-        ["Sample", "Sample, Collection, or Aggregation"], "Other solid object"
+    _biologicalSpecimenMapper = StringEqualityCategoryMapper(
+        ["Plant remains"], "Biological specimen"
+    )
+    _physicalSpecimenMapper = StringEqualityCategoryMapper(
+        [
+            "Sample, Collection, or Aggregation",
+            "Object"
+        ],
+        "Physical specimen"
     )
     _organismProductMapper = StringEqualityCategoryMapper(
+        ["Shell"], "Organism product"
+    )
+    _notSampleMapper = StringEqualityCategoryMapper(
         [
-            "Shell",
+            "Sample, Collection, or Aggregation",
+            "Human Subject",
+            "Reference Collection",
         ],
-        "Organism product",
+        Transformer.NOT_PROVIDED
     )
 
     @classmethod
     def categories_mappers(cls) -> typing.List[AbstractCategoryMapper]:
         return [
             cls._organismPartMapper,
-            cls._anthropogenicAggregationMapper,
-            cls._biomeAggregationMapper,
             cls._artifactMapper,
-            cls._otherSolidObjectMapper,
+            cls._biologicalSpecimenMapper,
+            cls._physicalSpecimenMapper,
             cls._organismProductMapper,
+            cls._notSampleMapper
         ]
 
 
 class OpenContextTransformer(Transformer):
+
+    def __init__(self, source_record: typing.Dict):
+        super().__init__(source_record)
+        self._material_prediction_results: typing.Optional[list] = None
+        self._specimen_prediction_results: typing.Optional[list] = None
 
     def _citation_uri(self) -> str:
         return self.source_record.get("citation uri") or ""
@@ -156,6 +192,16 @@ class OpenContextTransformer(Transformer):
             )
         return Transformer.DESCRIPTION_SEPARATOR.join(description_pieces)
 
+    def _material_type(self) -> typing.Optional[str]:
+        for consists_of_dict in self.source_record.get("Consists of", []):
+            return consists_of_dict.get("label")
+        return None
+
+    def _specimen_type(self) -> typing.Optional[str]:
+        for has_type_dict in self.source_record.get("Has type", []):
+            return has_type_dict.get("label")
+        return None
+
     def sample_registrant(self) -> str:
         pass
 
@@ -165,25 +211,77 @@ class OpenContextTransformer(Transformer):
     def has_context_categories(self) -> typing.List[str]:
         return ["Site of past human activities"]
 
-    def has_material_categories(self) -> typing.List[str]:
-        item_category = self.source_record.get("item category") or ""
-        if item_category == "":
-            # TODO : need more specification on when to call the predict function
-            # call the classifier for prediction
+    def _compute_material_prediction_results(self) -> typing.Optional[typing.List[PredictionResult]]:
+        item_category = self.source_record.get("item category", "")
+        to_classify_items = ["Object", "Pottery", "Sample", "Sculpture"]
+        if item_category not in to_classify_items:
+            # Have specified mapping, won't predict
+            return None
+        elif self._material_prediction_results is not None:
+            # Have already computed, don't predict again
+            return self._material_prediction_results
+        else:
+            # Need to predict
+            # get the model
             ocm_model = MetadataModelLoader.get_oc_material_model()
+            # load the model predictor
             ocmp = OpenContextMaterialPredictor(ocm_model)
-            return [prediction.value for prediction in ocmp.predict_material_type(self.source_record)]
+            self._material_prediction_results = ocmp.predict_material_type(self.source_record)
+            return self._material_prediction_results
+
+    def has_material_categories(self) -> typing.List[str]:
+        item_category = self.source_record.get("item category", "")
+        to_classify_items = ["Object", "Pottery", "Sample", "Sculpture"]
+        if item_category in to_classify_items:
+            prediction_results = self._compute_material_prediction_results()
+            if prediction_results is not None:
+                return [prediction.value for prediction in prediction_results]
+            else:
+                return []
         return MaterialCategoryMetaMapper.categories(item_category)
 
+    def has_material_category_confidences(self, material_categories: typing.List[str]) -> typing.Optional[typing.List[float]]:
+        prediction_results = self._compute_material_prediction_results()
+        if prediction_results is None:
+            return None
+        else:
+            return [prediction.confidence for prediction in prediction_results]
+
+    def _compute_specimen_prediction_results(self) -> typing.Optional[typing.List[PredictionResult]]:
+        item_category = self.source_record.get("item category", "")
+        to_classify_items = ["Animal Bone"]
+        if item_category not in to_classify_items:
+            # Have specified mapping, won't predict
+            return None
+        elif self._specimen_prediction_results is not None:
+            # Have already computed, don't predict again
+            return self._specimen_prediction_results
+        else:
+            # Need to predict
+            # get the model
+            ocs_model = MetadataModelLoader.get_oc_sample_model()
+            # load the model predictor
+            ocsp = OpenContextSamplePredictor(ocs_model)
+            self._specimen_prediction_results = ocsp.predict_sample_type(self.source_record)
+            return self._specimen_prediction_results
+
     def has_specimen_categories(self) -> typing.List[str]:
-        item_category = self.source_record.get("item category") or ""
-        if item_category == "":
-            # TODO : need more specification on when to call the predict function
-            # call the classifier for prediction
-            ocm_model = MetadataModelLoader.get_oc_sample_model()
-            ocsp = OpenContextSamplePredictor(ocm_model)
-            return [prediction.value for prediction in ocsp.predict_sample_type(self.source_record)]
+        item_category = self.source_record.get("item category", "")
+        to_classify_items = ["Animal Bone"]
+        if item_category in to_classify_items:
+            prediction_results = self._compute_specimen_prediction_results()
+            if prediction_results is not None:
+                return [prediction.value for prediction in prediction_results]
+            else:
+                return []
         return SpecimenCategoryMetaMapper.categories(item_category)
+
+    def has_specimen_category_confidences(self, specimen_categories: typing.List[str]) -> typing.Optional[typing.List[float]]:
+        prediction_results = self._compute_specimen_prediction_results()
+        if prediction_results is None:
+            return None
+        else:
+            return [prediction.confidence for prediction in prediction_results]
 
     def _context_label_pieces(self) -> typing.List[str]:
         context_label = self.source_record.get("context label")

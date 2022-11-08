@@ -225,8 +225,8 @@ class SESARMaterialPredictor:
         """
         Invoke the pre-trained BERT model to predict the material type label for the specified string inputs.
 
-        :param source_record: the raw source of a record
-        :return: iSamples CV that corresponds to the label that is the prediction result of the field
+        :param source_record the raw source of a record
+        :return iSamples CV that corresponds to the label that is the prediction result of the field
         """
         # extract the data that the model requires for classification
         sesar_input = SESARClassifierInput(source_record)
@@ -270,18 +270,15 @@ class OpenContextMaterialPredictor:
     ) -> List[PredictionResult]:
         """
         Invoke the pre-trained BERT model to predict the material type label for the specified string inputs.
-
-        :param source_record: the raw source of a record
-        :return: String label that is the prediction result of the field
         """
         # extract the data that the model requires for classification
         oc_input = OpenContextClassifierInput(source_record)
         oc_input.parse_thing()
-        # TODO: use the description map to assist rule-based classification
-        # description_map = oc_input.get_description_map()
+        # use the description map to assist rule-based classification
         input_string = oc_input.get_material_text()
-
-        # get the prediction result with necessary fields provided
+        # second pass : deriving the prediction by machine
+        # we pass the text to a pretrained model to get the prediction result
+        # load the model
         machine_predictions = self.classify_by_machine(input_string)
         return [PredictionResult(label, prob) for label, prob in machine_predictions]
 
@@ -308,17 +305,15 @@ class OpenContextSamplePredictor:
         """
         Invoke the pre-trained BERT model to predict the sample type label for the specified string inputs.
 
-        :param source_record: the raw source of a record
-        :return: String label that is the prediction result of the field
+        :param source_record the raw source of a record
+        :return string label that is the prediction result of the field
         """
         # extract the data that the model requires for classification
         oc_input = OpenContextClassifierInput(source_record)
         oc_input.parse_thing()
-        # TODO: use the description map to assist rule-based classification
-        # description_map = oc_input.get_description_map()
         input_string = oc_input.get_sample_text()
-
-        # get the prediction result with necessary fields provided
-        # get the prediction result with necessary fields provided
+        # deriving the prediction by machine
+        # we pass the text to a pretrained model to get the prediction result
+        # load the model
         machine_predictions = self.classify_by_machine(input_string)
         return [PredictionResult(label, prob) for label, prob in machine_predictions]

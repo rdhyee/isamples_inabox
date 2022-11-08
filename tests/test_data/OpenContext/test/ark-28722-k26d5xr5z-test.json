@@ -1,0 +1,77 @@
+{
+    "$schema":"../../iSamplesSchemaBasic0.2.json",
+    "@id":"metadata/http://n2t.net/ark:/28722/k26d5xr5z",
+    "label":"Arch. Frag. 16511",
+    "sampleidentifier":"http://n2t.net/ark:/28722/k26d5xr5z",
+    "description":"early bce/ce: -200.0 | late bce/ce: 360.0 | updated: 2017-02-09T02:38:47Z",
+    "hasContextCategory":[
+       "Site of past human activities"
+    ],
+    "hasContextCategoryConfidence":[
+       1.0
+    ],
+    "hasMaterialCategory":[
+       "Anthropogenic material"
+    ],
+    "hasMaterialCategoryConfidence":"None",
+    "hasSpecimenCategory":[
+       "Artifact"
+    ],
+    "hasSpecimenCategoryConfidence":"None",
+    "informalClassification":[
+       
+    ],
+    "keywords":[
+       "Jordan",
+       "Petra Great Temple",
+       "Upper Temenos",
+       "Trench 105-106",
+       "Locus 22"
+    ],
+    "producedBy":{
+       "@id":"Not Provided",
+       "label":"Petra Great Temple Excavations",
+       "description":"http://opencontext.org/projects/A5DDBEA2-B3C8-43F9-8151-33343CBDC857",
+       "hasFeatureOfInterest":"Not Provided",
+       "responsibility":[
+          "creator: Martha Sharp Joukowsky",
+          "collector: Eleanor A. Power",
+          "collector: Marshall C. Agnew"
+       ],
+       "resultTime":"2007-11-11T00:00:00Z",
+       "samplingSite":{
+          "description":"Not Provided",
+          "label":"Jordan/Petra Great Temple/Upper Temenos/Trench 105-106/Locus 22",
+          "location":{
+             "elevation":"Not Provided",
+             "latitude":30.3287,
+             "longitude":35.4421
+          },
+          "placeName":[
+             "Jordan",
+             "Petra Great Temple",
+             "Upper Temenos",
+             "Trench 105-106",
+             "Locus 22"
+          ]
+       }
+    },
+    "registrant":"None",
+    "samplingPurpose":"None",
+    "curation":{
+       "label":"Not Provided",
+       "description":"Not Provided",
+       "accessConstraints":"Not Provided",
+       "curationLocation":"Not Provided",
+       "responsibility":"Not Provided"
+    },
+    "relatedResource":[
+       
+    ],
+    "authorizedBy":[
+       
+    ],
+    "compliesWith":[
+       
+    ]
+ }

@@ -165,7 +165,7 @@ def _transformed_json_to_test_tuples() -> list[tuple]:
     """
     transformed_json: list[tuple] = []
 
-    with open("test_model_values.json", "r") as schema_json_file:
+    with open("sesar_material_test_records.json", "r") as schema_json_file:
         test_model_values_dict = json.load(schema_json_file)
         for key, value in test_model_values_dict.items():
             current_tuple = (
