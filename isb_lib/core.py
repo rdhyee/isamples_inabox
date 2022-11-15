@@ -19,6 +19,7 @@ import heartrate
 
 from isb_web import sqlmodel_database
 from isb_web.sqlmodel_database import SQLModelDAO
+from typing import Optional
 
 RECOGNIZED_DATE_FORMATS = [
     "%Y",  # e.g. 1985
@@ -456,8 +457,8 @@ class IdentifierIterator:
         self,
         offset: int = 0,
         max_entries: int = -1,
-        date_start: datetime.datetime = None,
-        date_end: datetime.datetime = None,
+        date_start: Optional[datetime.datetime] = None,
+        date_end: Optional[datetime.datetime] = None,
         page_size: int = 100,
     ):
         self._start_offset = offset
@@ -572,7 +573,7 @@ class ThingRecordIterator:
         page_size: int = 5000,
         offset: int = 0,
         limit: int = -1,
-        min_time_created: datetime.datetime = None,
+        min_time_created: Optional[datetime.datetime] = None,
     ):
         self._session = session
         self._authority_id = authority_id
@@ -620,7 +621,7 @@ class CoreSolrImporter:
         solr_batch_size: int,
         solr_url: str,
         offset: int = 0,
-        min_time_created: datetime.datetime = None,
+        min_time_created: Optional[datetime.datetime] = None,
     ):
         self._db_session = SQLModelDAO(db_url).get_session()
         self._authority_id = authority_id

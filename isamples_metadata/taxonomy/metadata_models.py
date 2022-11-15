@@ -73,7 +73,7 @@ class MetadataModelLoader:
             MetadataModelLoader._OPENCONTEXT_SAMPLE_MODEL = model
 
     @staticmethod
-    def get_sesar_material_model(config_json: dict = None) -> Optional[Model]:
+    def get_sesar_material_model(config_json: Optional[dict] = None) -> Optional[Model]:
         """
             Getter method that returns the SESAR material model
             If the config of the model is passed, we can load the model directly reading the config_json values
@@ -86,13 +86,13 @@ class MetadataModelLoader:
         return MetadataModelLoader._SESAR_MATERIAL_MODEL
 
     @staticmethod
-    def get_oc_material_model(config_json: dict = None) -> Optional[Model]:
+    def get_oc_material_model(config_json: Optional[dict] = None) -> Optional[Model]:
         if not MetadataModelLoader._OPENCONTEXT_MATERIAL_MODEL:
             MetadataModelLoader.load_model_from_path("OPENCONTEXT", "material", config_json)
         return MetadataModelLoader._OPENCONTEXT_MATERIAL_MODEL
 
     @staticmethod
-    def get_oc_sample_model(config_json: dict = None) -> Optional[Model]:
+    def get_oc_sample_model(config_json: Optional[dict] = None) -> Optional[Model]:
         if not MetadataModelLoader._OPENCONTEXT_SAMPLE_MODEL:
             MetadataModelLoader.load_model_from_path("OPENCONTEXT", "sample", config_json)
         return MetadataModelLoader._OPENCONTEXT_SAMPLE_MODEL

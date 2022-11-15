@@ -32,7 +32,7 @@ class OpenContextItem(object):
         resolved_url: str,
         t_resolved: datetime.datetime,
         resolve_elapsed: Optional[float],
-        media_type: str = None,
+        media_type: Optional[str] = None,
     ) -> isb_lib.models.thing.Thing:
         L = get_logger()
         L.debug("OpenContextItem.asThing")
@@ -66,8 +66,8 @@ class OpenContextRecordIterator(isb_lib.core.IdentifierIterator):
         self,
         offset: int = 0,
         max_entries: int = -1,
-        date_start: datetime.datetime = None,
-        date_end: datetime.datetime = None,
+        date_start: Optional[datetime.datetime] = None,
+        date_end: Optional[datetime.datetime] = None,
         page_size: int = 100,
     ):
         super().__init__(

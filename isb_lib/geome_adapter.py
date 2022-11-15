@@ -57,8 +57,8 @@ class GEOMEIdentifierIterator(isb_lib.core.IdentifierIterator):
         self,
         offset: int = 0,
         max_entries: int = -1,
-        date_start: datetime.datetime = None,
-        date_end: datetime.datetime = None,
+        date_start: Optional[datetime.datetime] = None,
+        date_end: Optional[datetime.datetime] = None,
         record_type: str = "Sample",
     ):
         super().__init__(

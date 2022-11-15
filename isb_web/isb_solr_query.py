@@ -1,5 +1,5 @@
 import typing
-from typing import Tuple
+from typing import Optional, Tuple
 
 import requests
 import geojson
@@ -595,10 +595,10 @@ class ISBCoreSolrRecordIterator:
     def __init__(
         self,
         rsession=requests.session(),
-        query: str = None,
+        query: Optional[str] = None,
         batch_size: int = 50000,
         offset: int = 0,
-        sort: str = None,
+        sort: Optional[str] = None,
     ):
         """
 

@@ -65,5 +65,5 @@
        run: |
          source ./.venv/bin/activate
          # Temporarily specify older mypy version that was known working until we do the work to come up to spec with current
-         pip install -Iv mypy==0.982
+         pip install mypy
          mypy --install-types --non-interactive --namespace-packages

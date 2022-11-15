@@ -1,5 +1,6 @@
 import requests
 import logging
+from typing import Optional
 
 
 def getLogger():
@@ -36,11 +37,11 @@ def escapeSolrQueryTerm(term):
 
 def getRelationsSolr(
     rsession: requests.Session,
-    s: str = None,
-    p: str = None,
-    o: str = None,
-    source: str = None,
-    name: str = None,
+    s: Optional[str] = None,
+    p: Optional[str] = None,
+    o: Optional[str] = None,
+    source: Optional[str] = None,
+    name: Optional[str] = None,
     offset: int = 0,
     limit: int = 1000,
     url: str = "http://localhost:8983/solr/isb_rel/",

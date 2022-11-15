@@ -121,7 +121,7 @@ class SESARItem(object):
             resolved_url: str,
             t_resolved: datetime.datetime,
             resolve_elapsed: float,
-            media_type: str = None,
+            media_type: Optional[str] = None,
     ) -> Thing:
         L = getLogger()
         L.debug("SESARItem.asThing")
@@ -266,8 +266,8 @@ class SESARIdentifiersSitemap(isb_lib.core.IdentifierIterator):
             sitemap_url: str = DEFAULT_SESAR_SITEMAP,
             offset: int = 0,
             max_entries: int = -1,
-            date_start: datetime.datetime = None,
-            date_end: datetime.datetime = None,
+            date_start: Optional[datetime.datetime] = None,
+            date_end: Optional[datetime.datetime] = None,
     ):
         super().__init__(
             offset=offset,
@@ -324,8 +324,8 @@ class SESARIdentifiersOAIPMH(isb_lib.core.IdentifierIterator):
             set_spec="IEDA.SESAR",
             offset: int = 0,
             max_entries: int = -1,
-            date_start: datetime.datetime = None,
-            date_end: datetime.datetime = None,
+            date_start: Optional[datetime.datetime] = None,
+            date_end: Optional[datetime.datetime] = None,
     ):
         super().__init__(
             offset=offset,

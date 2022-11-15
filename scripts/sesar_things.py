@@ -18,6 +18,7 @@ from isb_lib.models.thing import Thing
 from isb_web import sqlmodel_database
 from isb_web.sqlmodel_database import SQLModelDAO, save_thing
 from isamples_metadata.SESARTransformer import fullIgsn
+from typing import Optional
 
 CONCURRENT_DOWNLOADS = 10
 BACKLOG_SIZE = 40
@@ -27,7 +28,7 @@ def getLogger():
     return logging.getLogger("main")
 
 
-def wrapLoadThing(igsn, tc, existing_thing: Thing = None):
+def wrapLoadThing(igsn, tc, existing_thing: Optional[Thing] = None):
     """Return request information to assist future management"""
     try:
         return igsn, tc, isb_lib.sesar_adapter.loadThing(igsn, tc, existing_thing)
@@ -42,7 +43,7 @@ def countThings(session):
     return cnt
 
 
-async def _loadSesarEntries(session, max_count, start_from=None, manual_ids: typing.List[typing.List[str]] = None):  # noqa: C901 -- need to examine computational complexity
+async def _loadSesarEntries(session, max_count, start_from=None, manual_ids: Optional[typing.List[typing.List[str]]] = None):  # noqa: C901 -- need to examine computational complexity
     L = getLogger()
     futures: list = []
     working = {}
@@ -132,7 +133,7 @@ async def _loadSesarEntries(session, max_count, start_from=None, manual_ids: typ
             )
 
 
-def loadSesarEntries(session, max_count, start_from=None, manual_ids: typing.List[typing.List[str]] = None):
+def loadSesarEntries(session, max_count, start_from=None, manual_ids: Optional[typing.List[typing.List[str]]] = None):
     loop = asyncio.get_event_loop()
     future = asyncio.ensure_future(
         _loadSesarEntries(session, max_count, start_from=start_from, manual_ids=manual_ids)

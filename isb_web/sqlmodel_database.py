@@ -189,7 +189,7 @@ def paged_things_with_ids(
     status: int = 200,
     limit: int = 100,
     offset: int = 0,
-    min_time_created: datetime.datetime = None,
+    min_time_created: Optional[datetime.datetime] = None,
     min_id: int = 0,
 ) -> List[Thing]:
     thing_select = _base_thing_select(authority, status, limit, offset, min_id)
@@ -206,7 +206,7 @@ def things_for_sitemap(
     status: int = 200,
     limit: int = 100,
     offset: int = 0,
-    min_tstamp: datetime.datetime = None,
+    min_tstamp: Optional[datetime.datetime] = None,
     min_id: int = 0,
 ) -> List[Thing]:
     """Returns a list of Things suitable for generating a sitemap.

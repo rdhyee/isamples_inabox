@@ -7,13 +7,14 @@ from sqlmodel import Session
 
 from isb_lib.models.thing import Thing
 from isb_web.sqlmodel_database import insert_identifiers
+from typing import Optional
 
 
 def _add_some_things(
     session: Session,
     num_things: int,
     authority_id: str,
-    tcreated: datetime.datetime = None,
+    tcreated: Optional[datetime.datetime] = None,
 ):
     for i in range(num_things):
         new_thing = Thing(

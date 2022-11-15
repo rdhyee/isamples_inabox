@@ -37,7 +37,7 @@ def content_profile_headers(profile: Profile) -> dict:
 
 
 # taken and adapted from https://github.com/RDFLib/pyLDAPI
-def get_profile_from_qsa(profiles_string: str = None) -> Optional[Profile]:
+def get_profile_from_qsa(profiles_string: Optional[str] = None) -> Optional[Profile]:
     """
     Reads _profile Query String Argument and returns the first Profile it finds
     Ref: https://www.w3.org/TR/dx-prof-conneg/#qsa-getresourcebyprofile

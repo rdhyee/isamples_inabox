@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 import uvicorn
 import typing
@@ -393,7 +394,7 @@ async def get_thing(
     identifier: str,
     full: bool = False,
     format: typing.Optional[isb_format.ISBFormat] = None,
-    _profile: str = None,
+    _profile: Optional[str] = None,
     session: Session = Depends(get_session),
 ):
     properties = {
@@ -444,7 +445,7 @@ async def resolve_thing(
     identifier: str,
     full: bool = False,
     format: typing.Optional[isb_format.ISBFormat] = None,
-    _profile: str = None,
+    _profile: Optional[str] = None,
     session: Session = Depends(get_session),
 ):
     url_str = str(request.url).replace("/resolve/", f"/{config.Settings().thing_url_path}/")
@@ -517,7 +518,7 @@ def get_stac_collection(
     offset: int = fastapi.Query(0, ge=0),
     limit: int = fastapi.Query(1000, lt=10000, gt=0),
     authority: str = fastapi.Query(None),
-    filename: str = None
+    filename: Optional[str] = None
 ):
     properties = {
         "authority": authority or "None"
@@ -705,11 +706,11 @@ async def get_related(
 )
 async def get_related_solr(
     request: fastapi.Request,
-    s: str = None,
-    p: str = None,
-    o: str = None,
-    source: str = None,
-    name: str = None,
+    s: Optional[str] = None,
+    p: Optional[str] = None,
+    o: Optional[str] = None,
+    source: Optional[str] = None,
+    name: Optional[str] = None,
     offset: int = 0,
     limit: int = 1000,
     accept: typing.Optional[str] = fastapi.Header(MEDIA_JSON),

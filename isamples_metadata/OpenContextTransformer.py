@@ -203,10 +203,10 @@ class OpenContextTransformer(Transformer):
         return None
 
     def sample_registrant(self) -> str:
-        pass
+        return ""
 
     def sample_sampling_purpose(self) -> str:
-        pass
+        return ""
 
     def has_context_categories(self) -> typing.List[str]:
         return ["Site of past human activities"]

@@ -14,6 +14,7 @@ import click_config_file
 from isb_lib.models.thing import Thing
 from isb_web import sqlmodel_database
 from isb_web.sqlmodel_database import SQLModelDAO, get_thing_with_id, save_thing
+from typing import Optional
 
 CONCURRENT_DOWNLOADS = 10
 BACKLOG_SIZE = 40
@@ -23,7 +24,7 @@ def getLogger():
     return logging.getLogger("main")
 
 
-def wrapLoadThing(ark: str, tc: datetime.datetime, existing_thing: Thing = None):
+def wrapLoadThing(ark: str, tc: datetime.datetime, existing_thing: Optional[Thing] = None):
     """Return request information to assist future management"""
     try:
         return ark, tc, isb_lib.geome_adapter.loadThing(ark, tc, existing_thing)

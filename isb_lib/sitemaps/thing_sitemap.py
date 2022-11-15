@@ -54,7 +54,7 @@ class ThingSitemapIndexIterator:
 
     def __init__(
         self,
-        authority: str = None,
+        authority: Optional[str] = None,
         num_things_per_file: int = MAX_URLS_IN_SITEMAP,
         status: int = 200,
         offset: int = 0,
