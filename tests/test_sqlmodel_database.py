@@ -2,6 +2,7 @@ import datetime
 import random
 
 import pytest
+from isb_lib.models.namespace import Namespace
 from sqlalchemy.orm.attributes import flag_modified
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
@@ -19,7 +20,7 @@ from isb_web.sqlmodel_database import (
     save_or_update_thing,
     get_things_with_ids, insert_identifiers, all_thing_identifiers, get_thing_identifiers_for_thing,
     h3_values_without_points, h3_to_height, all_thing_primary_keys, save_draft_thing_with_id, save_person_with_orcid_id,
-    all_orcid_ids,
+    all_orcid_ids, mint_identifiers_in_namespace, save_or_update_namespace,
 )
 from test_utils import _add_some_things
 
@@ -457,3 +458,49 @@ def test_all_orcid_ids(session: Session):
     assert 2 == len(orcid_ids)
     assert orcid_id_1 in orcid_ids
     assert orcid_id_2 in orcid_ids
+
+
+def test_save_namespace(session: Session):
+    orcid_id = "0000-0003-2109-7692"
+    shoulder = "1234/fk44"
+    namespace = Namespace()
+    namespace.shoulder = shoulder
+    namespace.allowed_people = [orcid_id]
+    namespace = save_or_update_namespace(session, namespace)
+    assert namespace is not None
+    assert namespace.primary_key is not None
+    assert namespace.allowed_people == [orcid_id]
+    assert namespace.tstamp is not None
+    assert namespace.tcreated is not None
+
+
+def test_mint_identifiers_in_namespace(session: Session):
+    orcid_id = "0000-0003-2109-7692"
+    shoulder = "1234/fk44"
+    namespace = Namespace()
+    namespace.shoulder = shoulder
+    namespace.allowed_people = [orcid_id]
+    save_or_update_namespace(session, namespace)
+    identifiers = mint_identifiers_in_namespace(session, namespace, 10)
+    assert 10 == len(identifiers)
+    # Then mint again to be sure that the state is saved and the identifiers are unique
+    identifiers2 = mint_identifiers_in_namespace(session, namespace, 10)
+    set1 = set(identifiers)
+    set2 = set(identifiers2)
+    assert set1.isdisjoint(set2)
+
+
+def test_add_orcid_id_to_namespace(session: Session):
+    orcid_id = "0000-0003-2109-7692"
+    shoulder = "1234/fk44"
+    namespace = Namespace()
+    namespace.shoulder = shoulder
+    namespace.allowed_people = [orcid_id]
+    namespace = save_or_update_namespace(session, namespace)
+    orcid_id_2 = "0000-0003-2109-7693"
+    namespace.add_allowed_person(orcid_id_2)
+    namespace = save_or_update_namespace(session, namespace)
+    assert namespace.allowed_people == [orcid_id, orcid_id_2]
+    namespace.remove_allowed_person(orcid_id)
+    namespace = save_or_update_namespace(session, namespace)
+    assert namespace.allowed_people == [orcid_id_2]

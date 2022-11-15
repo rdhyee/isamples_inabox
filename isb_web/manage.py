@@ -21,7 +21,6 @@ from isb_lib.utilities import url_utilities
 from isb_web import config, sqlmodel_database
 from isb_web.sqlmodel_database import SQLModelDAO
 
-
 # The FastAPI app that mounts as a sub-app to the main FastAPI app
 manage_api = FastAPI()
 dao: Optional[SQLModelDAO] = None
@@ -154,12 +153,12 @@ oauth.register(
 )
 
 
-class MintIdentifierParams(BaseModel):
+class MintDataciteIdentifierParams(BaseModel):
     datacite_metadata: dict
 
 
-@manage_api.post("/mint_identifier", include_in_schema=False)
-def mint_identifier(params: MintIdentifierParams):
+@manage_api.post("/mint_datacite_identifier", include_in_schema=False)
+def mint_identifier(params: MintDataciteIdentifierParams):
     """Mints an identifier using the datacite API
     Args:
         request: The fastapi request
@@ -179,11 +178,11 @@ def mint_identifier(params: MintIdentifierParams):
         return "Error minting identifier"
 
 
-class MintDraftIdentifierParams(MintIdentifierParams):
+class MintDraftIdentifierParams(MintDataciteIdentifierParams):
     num_drafts: int
 
 
-@manage_api.post("/mint_draft_identifiers", include_in_schema=False)
+@manage_api.post("/mint_draft_datacite_identifiers", include_in_schema=False)
 async def mint_draft_identifiers(params: MintDraftIdentifierParams):
     """Mints draft identifiers using the datacite API
     Args:
@@ -271,3 +270,57 @@ def add_orcid_id(request: starlette.requests.Request, session: Session = Depends
     else:
         # I think the middleware should prevent this, but just in case…
         raise HTTPException(401, "no session")
+
+
+class ManageOrcidForNamespaceParams(BaseModel):
+    shoulder: str
+    is_remove: bool = False
+    orcid_id: str
+
+
+@manage_api.get("/manage_orcid_id_for_namespace")
+def manage_orcid_id_for_namespace(params: ManageOrcidForNamespaceParams, request: starlette.requests.Request,
+                                  session: Session = Depends(get_session)):
+    user: Optional[dict] = request.session.get("user")
+    if user is not None:
+        if user.get("orcid") not in config.Settings().orcid_superusers:
+            raise HTTPException(401, "orcid id not authorized to manage users")
+        namespace = sqlmodel_database.namespace_with_shoulder(session, params.shoulder)
+        if namespace is None:
+            raise HTTPException(404, f"unable to locate namespace with shoulder {params.shoulder}")
+        if params.is_remove:
+            namespace.remove_allowed_person(params.orcid_id)
+        else:
+            namespace.add_allowed_person(params.orcid_id)
+        sqlmodel_database.save_or_update_namespace(session, namespace)
+        return namespace
+    else:
+        # I think the middleware should prevent this, but just in case…
+        raise HTTPException(401, "no session")
+
+
+class MintNoidyIdentifierParams(BaseModel):
+    shoulder: str
+    num_identifiers: int
+
+
+@manage_api.post("/mint_noidy_identifiers", include_in_schema=False)
+def mint_noidy_identifiers(params: MintNoidyIdentifierParams, request: starlette.requests.Request,
+                           session: Session = Depends(get_session)):
+    """Mints identifiers using the noidy API.  Requires an active session.
+    Args:
+        params: Class that contains the shoulder and number of identifiers to mint
+    Return: A list of all the minted identifiers, or a 404 if the namespace doesn't exist.
+    """
+    user = request.session.get("user")
+    if user is not None:
+        orcid_id = user.get("orcid", None)
+    else:
+        raise HTTPException(401, "no session")
+    namespace = sqlmodel_database.namespace_with_shoulder(session, params.shoulder)
+    if namespace is None:
+        raise HTTPException(404, f"unable to locate namespace with shoulder {params.shoulder}")
+    if namespace.allowed_people is None or orcid_id not in namespace.allowed_people:
+        raise HTTPException(401, f"user doesn't have access to {params.shoulder}")
+    identifiers = sqlmodel_database.mint_identifiers_in_namespace(session, namespace, params.num_identifiers)
+    return identifiers

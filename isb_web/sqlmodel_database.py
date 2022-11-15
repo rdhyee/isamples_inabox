@@ -1,10 +1,13 @@
 import datetime
 import typing
 
+import igsn_lib.time
 import sqlalchemy
 import logging
 from typing import Optional, List
 
+from isb_lib.identifiers.noidy.n2tminter import N2TMinter
+from isb_lib.models.namespace import Namespace
 from sqlalchemy import Index, update
 from sqlalchemy.exc import ProgrammingError
 from sqlmodel import SQLModel, create_engine, Session, select
@@ -447,6 +450,38 @@ def all_orcid_ids(session: Session) -> list[str]:
     for row in orcid_id_rows:
         orcid_ids.append(row[0])
     return orcid_ids
+
+
+def save_or_update_namespace(session: Session, namespace: Namespace) -> Namespace:
+    now = igsn_lib.time.dtnow()
+    if namespace.primary_key is None:
+        namespace.tcreated = now
+    namespace.tstamp = now
+    session.add(namespace)
+    session.commit()
+    return namespace
+
+
+def namespace_with_shoulder(session: Session, shoulder: str) -> Optional[Namespace]:
+    namespace_select = select(Namespace).where(Namespace.shoulder == shoulder)
+    result = session.exec(namespace_select)
+    return result.first()
+
+
+def mint_identifiers_in_namespace(session: Session, namespace: Namespace, num_identifiers: int) -> list[str]:
+    if namespace is None:
+        raise ValueError("Namespace cannot be None.  Identifiers will not be minted.")
+    minter = N2TMinter(namespace.shoulder)
+    if namespace.minter_state is not None:
+        minter.fromDict(namespace.minter_state)
+    identifiers = []
+    for identifier in minter.mint(num_identifiers):
+        identifiers.append(identifier)
+    namespace.minter_state = minter.asDict()
+    namespace.tstamp = datetime.datetime.now()
+    session.add(namespace)
+    session.commit()
+    return identifiers
 
 
 THING_EXPORT_FIELD_LIST = "id, tstamp, tcreated, item_type, authority_id, resolved_url, resolved_status, tresolved, resolve_elapsed, resolved_content, resolved_media_type, _id, identifiers, h3"
