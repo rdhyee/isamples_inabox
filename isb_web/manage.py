@@ -1,8 +1,10 @@
-from typing import Optional
+from typing import Optional, Any
 
+import isamples_frictionless
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 from sqlmodel import Session
+from starlette.responses import Response
 
 from isb_lib.identifiers import datacite
 import json
@@ -17,6 +19,7 @@ import starlette.datastructures
 import starlette_oauth2_api
 import authlib.integrations.starlette_client
 
+from isb_lib.models.namespace import Namespace
 from isb_lib.utilities import url_utilities
 from isb_web import config, sqlmodel_database
 from isb_web.sqlmodel_database import SQLModelDAO
@@ -272,6 +275,30 @@ def add_orcid_id(request: starlette.requests.Request, session: Session = Depends
         raise HTTPException(401, "no session")
 
 
+class AddNamespaceParams(BaseModel):
+    shoulder: str
+    orcid_ids: list[str]
+
+
+@manage_api.post("/add_namespace")
+def add_namespace(params: AddNamespaceParams, request: starlette.requests.Request, session: Session = Depends(get_session)):
+    orcid_id = _orcid_id_from_session_or_scope(request)
+    if orcid_id is None:
+        raise HTTPException(401, "no session")
+    elif orcid_id not in config.Settings().orcid_superusers:
+        raise HTTPException(401, "orcid id not authorized to manage")
+    else:
+        existing_namespace = sqlmodel_database.namespace_with_shoulder(session, params.shoulder)
+        if existing_namespace is not None:
+            raise HTTPException(409, f"namespace with shoulder f{params.shoulder} alaready exists")
+        else:
+            namespace = Namespace()
+            namespace.shoulder = params.shoulder
+            namespace.allowed_people = params.orcid_ids
+            namespace = sqlmodel_database.save_or_update_namespace(session, namespace)
+            return namespace
+
+
 class ManageOrcidForNamespaceParams(BaseModel):
     shoulder: str
     is_remove: bool = False
@@ -302,20 +329,30 @@ def manage_orcid_id_for_namespace(params: ManageOrcidForNamespaceParams, request
 class MintNoidyIdentifierParams(BaseModel):
     shoulder: str
     num_identifiers: int
+    return_filename: Optional[str] = None
+
+
+def _orcid_id_from_session_or_scope(request: starlette.requests.Request) -> Optional[str]:
+    user = request.session.get("user")
+    if user is not None:
+        return user.get("orcid", None)
+    else:
+        oauth_claims = request.scope.get("oauth2-claims")
+        if oauth_claims is not None:
+            return oauth_claims.get("sub")
+    return None
 
 
 @manage_api.post("/mint_noidy_identifiers", include_in_schema=False)
 def mint_noidy_identifiers(params: MintNoidyIdentifierParams, request: starlette.requests.Request,
-                           session: Session = Depends(get_session)):
+                           session: Session = Depends(get_session)) -> Any:
     """Mints identifiers using the noidy API.  Requires an active session.
     Args:
         params: Class that contains the shoulder and number of identifiers to mint
     Return: A list of all the minted identifiers, or a 404 if the namespace doesn't exist.
     """
-    user = request.session.get("user")
-    if user is not None:
-        orcid_id = user.get("orcid", None)
-    else:
+    orcid_id = _orcid_id_from_session_or_scope(request)
+    if orcid_id is None:
         raise HTTPException(401, "no session")
     namespace = sqlmodel_database.namespace_with_shoulder(session, params.shoulder)
     if namespace is None:
@@ -323,4 +360,12 @@ def mint_noidy_identifiers(params: MintNoidyIdentifierParams, request: starlette
     if namespace.allowed_people is None or orcid_id not in namespace.allowed_people:
         raise HTTPException(401, f"user doesn't have access to {params.shoulder}")
     identifiers = sqlmodel_database.mint_identifiers_in_namespace(session, namespace, params.num_identifiers)
-    return identifiers
+    if params.return_filename is None:
+        return identifiers
+    else:
+        csv_str = isamples_frictionless.insert_identifiers_into_template(identifiers)
+        headers = {
+            "Content-Disposition": f"inline; filename={params.return_filename}",
+            "Access-Control-Expose-Headers": "Content-Disposition"
+        }
+        return Response(bytes(csv_str, "utf-8"), headers=headers, media_type="text/csv")

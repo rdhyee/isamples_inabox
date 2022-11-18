@@ -6,6 +6,20 @@ iSamples identifier minting is provided using [DataCite DOIs](https://datacite.o
 
 The first step in minting an identifier is authenticating using orcid.  Users will first need to register for an orcid id at https://orcid.org.  Once users have created their identifier, the login process is initiated by hitting the login URL at the hosted iSamples in a Box instance, e.g. on [Mars](https://mars.cyverse.org/isamples_central/manage/login).
 
+### Config keys
+In order to configure which orcid developer app values to use when proxying the orcid authentication service, the following config keys exist:
+
+```
+ORCID_CLIENT_ID="example id"
+ORCID_CLIENT_SECRET="example secret"
+ORCID_ISSUER="https://sandbox.orcid.org"
+```
+
+You may obtain these values by logging into your account on orcid and clicking on the developer settings tab.  Note that if you are using the production
+orcid site, you'll need to make sure to update the `ORCID_ISSUER` config to point to https://orcid.org
+
+Obviously before any of that will work, you'll need to have configured your orcid account for development access.  Details for doing so are available at [orcid](https://info.orcid.org/documentation/integration-guide/registering-a-public-api-client/#easy-faq-2606).
+
 ### Python oauth implementation using authlib
 
 Under the covers, orcid is using [openid](https://info.orcid.org/documentation/api-tutorials/api-tutorial-get-and-authenticated-orcid-id/#easy-faq-2731), which is really just an enhancement of the standard [3-legged oauth](https://info.orcid.org/documentation/api-tutorials/api-tutorial-get-and-authenticated-orcid-id/#easy-faq-2537) pattern.
@@ -67,6 +81,22 @@ manage_api.add_middleware(
 ```
 and it takes care of all the key verification details.
 
+### HTTP Errors
+As a general convention, the http errors are as follows:
+
+1. **400** -- malformed request (likely bad token or authorization header)
+1. **401** -- insufficient permission -- user doesn't have access to update assets or the particular asset they're trying to update
+1. **404** -- unable to locate the resource with the specified identifier
+
+## Obtaining the JWT from the UI
+In order to invoke any of the management scripts, you'll need a valid JWT.  You may obtain the JWT by logging into the iSamples UI and clicking on this link:
+![JWT Link](jwt_link_in_ui.png)
+
+That will take you to the JWT page, and you can copy the value of the JWT by clicking the following button on that page:
+![Copy JWT Button](jwt_page_in_ui.png)
+
+Then, when you invoke any of the management scripts, you include the copied value of the JWT using the `--identity-token` (`-t`) parameter.
+
 ## Management of users using config and the API
 
 Once users have their orcid ids established and the auth URLs are registered using the datacite API, the manage API can be used to manage the orcid id access list.  There are two levels of access in the iSamples management scheme:
@@ -82,3 +112,25 @@ Once all of the above has been completed, you're ready to mint new identifiers w
 (1) Using the management UI, hit the `/dois` URL in the ISB instance e.g. on [Mars](https://mars.cyverse.org/isamples_central/ui/#/dois) and enter the required fields.  You can see the generated JSON in the right-side panel, and that generated JSON is sent to datacite.  Once the datacite response comes back, you'll be able to see the newly minted identifier.
 
 (2) Similarly, you can also use a CLI to directly hit the iSB `/manage/mint_draft_identifiers` endpoint and mint identifiers using your scripting language of choice.  The only prerequisite here is to make sure you've obtained a valid JWT from orcid before calling the endpoint.  You'll need to include the JWT in an `authorization: Bearer` header when you call the endpoint.  A working example of a CLI is available on the [iSamples GitHub](https://github.com/isamplesorg/isamples_inabox/blob/develop/scripts/examples/mint_identifiers_cli.py)
+
+## Minting identifiers using noidy
+
+As an alternative to using datacite for identifier minting, you may also use the iSamples built-in identifier minter, noidy.
+
+The first thing you'll need to do is create a namespace.  There's a command in `scripts/examples/mint_identifiers_cli.py`.  An example invocation follows:
+
+```
+python scripts/examples/mint_identifiers_cli.py create_namespace -i orcid_id1,orcid_id2 -t <JWT> -u http://localhost:8000/manage/add_namespace -s 1234/fk4
+```
+
+Once you've created the namespace, you can then call the service to mint identifiers.
+
+There's an example of how to call the noidy service in `scripts/examples/mint_identifiers_cli.py`.  The parameters are
+as follows:
+
+```
+python scripts/examples/mint_identifiers_cli.py mint_noidy_identifiers -t <JWT> -u http://localhost:8000/manage/mint_noidy_identifiers -n 10 -s 1234/fk4
+```
+
+For the shoulder (`-s`) parameter, you'll need to ensure that the namespace with the specified shoulder exists in the database and that your orcid id has access to it 
+prior to calling the service.  You'll also need to have logged in to the iSamples WebUI and copied the JWT string value before attempting to hit the service.
