@@ -28,7 +28,7 @@ def listFieldTypes():
 
 
 def createField(
-    fname, ftype="string", stored=True, indexed=True, default=None, multivalued=False
+    fname, ftype="string", stored=True, indexed=True, default=None, multivalued=False, docValues=False
 ):
     print(f"going to create field {fname}")
     headers = {"Content-Type": MEDIA_JSON}
@@ -42,6 +42,8 @@ def createField(
     }
     if multivalued:
         data["add-field"]["multiValued"] = multivalued
+    if docValues:
+        data["add-field"]["docValues"] = True
     if default is not None:
         data["add-field"]["default"] = default
     data = json.dumps(data).encode("utf-8")
@@ -61,9 +63,21 @@ def deleteField(fname):
     pj(res.json())
 
 
-def createCopyField(source, dest):
+def createCopyField(source, dest, maxChars=None):
     headers = {"Content-Type": MEDIA_JSON}
-    data = {"add-copy-field": {"source": source, "dest": [dest]}}
+    copyFieldData = {"source": source, "dest": [dest]}
+    if maxChars is not None:
+        copyFieldData["maxChars"] = maxChars
+    data = {"add-copy-field": copyFieldData}
+    data = json.dumps(data).encode("utf-8")
+    res = requests.post(f"{SOLR_API}schema", headers=headers, data=data)
+    pj(res.json())
+
+
+def deleteCopyField(source, dest):
+    headers = {"Content-Type": MEDIA_JSON}
+    copyFieldData = {"source": source, "dest": [dest]}
+    data = {"delete-copy-field": copyFieldData}
     data = json.dumps(data).encode("utf-8")
     res = requests.post(f"{SOLR_API}schema", headers=headers, data=data)
     pj(res.json())
@@ -227,6 +241,21 @@ addFieldType({
 createField("producedBy_resultTimeRange", "date_range", True, True, None)
 
 createField("producedBy_samplingSite_location_h3", "string", True, True, None)
+createField("producedBy_samplingSite_location_h3_0", "string", False, False, None, False, True)
+createField("producedBy_samplingSite_location_h3_1", "string", False, False, None, False, True)
+createField("producedBy_samplingSite_location_h3_2", "string", False, False, None, False, True)
+createField("producedBy_samplingSite_location_h3_3", "string", False, False, None, False, True)
+createField("producedBy_samplingSite_location_h3_4", "string", False, False, None, False, True)
+createField("producedBy_samplingSite_location_h3_5", "string", False, False, None, False, True)
+createField("producedBy_samplingSite_location_h3_6", "string", False, False, None, False, True)
+createField("producedBy_samplingSite_location_h3_7", "string", False, False, None, False, True)
+createField("producedBy_samplingSite_location_h3_8", "string", False, False, None, False, True)
+createField("producedBy_samplingSite_location_h3_9", "string", False, False, None, False, True)
+createField("producedBy_samplingSite_location_h3_10", "string", False, False, None, False, True)
+createField("producedBy_samplingSite_location_h3_11", "string", False, False, None, False, True)
+createField("producedBy_samplingSite_location_h3_12", "string", False, False, None, False, True)
+createField("producedBy_samplingSite_location_h3_13", "string", False, False, None, False, True)
+createField("producedBy_samplingSite_location_h3_14", "string", False, False, None, False, True)
 createField("producedBy_samplingSite_location_cesium_height", "pfloat", True, True, None)
 # Nested document support
 # Note that the solr docs indicate we need these fields, but they already existed in our schema, keeping here for

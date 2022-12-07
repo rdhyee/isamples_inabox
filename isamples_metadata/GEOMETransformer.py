@@ -552,8 +552,11 @@ class GEOMETransformer(Transformer):
         return GEOMETransformer._format_result_object([original_string])
 
     @staticmethod
-    def geo_to_h3(content: typing.Dict) -> typing.Optional[str]:
-        return isamples_metadata.Transformer.geo_to_h3(_content_latitude(content), _content_longitude(content))
+    def geo_to_h3(content: typing.Dict, resolution: int = Transformer.DEFAULT_H3_RESOLUTION) -> typing.Optional[str]:
+        return isamples_metadata.Transformer.geo_to_h3(_content_latitude(content), _content_longitude(content), resolution)
+
+    def h3_function(self) -> typing.Callable:
+        return GEOMETransformer.geo_to_h3
 
 
 class GEOMEChildTransformer(GEOMETransformer):

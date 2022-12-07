@@ -359,6 +359,9 @@ class OpenContextTransformer(Transformer):
         # Don't have this information
         return []
 
+    def h3_function(self) -> typing.Callable:
+        return geo_to_h3
+
 
 def _content_latitude(content: typing.Dict) -> Optional[float]:
     return content.get("latitude", None)
@@ -368,5 +371,5 @@ def _content_longitude(content: typing.Dict) -> Optional[float]:
     return content.get("longitude", None)
 
 
-def geo_to_h3(content: typing.Dict) -> Optional[str]:
-    return isamples_metadata.Transformer.geo_to_h3(_content_latitude(content), _content_longitude(content))
+def geo_to_h3(content: typing.Dict, resolution: int = Transformer.DEFAULT_H3_RESOLUTION) -> Optional[str]:
+    return isamples_metadata.Transformer.geo_to_h3(_content_latitude(content), _content_longitude(content), resolution)

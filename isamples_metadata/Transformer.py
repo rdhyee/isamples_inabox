@@ -28,6 +28,8 @@ class Transformer(ABC):
 
     HUMAN_ENTERED_CONFIDENCE = 2.0
 
+    DEFAULT_H3_RESOLUTION = 15
+
     @staticmethod
     def _transform_key_to_label(
         key: str,
@@ -113,6 +115,10 @@ class Transformer(ABC):
             "authorizedBy": self.authorized_by(),
             "compliesWith": self.complies_with(),
         }
+        for index in range(0, 15):
+            h3_at_resolution = self.h3_function()(self.source_record, index)
+            field_name = f"producedBy_samplingSite_location_h3_{index}"
+            transformed_record[field_name] = h3_at_resolution
         return transformed_record
 
     @abstractmethod
@@ -289,6 +295,10 @@ class Transformer(ABC):
         """Returns a pointer to the associated compliance documentation, ideally in the form of one or more URIs."""
         pass
 
+    @abstractmethod
+    def h3_function(self) -> typing.Callable:
+        pass
+
 
 class AbstractCategoryMapper(ABC):
     _destination: str
@@ -445,9 +455,8 @@ class StringPairedCategoryMapper(AbstractCategoryMapper):
         )
 
 
-def geo_to_h3(latitude: typing.Optional[float], longitude: typing.Optional[float]) -> typing.Optional[str]:
+def geo_to_h3(latitude: typing.Optional[float], longitude: typing.Optional[float], resolution: int = Transformer.DEFAULT_H3_RESOLUTION) -> typing.Optional[str]:
     if latitude is not None and longitude is not None:
-        # Set the resolution value to 15, which is the maximum
-        return h3.geo_to_h3(latitude, longitude, 15)
+        return h3.geo_to_h3(latitude, longitude, resolution)
     else:
         return None

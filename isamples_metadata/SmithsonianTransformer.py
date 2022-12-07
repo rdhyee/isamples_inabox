@@ -297,6 +297,9 @@ class SmithsonianTransformer(Transformer):
         # Don't have this information
         return []
 
+    def h3_function(self) -> typing.Callable:
+        return geo_to_h3
+
 
 def _content_latitude(source_record: typing.Dict) -> typing.Optional[float]:
     # noinspection PyProtectedMember
@@ -308,5 +311,5 @@ def _content_longitude(source_record: typing.Dict) -> typing.Optional[float]:
     return SmithsonianTransformer._float_or_none(source_record.get("decimalLongitude"))
 
 
-def geo_to_h3(content: typing.Dict) -> typing.Optional[str]:
-    return isamples_metadata.Transformer.geo_to_h3(_content_latitude(content), _content_longitude(content))
+def geo_to_h3(content: typing.Dict, resolution: int = Transformer.DEFAULT_H3_RESOLUTION) -> typing.Optional[str]:
+    return isamples_metadata.Transformer.geo_to_h3(_content_latitude(content), _content_longitude(content), resolution)

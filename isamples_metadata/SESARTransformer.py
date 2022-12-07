@@ -536,6 +536,9 @@ class SESARTransformer(Transformer):
         # Don't have this information
         return []
 
+    def h3_function(self) -> typing.Callable:
+        return geo_to_h3
+
 
 def _geo_location_float_value(source_record: typing.Dict, key_name: str) -> typing.Optional[float]:
     description = source_record.get("description")
@@ -564,5 +567,5 @@ def _content_longitude(source_record: typing.Dict) -> typing.Optional[float]:
     return _geo_location_float_value(source_record, "longitude")
 
 
-def geo_to_h3(content: typing.Dict) -> typing.Optional[str]:
-    return isamples_metadata.Transformer.geo_to_h3(_content_latitude(content), _content_longitude(content))
+def geo_to_h3(content: typing.Dict, resolution: int = Transformer.DEFAULT_H3_RESOLUTION) -> typing.Optional[str]:
+    return isamples_metadata.Transformer.geo_to_h3(_content_latitude(content), _content_longitude(content), resolution)

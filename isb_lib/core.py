@@ -660,6 +660,16 @@ class CoreSolrImporter:
 
                 for core_record in core_records_from_thing:
                     core_record["source"] = self._authority_id
+                    # Note that the h3 is precomputed and stored on the Thing itself because we do a
+                    # "select distinct h3 from thing" query in order to determine which h3 values we need to compute
+                    # Cesium elevation for.  The full order of operations is
+                    # (1) compute h3 on things
+                    # (2) select distinct h3 to determine points that need to be computed
+                    # (3) compute points and insert into Point db cache table using Cesium JS API
+                    # (4) at index time, consult Point cache to get elevation for thing, and since we've previously
+                    #  computed the h3 just grab it off the Thing
+                    # Step 3 in this sequence of events is both slow and API rate-limited by Cesium, so we take great
+                    # pain to ensure that we're only querying the absolute minimum
                     core_record["producedBy_samplingSite_location_h3"] = thing.h3
                     core_record["producedBy_samplingSite_location_cesium_height"] = h3_to_height.get(thing.h3)
                     core_records.append(core_record)
