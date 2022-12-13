@@ -457,6 +457,6 @@ class StringPairedCategoryMapper(AbstractCategoryMapper):
 
 def geo_to_h3(latitude: typing.Optional[float], longitude: typing.Optional[float], resolution: int = Transformer.DEFAULT_H3_RESOLUTION) -> typing.Optional[str]:
     if latitude is not None and longitude is not None:
-        return h3.geo_to_h3(latitude, longitude, resolution)
+        return h3.latlng_to_cell(latitude, longitude, resolution)
     else:
         return None

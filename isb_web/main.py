@@ -15,11 +15,13 @@ import json
 from fastapi.params import Query, Depends
 from pydantic import BaseModel
 from sqlmodel import Session
+import geojson
 
 import isb_web
 import isamples_metadata.GEOMETransformer
 from isb_lib.core import MEDIA_GEO_JSON, MEDIA_JSON, MEDIA_NQUADS
 from isb_lib.models.thing import Thing
+from isb_lib.utilities import h3_utilities
 from isb_web import sqlmodel_database, analytics, manage
 from isb_web.analytics import AnalyticsEvent
 from isb_web import schemas
@@ -333,6 +335,48 @@ async def get_solr_luke_info(request: fastapi.Request):
     """
     analytics.record_analytics_event(AnalyticsEvent.THING_SOLR_LUKE_INFO, request)
     return isb_solr_query.solr_luke()
+
+
+resolution_q = fastapi.Query(
+    default=None,
+    ge=0,
+    le=16,
+    description="H3 resolution. Default is to infer from min_cells.",
+)
+exclude_poles_q = fastapi.Query(
+    default=True, description="Exclude cells containing the north or south poles."
+)
+bb_q = fastapi.Query(
+    default=None,
+    regex=h3_utilities.BB_REGEX,
+    description="Bounding box for cells (minx, miny, maxx, maxy)",
+    example="-150,-37,150,37",
+)
+min_cells_q = fastapi.Query(
+    default=10, gt=0, lt=10000, description="Minimum number of cells to return."
+)
+
+
+@app.get(
+    "/h3_counts/",
+    name="Get H3 GeoJSON grid of record counts",
+    description=("Return a GeoJSON feature collection of H3 cells for the provided bounding box or globally. "
+                 "bb is min_longitude, min_latitude, max_longitude, max_latitude"
+                 ),
+)
+def get_h3_grid(
+        resolution: typing.Optional[int] = resolution_q,
+        exclude_poles: bool = exclude_poles_q,
+        bb: typing.Optional[str] = bb_q,
+        q: str = None,
+) -> geojson.FeatureCollection:
+    solr_query_params = h3_utilities.get_h3_solr_query_from_bb(bb, resolution, q)
+    record_counts = h3_utilities.get_record_counts(
+        query=solr_query_params.q, resolution=solr_query_params.resolution, exclude_poles=exclude_poles
+    )
+    return h3_utilities.h3s_to_feature_collection(
+        set(record_counts.keys()), cell_props=record_counts
+    )
 
 
 class ThingsSitemapParams(BaseModel):

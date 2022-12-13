@@ -13,6 +13,8 @@ _RPT_FIELD = "producedBy_samplingSite_location_rpt"
 LONGITUDE_FIELD = "producedBy_samplingSite_location_longitude"
 LATITUDE_FIELD = "producedBy_samplingSite_location_latitude"
 
+DEFAULT_COLLECTION_NAME = "isb_core_records"
+
 # Identify the bounding boxes for solr and leaflet for diagnostic purposes
 SOLR_BOUNDS = -1
 LEAFLET_BOUNDS = -2
@@ -372,7 +374,7 @@ def solr_get_record(identifier):
     return 200, docs["response"]["docs"][0]
 
 
-def solr_searchStream(params, collection="isb_core_records"):  # noqa: C901
+def solr_searchStream(params, collection=DEFAULT_COLLECTION_NAME):  # noqa: C901
     """
     Requests a streaming search response from solr.
 
@@ -585,6 +587,22 @@ def solr_records_for_stac_collection(
         "sourceUpdatedTime asc",
         "producedBy_samplingSite_location_longitude:* AND producedBy_samplingSite_location_latitude:*",
     )
+
+
+def solr_records_forh3_counts(
+    query: str, field_name: str, max_rows: int = -1
+) -> dict:
+    url = get_solr_url("stream")
+    headers = {"Accept": "application/json"}
+    dlm = ",\n"
+    facet = (f'facet({DEFAULT_COLLECTION_NAME}{dlm}'
+             f'q="{query}"{dlm}'
+             f'buckets="{field_name}"{dlm}count(*),rows={max_rows})')
+    response = requests.post(
+        url, headers=headers, data={"expr": facet}, stream=True
+    )
+    logging.info("Returning response")
+    return response.json()
 
 
 class ISBCoreSolrRecordIterator:

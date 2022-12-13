@@ -35,7 +35,7 @@ def populate_points(session: Session):
     h3_no_points = h3_values_without_points(session, set(h3_vals))
     point_inserts = []
     for h3_no_point in h3_no_points:
-        geo = h3.h3_to_geo(h3_no_point)
+        geo = h3.cell_to_latlng(h3_no_point)
         point_inserts.append(
             {"h3": h3_no_point, "latitude": geo[0], "longitude": geo[1]}
         )

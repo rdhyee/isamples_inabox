@@ -25,7 +25,7 @@ def add_h3_values(solr_url: str):
     current_mutated_batch = []
     rsession = requests.session()
     iterator = ISBCoreSolrRecordIterator(
-        rsession, "producedBy_samplingSite_location_h3:*", batch_size, 0, "id asc"
+        rsession, "-(_nest_path_:*)", batch_size, 0, "id asc"
     )
     for record in iterator:
         mutated_record = mutate_record(record)
@@ -49,6 +49,8 @@ def save_mutated_batch(current_mutated_batch, rsession, solr_url):
 
 
 def mutate_record(record: dict) -> Optional[dict]:
+    if record.get("producedBy_samplingSite_location_h3") is None or record.get("producedBy_samplingSite_location_h3_0") is not None:
+        return None
     # Do whatever work is required to mutate the record to update things…
     record_copy = record.copy()
     for index in range(0, 15):
