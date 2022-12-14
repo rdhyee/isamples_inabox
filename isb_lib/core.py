@@ -670,7 +670,7 @@ class CoreSolrImporter:
                     #  computed the h3 just grab it off the Thing
                     # Step 3 in this sequence of events is both slow and API rate-limited by Cesium, so we take great
                     # pain to ensure that we're only querying the absolute minimum
-                    core_record["producedBy_samplingSite_location_h3"] = thing.h3
+                    core_record["producedBy_samplingSite_location_h3_15"] = thing.h3
                     core_record["producedBy_samplingSite_location_cesium_height"] = h3_to_height.get(thing.h3)
                     core_records.append(core_record)
                 for r in core_records:

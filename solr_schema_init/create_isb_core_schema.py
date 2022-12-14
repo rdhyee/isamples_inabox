@@ -240,7 +240,6 @@ addFieldType({
 })
 createField("producedBy_resultTimeRange", "date_range", True, True, None)
 
-createField("producedBy_samplingSite_location_h3", "string", True, True, None)
 createField("producedBy_samplingSite_location_h3_0", "string", False, False, None, False, True)
 createField("producedBy_samplingSite_location_h3_1", "string", False, False, None, False, True)
 createField("producedBy_samplingSite_location_h3_2", "string", False, False, None, False, True)
@@ -256,6 +255,7 @@ createField("producedBy_samplingSite_location_h3_11", "string", False, False, No
 createField("producedBy_samplingSite_location_h3_12", "string", False, False, None, False, True)
 createField("producedBy_samplingSite_location_h3_13", "string", False, False, None, False, True)
 createField("producedBy_samplingSite_location_h3_14", "string", False, False, None, False, True)
+createField("producedBy_samplingSite_location_h3_15", "string", False, False, None, False, True)
 createField("producedBy_samplingSite_location_cesium_height", "pfloat", True, True, None)
 # Nested document support
 # Note that the solr docs indicate we need these fields, but they already existed in our schema, keeping here for
