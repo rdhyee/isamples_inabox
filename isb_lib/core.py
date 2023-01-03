@@ -8,6 +8,8 @@ import json
 import typing
 
 import igsn_lib.time
+
+from isamples_metadata.metadata_exceptions import MetadataException
 from isb_lib.models.thing import Thing
 from isamples_metadata.Transformer import Transformer
 import dateparser
@@ -653,6 +655,9 @@ class CoreSolrImporter:
             for thing in self._thing_iterator.yieldRecordsByPage():
                 try:
                     core_records_from_thing = core_record_function(thing)
+                except MetadataException as e:
+                    getLogger().info(f"Excluding record {thing.id} from index due to known exclusion: \"{e}\".")
+                    continue
                 except Exception as e:
                     getLogger().error("Failed trying to run transformer, skipping record %s exception %s",
                                       thing.resolved_content, e)

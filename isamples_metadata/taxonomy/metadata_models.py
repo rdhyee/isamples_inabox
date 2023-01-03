@@ -5,6 +5,7 @@ import os
 from typing import Tuple, Optional, List
 
 from isamples_metadata.Transformer import Transformer
+from isamples_metadata.metadata_exceptions import TestRecordException, SESARSampleTypeException
 from isb_web import config
 
 from isamples_metadata.taxonomy.Model import Model
@@ -135,10 +136,10 @@ class SESARMaterialPredictor:
         if field_to_value["igsnPrefix"] != "":
             for test_igsn in SESARClassifierInput.SESAR_test_igsn:
                 if test_igsn in field_to_value["igsnPrefix"]:
-                    return True
+                    raise TestRecordException("Record excluded from indexing due to a known test igsnPrefix")
         if field_to_value["sampleType"] == "Hole" or \
                 field_to_value["sampleType"] == "Site":
-            return True
+            raise SESARSampleTypeException("Record excluded from indexing due to it being a known ignored sampleType")
         return False
 
     def classify_by_sample_type(self, field_to_value: dict) -> Optional[str]:
