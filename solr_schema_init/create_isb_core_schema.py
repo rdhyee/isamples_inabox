@@ -6,8 +6,11 @@ import time
 # Sleep for 10 seconds to allow for the Solr Docker container to start up.
 time.sleep(10)
 
-CREATE_COLLECTION_API = "http://solr:8983/solr/admin/collections?action=CREATE&name=isb_core_records&numShards=1&replicationFactor=1"
-SOLR_API = "http://solr:8983/api/collections/isb_core_records/"
+COLLECTION_NAME = "isb_core_records"
+
+CREATE_COLLECTION_API = f"http://solr:8983/solr/admin/collections?action=CREATE&name={COLLECTION_NAME}&numShards=1&replicationFactor=1"
+CONFIG_API = f"http://solr:8983/solr/{COLLECTION_NAME}/config"
+SOLR_API = f"http://solr:8983/api/collections/{COLLECTION_NAME}/"
 MEDIA_JSON = "application/json"
 
 
@@ -108,7 +111,7 @@ def addDynamicField(dynamic_field_dict: typing.Dict):
 
 
 def createCollection():
-    print("Going to attempt to create collection isb_core_records")
+    print(f"Going to attempt to create collection {COLLECTION_NAME}")
     headers = {"Content-Type": MEDIA_JSON}
     res = requests.get(f"{CREATE_COLLECTION_API}", headers=headers)
     print("Response is: " + str(res))
@@ -116,6 +119,15 @@ def createCollection():
         print("Collection already exists.  Exiting.")
         exit(0)
     pj(res.json())
+    # Make sure to disable auto field creation, as this is known harmful behavior!
+    data = {
+        "set-user-property": {
+            "update.autoCreateFields": "false"
+        }
+    }
+    encoded_data = json.dumps(data).encode("utf-8")
+    config_res = requests.post(CONFIG_API, headers=headers, data=encoded_data)
+    pj(config_res.json())
 
 
 print("Going to create collection in create_isb_core_schema")
