@@ -5,7 +5,7 @@ import fastapi
 import requests
 import json
 import isb_web.config
-from isb_web.isb_format import _NoValue
+from isb_web.isb_enums import _NoValue
 from isb_lib.core import MEDIA_JSON
 
 ANALYTICS_URL = isb_web.config.Settings().analytics_url

@@ -26,7 +26,7 @@ class GEOMETransformer(Transformer):
     """Concrete transformer class for going from a GEOME record to an iSamples record"""
 
     def __init__(
-        self, source_record: typing.Dict, last_updated_time: Optional[datetime.datetime]
+        self, source_record: typing.Dict, last_updated_time: Optional[datetime.datetime] = None
     ):
         super().__init__(source_record)
         self._child_transformers = []

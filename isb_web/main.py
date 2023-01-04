@@ -22,12 +22,12 @@ import isamples_metadata.GEOMETransformer
 from isb_lib.core import MEDIA_GEO_JSON, MEDIA_JSON, MEDIA_NQUADS
 from isb_lib.models.thing import Thing
 from isb_lib.utilities import h3_utilities
-from isb_web import sqlmodel_database, analytics, manage
+from isb_web import sqlmodel_database, analytics, manage, debug
 from isb_web.analytics import AnalyticsEvent
 from isb_web import schemas
 from isb_web import crud
 from isb_web import config
-from isb_web import isb_format
+from isb_web import isb_enums
 from isb_web import isb_solr_query
 from isb_web import profiles
 from isamples_metadata.SESARTransformer import SESARTransformer
@@ -67,6 +67,7 @@ dao = SQLModelDAO(None)
 manage_app = manage.manage_api
 # Avoid a circular dependency but share the db connection by pushing into the manage handler
 manage.dao = dao
+debug_app = debug.debug_api
 
 app.add_middleware(
     fastapi.middleware.cors.CORSMiddleware,
@@ -97,6 +98,7 @@ app.mount(
     name="ui",
 )
 app.mount(manage.MANAGE_PREFIX, manage_app)
+app.mount(debug.DEBUG_PREFIX, debug_app)
 
 
 @app.on_event("startup")
@@ -437,7 +439,7 @@ async def get_thing(
     request: fastapi.Request,
     identifier: str,
     full: bool = False,
-    format: typing.Optional[isb_format.ISBFormat] = None,
+    format: typing.Optional[isb_enums.ISBFormat] = None,
     _profile: Optional[str] = None,
     session: Session = Depends(get_session),
 ):
@@ -446,7 +448,7 @@ async def get_thing(
     }
     analytics.record_analytics_event(AnalyticsEvent.THING_BY_IDENTIFIER, request, properties)
     """Record for the specified identifier"""
-    if format == isb_format.ISBFormat.SOLR:
+    if format == isb_enums.ISBFormat.SOLR:
         return solr_thing_response(identifier)
 
     if _profile == profiles.ALL_PROFILES_QSA_VALUE or _profile == profiles.ALT_PROFILES_QSA_VALUE \
@@ -463,10 +465,10 @@ async def get_thing(
         raise fastapi.HTTPException(
             status_code=404, detail=f"Thing not found: {identifier}"
         )
-    if full or format == isb_format.ISBFormat.FULL:
+    if full or format == isb_enums.ISBFormat.FULL:
         return item
     if (request_profile is not None and request_profile == profiles.ISAMPLES_PROFILE) or \
-            format == isb_format.ISBFormat.CORE:
+            format == isb_enums.ISBFormat.CORE:
         if request_profile is None:
             request_profile = profiles.ISAMPLES_PROFILE
         content = await thing_resolved_content(identifier, item)
@@ -488,7 +490,7 @@ async def resolve_thing(
     request: fastapi.Request,
     identifier: str,
     full: bool = False,
-    format: typing.Optional[isb_format.ISBFormat] = None,
+    format: typing.Optional[isb_enums.ISBFormat] = None,
     _profile: Optional[str] = None,
     session: Session = Depends(get_session),
 ):
