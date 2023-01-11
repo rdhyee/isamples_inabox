@@ -1,5 +1,5 @@
 import typing
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Mapping
 
 import requests
 import geojson
@@ -34,6 +34,9 @@ _LEAFLET_ERR_PCT = 0.1
 # Note that this limit should vary by the number of fields being returned since
 # that somewhat dictates memory use for constructing the stream
 MAX_STREAMING_ROWS = 500000
+
+# Max rows for a reliquery response
+MAX_RELIQUERY_ROWS = 10000
 
 RESERVED_CHAR_LIST = [
     "+",
@@ -342,6 +345,26 @@ def solr_query(params, query=None):
     return fastapi.responses.StreamingResponse(
         response.iter_content(chunk_size=2048), media_type=content_type
     )
+
+
+def reliquery_solr_query(query: str) -> dict:
+    """
+    Returns the solr response from making the reliquery query
+    Args:
+        query: The solr query to execute
+
+    Returns: The solr response from executing the reliquery query
+    """
+    url = get_solr_url("select")
+    headers = {"Accept": "application/json"}
+    params: Mapping = {
+        "q": query,
+        "rows": MAX_RELIQUERY_ROWS,
+        "wt": "json",
+        "fl": "id"
+    }
+    response = requests.get(url, headers=headers, params=params)
+    return response.json()
 
 
 def solr_get_record(identifier):

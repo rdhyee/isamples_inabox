@@ -2,7 +2,6 @@ from typing import Optional, Any
 
 import isamples_frictionless
 from fastapi import FastAPI, HTTPException, Depends
-from pydantic import BaseModel
 from sqlmodel import Session
 from starlette.responses import Response
 
@@ -22,6 +21,8 @@ import authlib.integrations.starlette_client
 from isb_lib.models.namespace import Namespace
 from isb_lib.utilities import url_utilities
 from isb_web import config, sqlmodel_database
+from isb_web.api_types import MintDataciteIdentifierParams, MintDraftIdentifierParams, ManageOrcidForNamespaceParams, \
+    AddNamespaceParams, MintNoidyIdentifierParams
 from isb_web.sqlmodel_database import SQLModelDAO
 
 # The FastAPI app that mounts as a sub-app to the main FastAPI app
@@ -156,10 +157,6 @@ oauth.register(
 )
 
 
-class MintDataciteIdentifierParams(BaseModel):
-    datacite_metadata: dict
-
-
 @manage_api.post("/mint_datacite_identifier", include_in_schema=False)
 def mint_identifier(params: MintDataciteIdentifierParams):
     """Mints an identifier using the datacite API
@@ -179,10 +176,6 @@ def mint_identifier(params: MintDataciteIdentifierParams):
         return result
     else:
         return "Error minting identifier"
-
-
-class MintDraftIdentifierParams(MintDataciteIdentifierParams):
-    num_drafts: int
 
 
 @manage_api.post("/mint_draft_datacite_identifiers", include_in_schema=False)
@@ -275,11 +268,6 @@ def add_orcid_id(request: starlette.requests.Request, session: Session = Depends
         raise HTTPException(401, "no session")
 
 
-class AddNamespaceParams(BaseModel):
-    shoulder: str
-    orcid_ids: list[str]
-
-
 @manage_api.post("/add_namespace")
 def add_namespace(params: AddNamespaceParams, request: starlette.requests.Request, session: Session = Depends(get_session)):
     orcid_id = _orcid_id_from_session_or_scope(request)
@@ -297,12 +285,6 @@ def add_namespace(params: AddNamespaceParams, request: starlette.requests.Reques
             namespace.allowed_people = params.orcid_ids
             namespace = sqlmodel_database.save_or_update_namespace(session, namespace)
             return namespace
-
-
-class ManageOrcidForNamespaceParams(BaseModel):
-    shoulder: str
-    is_remove: bool = False
-    orcid_id: str
 
 
 @manage_api.get("/manage_orcid_id_for_namespace")
@@ -324,12 +306,6 @@ def manage_orcid_id_for_namespace(params: ManageOrcidForNamespaceParams, request
     else:
         # I think the middleware should prevent this, but just in case…
         raise HTTPException(401, "no session")
-
-
-class MintNoidyIdentifierParams(BaseModel):
-    shoulder: str
-    num_identifiers: int
-    return_filename: Optional[str] = None
 
 
 def _orcid_id_from_session_or_scope(request: starlette.requests.Request) -> Optional[str]:

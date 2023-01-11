@@ -4,15 +4,12 @@ from typing import Any
 import fastapi
 from fastapi import FastAPI, HTTPException
 from isamples_metadata.SESARTransformer import SESARTransformer
-
 from isamples_metadata.OpenContextTransformer import OpenContextTransformer
-
 from isamples_metadata.GEOMETransformer import GEOMETransformer
-
 from isamples_metadata.SmithsonianTransformer import SmithsonianTransformer
-from pydantic import BaseModel
 
 from isamples_metadata.metadata_exceptions import MetadataException
+from isb_web.api_types import DebugTransformParams
 from isb_web.isb_enums import ISBAuthority, ISBReturnField
 
 debug_api = FastAPI()
@@ -20,12 +17,6 @@ debug_api = FastAPI()
 DEBUG_PREFIX = "/debug"
 logging.basicConfig(level=logging.DEBUG)
 _L = logging.getLogger("manage")
-
-
-class DebugTransformParams(BaseModel):
-    input_record: dict
-    authority: ISBAuthority
-    return_field: ISBReturnField
 
 
 @debug_api.get("/", include_in_schema=False)
