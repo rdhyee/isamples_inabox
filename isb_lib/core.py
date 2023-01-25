@@ -6,6 +6,8 @@ import datetime
 import hashlib
 import json
 import typing
+import faulthandler
+from signal import SIGINT
 
 import igsn_lib.time
 
@@ -647,6 +649,8 @@ class CoreSolrImporter:
             self._db_batch_size,
             self._solr_batch_size,
         )
+        faulthandler.enable()
+        faulthandler.register(SIGINT)
         allkeys = set()
         rsession = requests.session()
         h3_to_height = sqlmodel_database.h3_to_height(self._db_session)
