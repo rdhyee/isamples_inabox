@@ -14,7 +14,7 @@ import igsn_lib.time
 from isamples_metadata.metadata_exceptions import MetadataException
 from isb_lib.models.thing import Thing
 from isamples_metadata.Transformer import Transformer
-import dateparser
+from dateparser.date import DateDataParser
 import re
 import requests
 import shapely.wkt
@@ -37,6 +37,7 @@ DATEPARSER_SETTINGS = {
     "TIMEZONE": "UTC",
     "RETURN_AS_TIMEZONE_AWARE": True,
 }
+ddp = DateDataParser(languages=["en"], settings=DATEPARSER_SETTINGS)
 
 SOLR_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 ELEVATION_PATTERN = re.compile(r"\s*(-?\d+\.?\d*)\s*m?", re.IGNORECASE)
@@ -302,10 +303,11 @@ def handle_related_resources(coreMetadata: typing.Dict, doc: typing.Dict):
 
 def parsed_date(raw_date_str):
     # TODO: https://github.com/isamplesorg/isamples_inabox/issues/24
-    date_time = dateparser.parse(
-        raw_date_str, date_formats=RECOGNIZED_DATE_FORMATS, settings=DATEPARSER_SETTINGS
-    )
-    return date_time
+    date_data = ddp.get_date_data(raw_date_str, date_formats=RECOGNIZED_DATE_FORMATS)
+    if date_data is not None:
+        return date_data.date_obj
+    else:
+        return None
 
 
 def parsed_datetime_from_isamples_format(raw_date_str) -> datetime.datetime:
