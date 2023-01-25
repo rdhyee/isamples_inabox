@@ -14,6 +14,7 @@ import igsn_lib.time
 from isamples_metadata.metadata_exceptions import MetadataException
 from isb_lib.models.thing import Thing
 from isamples_metadata.Transformer import Transformer
+import dateparser
 from dateparser.date import DateDataParser
 import re
 import requests
