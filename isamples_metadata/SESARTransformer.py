@@ -323,20 +323,28 @@ class SESARTransformer(Transformer):
 
     def has_material_categories(self) -> typing.List[str]:
         material = self._material_type()
-        if not material:
-            prediction_results = self._compute_material_prediction_results()
-            if prediction_results is not None:
-                return [prediction.value for prediction in prediction_results]
-            else:
-                return []
         return MaterialCategoryMetaMapper.categories(material)
 
     def has_material_category_confidences(self, material_categories: list[str]) -> typing.Optional[typing.List[float]]:
-        prediction_results = self._compute_material_prediction_results()
-        if prediction_results is None:
-            return None
-        else:
-            return [prediction.confidence for prediction in prediction_results]
+        return None
+
+    # Disabled pending resolution of https://github.com/isamplesorg/isamples_inabox/issues/255
+    # def has_material_categories(self) -> typing.List[str]:
+    #     material = self._material_type()
+    #     if not material:
+    #         prediction_results = self._compute_material_prediction_results()
+    #         if prediction_results is not None:
+    #             return [prediction.value for prediction in prediction_results]
+    #         else:
+    #             return []
+    #     return MaterialCategoryMetaMapper.categories(material)
+    #
+    # def has_material_category_confidences(self, material_categories: list[str]) -> typing.Optional[typing.List[float]]:
+    #     prediction_results = self._compute_material_prediction_results()
+    #     if prediction_results is None:
+    #         return None
+    #     else:
+    #         return [prediction.confidence for prediction in prediction_results]
 
     def has_specimen_categories(self) -> typing.List[str]:
         sample_type = self._source_record_description()["sampleType"]
