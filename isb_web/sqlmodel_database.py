@@ -504,3 +504,12 @@ def save_taxonomy_name(session: Session, name: TaxonomyName, commit: bool = Fals
     session.add(name)
     if commit:
         session.commit()
+
+
+def taxonomy_name_to_kingdom_map(session: Session) -> dict:
+    name_select = select(TaxonomyName.name, TaxonomyName.kingdom)
+    name_rows = session.execute(name_select).fetchall()
+    name_dict = {}
+    for row in name_rows:
+        name_dict[row[0]] = row[1]
+    return name_dict
