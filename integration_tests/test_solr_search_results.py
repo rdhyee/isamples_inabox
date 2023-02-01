@@ -16,7 +16,7 @@ def rsession():
 def solr_url():
     solr_url = os.getenv("INPUT_SOLR_URL")
     if solr_url is None:
-        solr_url = "https://hyde.cyverse.org/isamples_central/thing/select"
+        solr_url = "https://iscaws.isample.xyz/isamples_central/thing/select"
     return solr_url
 
 

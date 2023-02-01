@@ -14,7 +14,7 @@ def rsession():
 def hostname():
     hostname = os.getenv("INPUT_HOSTNAME")
     if hostname is None:
-        hostname = "https://hyde.cyverse.org/isamples_central/"
+        hostname = "https://iscaws.isample.xyz/isamples_central/"
     # ensure the hostname is properly ended, since we construct the URLs by hand
     if not hostname.endswith("/"):
         hostname = hostname + "/"
