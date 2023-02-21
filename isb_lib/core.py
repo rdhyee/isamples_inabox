@@ -13,7 +13,7 @@ import igsn_lib.time
 
 from isamples_metadata.metadata_exceptions import MetadataException
 from isb_lib.models.thing import Thing
-from isamples_metadata.Transformer import Transformer
+from isamples_metadata.Transformer import Transformer, geo_to_h3
 import dateparser
 from dateparser.date import DateDataParser
 import re
@@ -240,6 +240,14 @@ def lat_lon_to_solr(coreMetadata: typing.Dict, latitude: typing.SupportsFloat, l
     coreMetadata.update(shapely_to_solr(shapely.geometry.Point(longitude, latitude)))
     coreMetadata["producedBy_samplingSite_location_latitude"] = latitude
     coreMetadata["producedBy_samplingSite_location_longitude"] = longitude
+    for index in range(0, 16):
+        h3_at_resolution = geo_to_h3(
+            latitude,
+            longitude,
+            index,
+        )
+        field_name = f"producedBy_samplingSite_location_h3_{index}"
+        coreMetadata[field_name] = h3_at_resolution
 
 
 def handle_produced_by_fields(coreMetadata: typing.Dict, doc: typing.Dict):  # noqa: C901 -- need to examine computational complexity

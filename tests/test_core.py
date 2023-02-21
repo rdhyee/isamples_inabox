@@ -70,6 +70,8 @@ def test_coreRecordAsSolrDoc():
     """
     solr_dict = _try_to_add_solr_doc(core_doc_str)
     assert "producedBy_samplingSite_location_ll" in solr_dict
+    assert "producedBy_samplingSite_location_h3_0" in solr_dict
+    assert "producedBy_samplingSite_location_h3_15" in solr_dict
 
 
 def test_coreRecordAsSolrDoc2():
