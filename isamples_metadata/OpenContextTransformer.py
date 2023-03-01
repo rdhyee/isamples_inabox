@@ -231,29 +231,21 @@ class OpenContextTransformer(Transformer):
 
     def has_material_categories(self) -> typing.List[str]:
         item_category = self.source_record.get("item category", "")
+        to_classify_items = ["Object", "Pottery", "Sample", "Sculpture"]
+        if item_category in to_classify_items:
+            prediction_results = self._compute_material_prediction_results()
+            if prediction_results is not None:
+                return [prediction.value for prediction in prediction_results]
+            else:
+                return []
         return MaterialCategoryMetaMapper.categories(item_category)
 
     def has_material_category_confidences(self, material_categories: typing.List[str]) -> typing.Optional[typing.List[float]]:
-        return None
-
-    # Disabled pending resolution of https://github.com/isamplesorg/isamples_inabox/issues/255
-    # def has_material_categories(self) -> typing.List[str]:
-    #     item_category = self.source_record.get("item category", "")
-    #     to_classify_items = ["Object", "Pottery", "Sample", "Sculpture"]
-    #     if item_category in to_classify_items:
-    #         prediction_results = self._compute_material_prediction_results()
-    #         if prediction_results is not None:
-    #             return [prediction.value for prediction in prediction_results]
-    #         else:
-    #             return []
-    #     return MaterialCategoryMetaMapper.categories(item_category)
-    #
-    # def has_material_category_confidences(self, material_categories: typing.List[str]) -> typing.Optional[typing.List[float]]:
-    #     prediction_results = self._compute_material_prediction_results()
-    #     if prediction_results is None:
-    #         return None
-    #     else:
-    #         return [prediction.confidence for prediction in prediction_results]
+        prediction_results = self._compute_material_prediction_results()
+        if prediction_results is None:
+            return None
+        else:
+            return [prediction.confidence for prediction in prediction_results]
 
     def _compute_specimen_prediction_results(self) -> typing.Optional[typing.List[PredictionResult]]:
         item_category = self.source_record.get("item category", "")
@@ -275,29 +267,21 @@ class OpenContextTransformer(Transformer):
 
     def has_specimen_categories(self) -> typing.List[str]:
         item_category = self.source_record.get("item category", "")
+        to_classify_items = ["Animal Bone"]
+        if item_category in to_classify_items:
+            prediction_results = self._compute_specimen_prediction_results()
+            if prediction_results is not None:
+                return [prediction.value for prediction in prediction_results]
+            else:
+                return []
         return SpecimenCategoryMetaMapper.categories(item_category)
 
     def has_specimen_category_confidences(self, specimen_categories: typing.List[str]) -> typing.Optional[typing.List[float]]:
-        return None
-
-    # Disabled pending resolution of https://github.com/isamplesorg/isamples_inabox/issues/255
-    # def has_specimen_categories(self) -> typing.List[str]:
-    #     item_category = self.source_record.get("item category", "")
-    #     to_classify_items = ["Animal Bone"]
-    #     if item_category in to_classify_items:
-    #         prediction_results = self._compute_specimen_prediction_results()
-    #         if prediction_results is not None:
-    #             return [prediction.value for prediction in prediction_results]
-    #         else:
-    #             return []
-    #     return SpecimenCategoryMetaMapper.categories(item_category)
-    #
-    # def has_specimen_category_confidences(self, specimen_categories: typing.List[str]) -> typing.Optional[typing.List[float]]:
-    #     prediction_results = self._compute_specimen_prediction_results()
-    #     if prediction_results is None:
-    #         return None
-    #     else:
-    #         return [prediction.confidence for prediction in prediction_results]
+        prediction_results = self._compute_specimen_prediction_results()
+        if prediction_results is None:
+            return None
+        else:
+            return [prediction.confidence for prediction in prediction_results]
 
     def _context_label_pieces(self) -> typing.List[str]:
         context_label = self.source_record.get("context label")

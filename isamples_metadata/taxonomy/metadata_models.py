@@ -2,6 +2,7 @@ import collections
 import logging
 import json
 import os
+from functools import cache
 from typing import Tuple, Optional, List
 
 from isamples_metadata.Transformer import Transformer
@@ -210,6 +211,7 @@ class SESARMaterialPredictor:
             else:
                 return None
 
+    @cache
     def classify_by_machine(self, text: str) -> List[Tuple[str, float]]:
         """ Returns the machine prediction on the given
         input record
@@ -257,6 +259,7 @@ class OpenContextMaterialPredictor:
             raise TypeError("Model is required to be non-None")
         self._model = model
 
+    @cache
     def classify_by_machine(self, text: str) -> List[Tuple[str, float]]:
         """ Returns the machine prediction on the given
         input record
@@ -291,6 +294,7 @@ class OpenContextSamplePredictor:
             raise TypeError("Model is required to be non-None")
         self._model = model
 
+    @cache
     def classify_by_machine(self, text: str) -> List[Tuple[str, float]]:
         """ Returns the machine prediction on the given
         input record
