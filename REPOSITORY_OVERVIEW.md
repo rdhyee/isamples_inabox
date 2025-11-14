@@ -439,6 +439,24 @@ Additional documentation in `docs/`:
 - **Contributing**: Submit pull requests to `develop` branch
 - **License**: Apache 2.0
 
+## Related Repositories
+
+### iSamples Export Client
+- **Repository**: https://github.com/isamplesorg/export_client
+- **Purpose**: CLI tool for exporting iSamples data with GeoParquet support
+- **Key Features**:
+  - Export to GeoParquet, CSV, and JSONL formats
+  - STAC metadata generation
+  - Local web server for viewing exports
+  - ORCID authentication integration
+- **Installation**: `pipx install "git+https://github.com/isamplesorg/export_client.git"`
+- **Documentation**: [docs/geoparquet_export_code.md](docs/geoparquet_export_code.md)
+
+### Other iSamples Repositories
+- **Metadata Schemas**: https://github.com/isamplesorg/metadata - Core metadata specifications
+- **Vocabularies**: https://github.com/isamplesorg/vocabularies - Controlled vocabularies
+- **PQG (Property Graph)**: https://github.com/isamplesorg/pqg - Property graph in DuckDB
+
 ## Common Tasks
 
 ### Add a new sample source
@@ -450,6 +468,33 @@ Additional documentation in `docs/`:
 5. Update documentation
 
 ### Export data
+
+#### Option 1: Using the Export Client (Recommended for GeoParquet)
+
+The **iSamples Export Client** (https://github.com/isamplesorg/export_client) provides a CLI tool with GeoParquet support:
+
+```bash
+# Install export client
+pipx install "git+https://github.com/isamplesorg/export_client.git"
+
+# Login to get JWT
+isample login
+
+# Export to GeoParquet format
+export TOKEN="your_jwt_token"
+isample export -j $TOKEN -f geoparquet -d /output -q 'source:SESAR'
+
+# Also supports CSV and JSONL
+isample export -j $TOKEN -f csv -d /output -q 'keywords:geology'
+```
+
+**Export Client Features:**
+- **Formats**: JSONL, CSV, and **GeoParquet** (not available via server API)
+- **STAC Metadata**: Automatically generates STAC catalog
+- **Local Viewer**: Built-in web server to browse exports
+- **See**: [docs/geoparquet_export_code.md](docs/geoparquet_export_code.md) for implementation details
+
+#### Option 2: Direct API Access (CSV/JSONL only)
 
 ```bash
 # Via API (requires ORCID authentication)

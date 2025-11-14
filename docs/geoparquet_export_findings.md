@@ -7,7 +7,19 @@ https://zenodo.org/records/15278211/files/isamples_export_2025_04_21_16_23_46_ge
 
 ## Investigation Results
 
-**Status**: The GeoParquet export code was **NOT FOUND** in the current `isamples_inabox` repository.
+**🎉 UPDATE: CODE FOUND!**
+
+The GeoParquet export code is located in a **separate repository**:
+
+**Repository**: https://github.com/rdhyee/export_client (also at https://github.com/isamplesorg/export_client)
+
+**See**: [geoparquet_export_code.md](./geoparquet_export_code.md) for complete documentation of the export implementation.
+
+---
+
+## Original Investigation
+
+**Initial Status**: The GeoParquet export code was **NOT FOUND** in the current `isamples_inabox` repository.
 
 ## Search Methods Used
 
@@ -174,16 +186,29 @@ Current `requirements.txt` includes:
 
 ## Conclusion
 
+### Original Conclusion (Before Finding Code)
 The GeoParquet export code does **not exist in the current `isamples_inabox` repository**. The file was most likely created using:
-1. An external standalone script (most probable)
+1. An external standalone script (most probable) ✅ **CORRECT**
 2. A Jupyter notebook
-3. Code in a different repository or branch
+3. Code in a different repository or branch ✅ **CORRECT**
 4. An ad-hoc one-time export script
 
-**Recommended Action**: Contact the team member who uploaded the file to Zenodo to obtain the original export code or recreate it using the recommendations above.
+### Final Conclusion (After Finding Code)
+
+**The investigation was correct!** The GeoParquet export code exists in a **separate repository**: https://github.com/rdhyee/export_client
+
+**Key Findings:**
+- The `export_client` repository contains a CLI tool (`isample`) for exporting iSamples data
+- GeoParquet conversion is implemented in `isamples_export_client/geoparquet_utilities.py`
+- The export process: Server provides JSONL → Client converts to GeoParquet
+- Uses pandas, geopandas, and pyarrow for the conversion
+- The Zenodo file was created using: `isample export -f geoparquet -q '*:*'`
+
+**Documentation**: See [geoparquet_export_code.md](./geoparquet_export_code.md) for complete implementation details.
 
 ---
 
 **Investigation Date**: 2025-11-14
+**Code Found Date**: 2025-11-14
 **Repository Commit**: f8fd9d4
 **Investigator**: Claude (AI Assistant)

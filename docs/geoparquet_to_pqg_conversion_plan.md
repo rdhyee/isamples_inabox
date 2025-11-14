@@ -6,6 +6,9 @@ This document provides a detailed plan for converting the iSamples GeoParquet ex
 (`isamples_export_2025_04_21_16_23_46_geo.parquet`) into the PQG (Property Graph in DuckDB) format
 as documented at https://github.com/isamplesorg/pqg.
 
+**📝 Note**: The GeoParquet export code was located at https://github.com/rdhyee/export_client.
+See [geoparquet_export_code.md](./geoparquet_export_code.md) for details on how the GeoParquet files are created.
+
 ## Background
 
 ### Source Format: GeoParquet
@@ -13,6 +16,8 @@ as documented at https://github.com/isamplesorg/pqg.
 - **Format**: Apache Parquet with GeoParquet spatial extension
 - **Content**: iSamples sample metadata including geospatial coordinates
 - **Schema**: Based on iSamples Core metadata schema (see `isb_lib/models/isb_core_record.py`)
+- **Creation Tool**: Generated using the `isample` CLI from https://github.com/rdhyee/export_client
+- **Process**: Server exports JSONL → Client converts to GeoParquet (see `geoparquet_utilities.py`)
 
 ### Target Format: PQG
 - **Library**: Python library for property graphs using DuckDB backend
